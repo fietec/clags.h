@@ -49,7 +49,7 @@ void clags_usage(const char *program_name);
 
 #ifndef clags_flags
 #define clags_flags
-#endif // clags_flagean
+#endif // clags_flags
 
 static clags_args_t args = {
 #define clags_arg(n, val, desc) (clags_req_t){.name=(n), .value=(val), .description=(desc)},
@@ -103,7 +103,7 @@ bool clags_parse(int argc, char **argv, bool *help)
             }
         }
         if (required_found >= args.required_count){
-            fprintf(stderr, "[ERROR] Unknown addtional argument: '%s'!\n", arg);
+            fprintf(stderr, "[ERROR] Unknown additional argument: '%s'!\n", arg);
             return false;
         }
         clags_req_t req = args.required[required_found++];
@@ -125,7 +125,7 @@ void clags_usage(const char *program_name)
 {
     printf("Usage: %s", program_name);
     if (args.optional_count) printf(" [OPTIONS]");
-    if (args.flag_count) printf(" [FLAGS]");
+    printf(" [FLAGS]");
     for (size_t i=0; i<args.required_count; ++i){
         printf(" <%s>", args.required[i].name);
     }
@@ -147,13 +147,12 @@ void clags_usage(const char *program_name)
             printf("    %-16s : %s\n", buf, opt.description);
         }
     }
-    if (args.flag_count){
-        printf("  Flags:\n");
-        for (size_t i=0; i<args.flag_count; ++i){
-            clags_flag_t bol = args.flags[i];
-            printf("    %-16s : %s\n", bol.flag, bol.description);
-        }
+    printf("  Flags:\n");
+    for (size_t i=0; i<args.flag_count; ++i){
+        clags_flag_t bol = args.flags[i];
+        printf("    %-16s : %s\n", bol.flag, bol.description);
     }
+    printf("    %-16s : %s\n", "-h / --help", "print this help dialog");
     printf("\n");
 }
 #endif // CLAGS_IMPLEMENTATION

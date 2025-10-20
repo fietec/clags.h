@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h>
 
 char *input = NULL;
 char *output = NULL;
