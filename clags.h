@@ -1,27 +1,28 @@
-/* clags.h - A simple command line arguments parser for C */
+/*
+  clags.h - A simple command line arguments parser for C
 
-/* MIT License */
+  MIT License
 
-/* Copyright (c) 2025 Constantijn de Meer */
+  Copyright (c) 2025 Constantijn de Meer
 
-/* Permission is hereby granted, free of charge, to any person obtaining a copy */
-/* of this software and associated documentation files (the "Software"), to deal */
-/* in the Software without restriction, including without limitation the rights */
-/* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell */
-/* copies of the Software, and to permit persons to whom the Software is */
-/* furnished to do so, subject to the following conditions: */
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-/* The above copyright notice and this permission notice shall be included in all */
-/* copies or substantial portions of the Software. */
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR */
-/* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, */
-/* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE */
-/* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER */
-/* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, */
-/* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE */
-/* SOFTWARE. */
-                    
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+*/
 
 #ifndef CLAGS_H
 #define CLAGS_H
@@ -29,6 +30,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <assert.h>
 
 typedef struct{
     const char *name;
@@ -58,49 +60,68 @@ typedef struct{
     size_t flag_count;
 } clags_args_t;
 
-bool clags_parse(int argc, char **argv, bool *help);
-void clags_usage(const char *program_name);
+typedef enum{
+    Clags_Required,
+    Clags_Optional,
+    Clags_Flag
+} clags_arg_type_t;
+
+typedef struct{
+    clags_arg_type_t type;
+    union{
+        clags_req_t req;
+        clags_opt_t opt;
+        clags_flag_t flag;
+    };
+} clags_arg_t;
+
+
+#define clags_required(n, val, desc) (clags_arg_t) {.type=Clags_Required, .req=(clags_req_t){.name=(n), .value=(val), .description=(desc)}}
+#define clags_optional(f, val, f_name, desc) (clags_arg_t) {.type=Clags_Optional, .opt=(clags_opt_t){.flag=(f), .value=(val), .description=(desc), .field_name=(f_name)}}
+#define clags_flag(f, val, desc) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.flag=(f), .value=(val), .description=(desc)}}
+
+#define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
+
+#define clags_parse(argc, argv, args, help) _clags_parse((argc), (argv), (help), (args), clags_arr_len(args))
+bool _clags_parse(int argc, char **argv, bool *help, clags_arg_t *args, size_t arg_count);
+
+#define clags_usage(pn, args) _clags_usage((pn), (args), clags_arr_len(args))
+void _clags_usage(const char *program_name, clags_arg_t *args, size_t arg_count);
+
 #endif // CLAGS_H
 
 #ifdef CLAGS_IMPLEMENTATION
 
-#ifndef clags_required
-#define clags_required
-#endif // clags_required
-
-#ifndef clags_optional
-#define clags_optional
-#endif // clags_optional
-
-#ifndef clags_flags
-#define clags_flags
-#endif // clags_flags
-
-static clags_args_t args = {
-#define clags_arg(n, val, desc) (clags_req_t){.name=(n), .value=(val), .description=(desc)},
-    .required = (clags_req_t[]){
-        clags_required
-    },
-#undef clags_arg
-#define clags_arg(f, val, fname, desc) (clags_opt_t){.value=(val), .description=(desc), .flag=(f), .field_name=(fname)},
-    .optional = (clags_opt_t[]){
-        clags_optional
-    },
-#undef clags_arg
-#define clags_arg(f, val, desc) (clags_flag_t){.flag=(f), .value=(val), .description=(desc)},
-    .flags = (clags_flag_t[]){
-        clags_flags
-    },
-#undef clags_arg
-#define clags_arg(...) 1+
-    .required_count = clags_required 0,
-    .optional_count = clags_optional 0,
-    .flag_count  = clags_flags  0,
-#undef clags_arg
-};
-
-bool clags_parse(int argc, char **argv, bool *help)
+void _clags_sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
 {
+    for (size_t i=0; i<arg_count; ++i){
+        switch(_args[i].type){
+            case Clags_Required:{
+                args->required[args->required_count++] = _args[i].req;
+            } break;
+            case Clags_Optional:{
+                args->optional[args->optional_count++] = _args[i].opt;
+            } break;
+            case Clags_Flag:{
+                args->flags[args->flag_count++] = _args[i].flag;
+            } break;
+            default: {
+                assert(0 && "Unreachable");
+            }
+        }
+    }
+}
+
+bool _clags_parse(int argc, char **argv, bool *help, clags_arg_t *_args, size_t arg_count)
+{
+    clags_req_t required[arg_count];
+    clags_opt_t optional[arg_count];
+    clags_flag_t flags[arg_count];
+
+    clags_args_t args = {.required=required, .optional=optional, .flags=flags};
+
+    _clags_sort_args(&args, _args, arg_count);
+    
     size_t required_found = 0;
     for (size_t index=1; index<(size_t)argc; ++index){
         char *arg = argv[index];
@@ -146,8 +167,16 @@ bool clags_parse(int argc, char **argv, bool *help)
     return true;
 }
 
-void clags_usage(const char *program_name)
+void _clags_usage(const char *program_name, clags_arg_t *_args, size_t arg_count)
 {
+    clags_req_t required[arg_count];
+    clags_opt_t optional[arg_count];
+    clags_flag_t flags[arg_count];
+
+    clags_args_t args = {.required=required, .optional=optional, .flags=flags};
+    
+    _clags_sort_args(&args, _args, arg_count);
+
     printf("Usage: %s", program_name);
     if (args.optional_count) printf(" [OPTIONS]");
     printf(" [FLAGS]");
@@ -178,6 +207,5 @@ void clags_usage(const char *program_name)
         printf("    %-16s : %s\n", bol.flag, bol.description);
     }
     printf("    %-16s : %s\n", "-h / --help", "print this help dialog");
-    printf("\n");
 }
 #endif // CLAGS_IMPLEMENTATION

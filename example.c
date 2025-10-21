@@ -1,34 +1,33 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#define CLAGS_IMPLEMENTATION
+#include "clags.h"
+
 char *input = NULL;
 char *output = NULL;
 char *algorithm = NULL;
 bool help = false;
-bool line = false;
+bool warnings = false;
 
-#define clags_required\
-    clags_arg("input_file", &input, "the input file")\
-    clags_arg("algorithm", &algorithm, "the algorithm to use")
+clags_arg_t args[] = {
+    clags_required("input_file", &input, "the input file"),
+    clags_required("algorithm", &algorithm, "the algorithm to use"),
+    
+    clags_optional("-o", &output, "output_file", "the output file"),
+    clags_optional("-q", NULL, "quality", "the sample quality"),
 
-#define clags_optional\
-    clags_arg("-o", &output, "output_file", "the output file")\
-    clags_arg("-q", NULL, "quality", "the sample quality")
-
-#define clags_flags\
-    clags_arg("-w", &line, "print warnings")
-
-#define CLAGS_IMPLEMENTATION
-#include "clags.h"
+    clags_flag("-w", &warnings, "print warnings"),
+};
 
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, &help)){
-        clags_usage(argv[0]);
+    if (!clags_parse(argc, argv, args, &help)){
+        clags_usage(argv[0], args);
         return 1;
     }
-    if (help) {
-        clags_usage(argv[0]);
+    if (help){
+        clags_usage(argv[0], args);
         return 0;
     }
     printf("input: %s, output: %s\n", input, output);
