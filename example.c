@@ -12,8 +12,8 @@ bool help = false;
 bool warnings = false;
 
 clags_arg_t args[] = {
-    clags_required("input_file", &input, "the input file"),
-    clags_required("algorithm", &algorithm, "the algorithm to use"),
+    clags_required(&input, "input_file", "the input file"),
+    clags_required(&algorithm, "algorithm", "the algorithm to use"),
     
     clags_optional("-o", "--output", &output, "FILE", "the output file"),
     clags_optional("-q", "--quality", &quality, "LEVEL", "the sample quality"),

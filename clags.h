@@ -81,7 +81,7 @@ typedef struct{
 #define CLAGS_USAGE_ALIGNMENT -24
 
 
-#define clags_required(n, val, desc) (clags_arg_t) {.type=Clags_Required, .req=(clags_req_t){.name=(n), .value=(val), .description=(desc)}}
+#define clags_required(val, n, desc) (clags_arg_t) {.type=Clags_Required, .req=(clags_req_t){.name=(n), .value=(val), .description=(desc)}}
 #define clags_optional(sf, lf, val, f_name, desc) (clags_arg_t) {.type=Clags_Optional, .opt=(clags_opt_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .field_name=(f_name)}}
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
