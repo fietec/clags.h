@@ -88,17 +88,17 @@ typedef struct{
 
 #define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
 
-#define clags_parse(argc, argv, args) _clags_parse((argc), (argv), (args), clags_arr_len(args))
-bool _clags_parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
+#define clags_parse(argc, argv, args) clags__parse((argc), (argv), (args), clags_arr_len(args))
+bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
 
-#define clags_usage(pn, args) _clags_usage((pn), (args), clags_arr_len(args))
-void _clags_usage(const char *program_name, clags_arg_t *args, size_t arg_count);
+#define clags_usage(pn, args) clags__usage((pn), (args), clags_arr_len(args))
+void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count);
 
 #endif // CLAGS_H
 
 #ifdef CLAGS_IMPLEMENTATION
 
-void _clags_sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
+void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
 {
     for (size_t i=0; i<arg_count; ++i){
         switch(_args[i].type){
@@ -118,7 +118,7 @@ void _clags_sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
     }
 }
 
-bool _clags_parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
+bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
 {
     clags_req_t required[arg_count];
     clags_opt_t optional[arg_count];
@@ -126,7 +126,7 @@ bool _clags_parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
     
-    _clags_sort_args(&args, _args, arg_count);
+    clags__sort_args(&args, _args, arg_count);
     
     size_t required_found = 0;
     for (size_t index=1; index<(size_t)argc; ++index){
@@ -183,7 +183,7 @@ bool _clags_parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
     return true;
 }
 
-void _clags_usage(const char *program_name, clags_arg_t *_args, size_t arg_count)
+void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count)
 {
     clags_req_t required[arg_count];
     clags_opt_t optional[arg_count];
@@ -191,7 +191,7 @@ void _clags_usage(const char *program_name, clags_arg_t *_args, size_t arg_count
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
     
-    _clags_sort_args(&args, _args, arg_count);
+    clags__sort_args(&args, _args, arg_count);
 
     printf("Usage: %s", program_name);
     if (args.optional_count) printf(" [OPTIONS]");
@@ -242,7 +242,7 @@ void _clags_usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                 } else{
                     printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
                 }
-            }else if (flag.long_flag){
+            } else if (flag.long_flag){
                 printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
             }
         }
