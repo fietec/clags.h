@@ -28,20 +28,57 @@
 #define CLAGS_H
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
+#include <float.h>
+
+typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *pvalue);
+typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+
+bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_bool   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_int8   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_uint8  (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+
+#define clags__types\
+    X(Clags_None, clags__verify_none, NULL)     \
+    X(Clags_Custom, clags__verify_custom, "custom")\
+    X(Clags_Bool, clags__verify_bool, "bool")\
+    X(Clags_Int8, clags__verify_int8, "int8")\
+    X(Clags_UInt8, clags__verify_uint8, "uint8")\
+    X(Clags_Int32, clags__verify_int32, "int32")\
+    X(Clags_UInt32, clags__verify_uint32, "uint32")\
+    X(Clags_Double, clags__verify_double, "double")
+
+
+#define X(type, func, name) type,
+typedef enum{
+    clags__types
+} clags_value_type_t;
+#undef X
 
 typedef struct{
     const char *name;
-    char **value;
+    clags_value_type_t value_type;
+    void *value;
+    clags_value_func_t value_func;
     const char *description;
 } clags_req_t;
 
 typedef struct{
     const char *short_flag;
     const char *long_flag;
-    char **value;
+    clags_value_type_t value_type;
+    void *value;
+    clags_value_func_t value_func;
     const char *field_name;
     const char *description;
 } clags_opt_t;
@@ -80,9 +117,25 @@ typedef struct{
 
 #define CLAGS_USAGE_ALIGNMENT -24
 
+#define clags_required(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL}}
+#define clags_required_custom(val, n, desc, vfunc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Custom,.value_func=(vfunc)}}
+#define clags_required_bool(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Bool,.value_func=NULL}}
+#define clags_required_int8(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int8,.value_func=NULL}}
+#define clags_required_uint8(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL}}
+#define clags_required_int32(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL}}
+#define clags_required_uint32(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL}}
+#define clags_required_double(val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL}}
 
-#define clags_required(val, n, desc) (clags_arg_t) {.type=Clags_Required, .req=(clags_req_t){.name=(n), .value=(val), .description=(desc)}}
-#define clags_optional(sf, lf, val, f_name, desc) (clags_arg_t) {.type=Clags_Optional, .opt=(clags_opt_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .field_name=(f_name)}}
+
+#define clags_optional(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_None,.value_func=NULL}}
+#define clags_optional_custom(sf, lf, val, f_name, desc, vfunc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Custom,.value_func=(vfunc)}}
+#define clags_optional_bool(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Bool,.value_func=NULL}}
+#define clags_optional_int8(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int8,.value_func=NULL}}
+#define clags_optional_uint8(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt8,.value_func=NULL}}
+#define clags_optional_int32(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int32,.value_func=NULL}}
+#define clags_optional_uint32(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt32,.value_func=NULL}}
+#define clags_optional_double(sf, lf, val, f_name, desc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Double,.value_func=NULL}}
+
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
 
@@ -94,9 +147,147 @@ bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
 #define clags_usage(pn, args) clags__usage((pn), (args), clags_arr_len(args))
 void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count);
 
+
+
 #endif // CLAGS_H
 
 #ifdef CLAGS_IMPLEMENTATION
+
+#define X(type, func, name) [type] = func,
+static clags_value_verify_t clags__verify_funcs[] = {
+    clags__types
+};
+#undef X
+
+#define X(type, func, name) [type] = name,
+static const char *clags__type_names[] = {
+    clags__types
+};
+#undef X
+
+bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    (void) arg_name;
+    if (pvalue) *(char**)pvalue = (char*)arg;
+    return true;
+}
+
+bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    if (strcmp(arg, "true") == 0) {
+        if (pvalue) *(bool*)pvalue = true;
+        return true;
+    } else if (strcmp(arg, "false") == 0) {
+        if (pvalue) *(bool*)pvalue = false;
+        return true;
+    }
+    fprintf(stderr, "[ERROR] Invalid boolean value for argument '%s': '%s'!\n", arg_name, arg);
+    return false;
+}
+
+
+bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    char *endptr;
+    errno = 0;
+    long value = strtol(arg, &endptr, 10);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid int8 value for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value < INT8_MIN || value > INT8_MAX) {
+        fprintf(stderr, "[ERROR] int8 value out of range (%d to %d) for argument '%s': '%s'!\n", INT8_MIN, INT8_MAX, arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(int8_t*)pvalue = (int8_t)value;
+    return true;
+}
+
+bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    char *endptr;
+    errno = 0;
+    unsigned long value = strtoul(arg, &endptr, 10);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid uint8 value for argument %s: '%s'\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value > UINT8_MAX) {
+        fprintf(stderr, "[ERROR] uint8 value out of range (0 to %u) for argument %s: '%s'!\n", UINT8_MAX, arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(uint8_t*)pvalue = (uint8_t)value;
+    return true;
+}
+
+bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    char *endptr;
+    errno = 0;
+    long value = strtol(arg, &endptr, 10);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid int32 value for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value < INT32_MIN || value > INT32_MAX) {
+        return false;
+        fprintf(stderr, "[ERROR] int32 value out of range (%d to %d) for argument '%s': '%s'!\n", INT32_MIN, INT32_MAX, arg_name, arg);
+    }
+
+    if (pvalue) *(int32_t*)pvalue = (int32_t)value;
+    return true;
+}
+
+bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    char *endptr;
+    errno = 0;
+    unsigned long value = strtoul(arg, &endptr, 10);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid uint32 value for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value > UINT32_MAX) {
+        fprintf(stderr, "[ERROR] uint32 value out of range (0 to %u) for argument '%s': '%s'!\n", UINT32_MAX, arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(uint32_t*)pvalue = (uint32_t)value;
+    return true;
+}
+
+bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    (void)func;
+    char *endptr;
+    errno = 0;
+    double value = strtod(arg, &endptr);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid double value for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value > DBL_MAX || value < -DBL_MAX) {
+        fprintf(stderr, "[ERROR] double value out of range for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(double*)pvalue = value;
+    return true;
+}
+
+bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+    if (!func(arg_name, (char*)arg, pvalue)) {
+        fprintf(stderr, "[ERROR] Value for argument '%s' does not match custom criteria: '%s'!\n", arg_name, arg);
+        return false;
+    }
+    return true;
+}
 
 void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
 {
@@ -139,7 +330,8 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                     fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
                     return false;
                 }
-                if (opt.value != NULL) *opt.value = argv[++index];
+                char *result = argv[++index];
+                if (!clags__verify_funcs[opt.value_type](arg, result, opt.value, opt.value_func)) return false;
                 goto next_arg;
             } else if (opt.long_flag != NULL && strncmp(arg, opt.long_flag, strlen(opt.long_flag)) == 0){
                 char *value = arg+strlen(opt.long_flag);
@@ -148,7 +340,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                         fprintf(stderr, "[ERROR] Designated option assignment may not have an empty value: '%s'!\n", arg);
                         return false;
                     }
-                    if (opt.value != NULL) *opt.value = value;
+                    if (!clags__verify_funcs[opt.value_type](opt.long_flag, value, opt.value, opt.value_func)) return false;
                     goto next_arg;
                 }
             }
@@ -169,7 +361,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
         }
         // TODO: support lists
         clags_req_t req = args.required[required_found++];
-        if (req.value != NULL) *req.value = arg;
+        if (!clags__verify_funcs[req.value_type](req.name, arg, req.value, req.value_func)) return false;
     next_arg:
     }
     if (required_found != args.required_count){
@@ -205,7 +397,9 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
         printf("  Arguments:\n");
         for (size_t i=0; i<args.required_count; ++i){
             clags_req_t req = args.required[i];
-            printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, req.name, req.description);
+            printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, req.name, req.description);
+            if (req.value_type != Clags_None) printf(" (%s)", clags__type_names[req.value_type]);
+            printf("\n");
         }
     }
     if (args.optional_count){
@@ -217,15 +411,19 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                     size_t buf_size = strlen(opt.short_flag) + strlen(opt.long_flag) + (opt.field_name? strlen(opt.field_name):0) + 6;
                     char buf[buf_size];
                     snprintf(buf, buf_size, "%s, %s(=)%s>", opt.short_flag, opt.long_flag, opt.field_name);
-                    printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
+                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
                 } else{
-                    printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
+                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
+                if (opt.value_type != Clags_None) printf(" (%s)", clags__type_names[opt.value_type]);
+                printf("\n");
             }else if (opt.long_flag){
                 size_t buf_size = strlen(opt.long_flag) + (opt.field_name? strlen(opt.field_name):0) + 4;
                 char buf[buf_size];
                 snprintf(buf, buf_size, "%s(=)%s", opt.long_flag, opt.field_name);
-                printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
+                printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
+                if (opt.value_type != Clags_None) printf(" (%s)", clags__type_names[opt.value_type]);
+                printf("\n");
             }
         }
     }
