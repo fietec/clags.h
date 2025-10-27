@@ -155,14 +155,14 @@ typedef struct{
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
 
-#define clags_list              (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
-#define clags_custom_list(size) (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=(size)}
-#define clags_bool_list         (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
-#define clags_int8_list         (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
-#define clags_uint8_list        (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
-#define clags_int32_list        (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
-#define clags_uint32_list       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
-#define clags_double_list       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
+#define clags_list              (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
+#define clags_custom_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}
+#define clags_bool_list         (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
+#define clags_int8_list         (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
+#define clags_uint8_list        (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
+#define clags_int32_list        (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
+#define clags_uint32_list       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
+#define clags_double_list       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
 
 #define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
 
@@ -171,6 +171,8 @@ bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
 
 #define clags_usage(pn, args) clags__usage((pn), (args), clags_arr_len(args))
 void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count);
+
+void clags_list_free(clags_list_t *list);
 
 #endif // CLAGS_H
 
@@ -258,8 +260,8 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, cl
         return false;
     }
     if (errno == ERANGE || value < INT32_MIN || value > INT32_MAX) {
-        return false;
         fprintf(stderr, "[ERROR] int32 value out of range (%d to %d) for argument '%s': '%s'!\n", INT32_MIN, INT32_MAX, arg_name, arg);
+        return false;
     }
 
     if (pvalue) *(int32_t*)pvalue = (int32_t)value;
@@ -314,8 +316,6 @@ bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, c
 
 bool clags__append_to_list(clags_req_t req, const char *arg)
 {
-    // TODO: - reserve one element of size type
-    //       - depending on value_type, write value using `_verify` functions
     clags_list_t *list = (clags_list_t*) req.value;
     size_t item_size = list->item_size;
     if (list->count >= list->capacity){
@@ -324,7 +324,8 @@ bool clags__append_to_list(clags_req_t req, const char *arg)
         list->capacity = new_capacity;
         assert(list->items && "Buy more RAM lol");
     }
-    return clags__verify_funcs[req.value_type](req.name, arg, list->items+item_size*list->count++, req.value_func);
+    char *ptr = (char*) list->items;
+    return clags__verify_funcs[req.value_type](req.name, arg, ptr+item_size*list->count++, req.value_func);
 }
 
 void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
@@ -361,7 +362,13 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
     size_t required_found = 0;
     for (size_t index=1; index<(size_t)argc; ++index){
         char *arg = argv[index];
-        
+        if (strcmp(arg, "--") == 0){
+            if (in_list){
+                in_list = false;
+                required_found++;
+            }
+            continue;
+        }
         for (size_t i=0; i<args.optional_count; ++i){
             clags_opt_t opt = args.optional[i];
             if ((opt.short_flag != NULL && strcmp(arg, opt.short_flag) == 0) || (opt.long_flag != NULL && strcmp(arg, opt.long_flag) == 0)){
@@ -393,6 +400,26 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                 goto next_arg;
             }
         }
+        if (arg[0] == '-' && arg[1] != '-' && strlen(arg) > 2) { 
+            for (size_t c = 1; c < strlen(arg); ++c) {
+                char short_flag_str[3] = { '-', arg[c], '\0' };
+                bool matched = false;
+                for (size_t i = 0; i < args.flag_count; ++i) {
+                    clags_flag_t flag = args.flags[i];
+                    if (flag.short_flag && (strcmp(flag.short_flag, short_flag_str) == 0 || (*flag.short_flag!='-' && strcmp(flag.short_flag, short_flag_str+1) == 0))) {
+                        if (flag.value) *flag.value = true;
+                        if (flag.exit) return true;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    fprintf(stderr, "[ERROR] Unknown short flag in combination: '-%c'\n", arg[c]);
+                    return false;
+                }
+            }
+            goto next_arg;
+        }
 
         if (*arg == '-'){
             fprintf(stderr, "[ERROR] Unknown option: '%s'!\n", arg);
@@ -403,7 +430,6 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
             fprintf(stderr, "[ERROR] Unknown additional argument (%zu/%zu): '%s'!\n", required_found+1, args.required_count, arg);
             return false;
         }
-        // TODO: support lists
         clags_req_t current_req = args.required[required_found];
         if (current_req.is_list){
             in_list = true;
@@ -419,7 +445,8 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
             in_list = false;
         }
     }
-    if (required_found != args.required_count && !args.required[required_found].is_list){
+    if (in_list) required_found++;
+    if (required_found != args.required_count){
         fprintf(stderr, "[ERROR] Missing required arguments:");
         for (size_t i=required_found; i<args.required_count; ++i){
             fprintf(stderr, " <%s>", args.required[i].name);
@@ -501,4 +528,12 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
         }
     }
 }
+
+void clags_list_free(clags_list_t *list)
+{
+    free(list->items);
+    list->items = NULL;
+    list->count = list->capacity = 0;
+}
+
 #endif // CLAGS_IMPLEMENTATION
