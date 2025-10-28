@@ -190,14 +190,16 @@ static const char *clags__type_names[] = {
 };
 #undef X
 
-bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     (void) arg_name;
     if (pvalue) *(char**)pvalue = (char*)arg;
     return true;
 }
 
-bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     if (strcmp(arg, "true") == 0) {
         if (pvalue) *(bool*)pvalue = true;
@@ -211,7 +213,8 @@ bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, cla
 }
 
 
-bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     char *endptr;
     errno = 0;
@@ -230,7 +233,8 @@ bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, cla
     return true;
 }
 
-bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     char *endptr;
     errno = 0;
@@ -249,7 +253,8 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, cl
     return true;
 }
 
-bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     char *endptr;
     errno = 0;
@@ -268,7 +273,8 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, cl
     return true;
 }
 
-bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     char *endptr;
     errno = 0;
@@ -287,7 +293,8 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, c
     return true;
 }
 
-bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     (void)func;
     char *endptr;
     errno = 0;
@@ -306,7 +313,8 @@ bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, c
     return true;
 }
 
-bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func) {
+bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
     if (!func(arg_name, (char*)arg, pvalue)) {
         fprintf(stderr, "[ERROR] Value for argument '%s' does not match custom criteria: '%s'!\n", arg_name, arg);
         return false;
