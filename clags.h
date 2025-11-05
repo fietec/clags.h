@@ -47,6 +47,7 @@ bool clags__verify_uint8  (const char *arg_name, const char *arg, void *pvalue, 
 bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
 bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
 bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_union  (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
 
 #define clags__types\
     X(Clags_None,   clags__verify_none,    NULL)    \
@@ -57,6 +58,7 @@ bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, 
     X(Clags_Int32,  clags__verify_int32,  "int32")  \
     X(Clags_UInt32, clags__verify_uint32, "uint32") \
     X(Clags_Double, clags__verify_double, "double") \
+    X(Clags_Union,  clags__verify_union,  "union")  \
 
 
 #define X(type, func, name) type,
@@ -71,6 +73,12 @@ typedef struct{
     size_t count;
     size_t capacity;
 } clags_list_t;
+
+typedef struct{
+    const char **items;
+    size_t item_count;
+    size_t value;
+} clags_union_t;
 
 typedef struct{
     const char *name;
@@ -133,6 +141,7 @@ typedef struct{
 #define clags_required_int32(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=false}}
 #define clags_required_uint32(val, n, desc)        (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=false}}
 #define clags_required_double(val, n, desc)        (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=false}}
+#define clags_required_union(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Union,.value_func=NULL,.is_list=false}}
 
 #define clags_required_list(val, n, desc)               (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL,.is_list=true}}
 #define clags_required_custom_list(val, n, desc, vfunc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Custom,.value_func=(vfunc),.is_list=true}}
@@ -151,6 +160,7 @@ typedef struct{
 #define clags_optional_int32(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int32,.value_func=NULL}}
 #define clags_optional_uint32(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt32,.value_func=NULL}}
 #define clags_optional_double(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Double,.value_func=NULL}}
+#define clags_optional_union(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Union,.value_func=NULL}}
 
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
@@ -165,6 +175,9 @@ typedef struct{
 #define clags_double_list       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
 
 #define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
+
+#define clags_union(arr) (clags_union_t){.items=(arr), .item_count=clags_arr_len(arr), .value=0}
+#define clags_union_value(un) (un).items[(un).value]
 
 #define clags_parse(argc, argv, args) clags__parse((argc), (argv), (args), clags_arr_len(args))
 bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
@@ -313,6 +326,21 @@ bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, c
     return true;
 }
 
+bool clags__verify_union(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+{
+    (void) func;
+    if (pvalue == NULL) return false;
+    clags_union_t *punion = (clags_union_t*)pvalue;
+    for (size_t i=0; i<punion->item_count; ++i){
+        if (strcmp(punion->items[i], arg) == 0){
+            punion->value = i;
+            return true;
+        }
+    }
+    fprintf(stderr, "[ERROR] Invalid '%s' union value: '%s'!\n", arg_name, arg);
+    return false;
+}
+
 bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
 {
     if (!func(arg_name, (char*)arg, pvalue)) {
@@ -364,9 +392,9 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
     bool in_list = false;
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
-    
+
     clags__sort_args(&args, _args, arg_count);
-    
+
     size_t required_found = 0;
     for (size_t index=1; index<(size_t)argc; ++index){
         char *arg = argv[index];
@@ -399,7 +427,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                 }
             }
         }
-        
+
         for (size_t i=0; i<args.flag_count; ++i){
             clags_flag_t flag = args.flags[i];
             if ((flag.short_flag != NULL && strcmp(arg, flag.short_flag) == 0) || (flag.long_flag != NULL && strcmp(arg, flag.long_flag) == 0)){
@@ -408,7 +436,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                 goto next_arg;
             }
         }
-        if (arg[0] == '-' && arg[1] != '-' && strlen(arg) > 2) { 
+        if (arg[0] == '-' && arg[1] != '-' && strlen(arg) > 2) {
             for (size_t c = 1; c < strlen(arg); ++c) {
                 char short_flag_str[3] = { '-', arg[c], '\0' };
                 bool matched = false;
@@ -472,7 +500,7 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
     clags_flag_t flags[arg_count];
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
-    
+
     clags__sort_args(&args, _args, arg_count);
 
     printf("Usage: %s", program_name);
@@ -482,13 +510,22 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
         printf(" <%s%s>", args.required[i].name, args.required[i].is_list?"..":"");
     }
     printf("\n");
-    
+
     if (args.required_count){
         printf("  Arguments:\n");
         for (size_t i=0; i<args.required_count; ++i){
             clags_req_t req = args.required[i];
             printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, req.name, req.description);
-            if (req.value_type != Clags_None) printf(" (%s%s)", clags__type_names[req.value_type], req.is_list?"[]":"");
+            if (req.value_type == Clags_Union){
+                printf(" (%s:", clags__type_names[req.value_type]);
+                clags_union_t *punion = (clags_union_t*) req.value;
+                for (size_t j=0; j<punion->item_count; ++j){
+                    printf("%s%s", j>0?" | ":" ", punion->items[j]);
+                }
+                printf(")");
+            }else if (req.value_type != Clags_None){
+                printf(" (%s%s)", clags__type_names[req.value_type], req.is_list?"[]":"");
+            }
             printf("\n");
         }
     }
@@ -505,7 +542,16 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                 } else{
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
-                if (opt.value_type != Clags_None) printf(" (%s)", clags__type_names[opt.value_type]);
+                if (opt.value_type == Clags_Union){
+                    printf(" (%s:", clags__type_names[opt.value_type]);
+                    clags_union_t *punion = (clags_union_t*) opt.value;
+                    for (size_t j=0; j<punion->item_count; ++j){
+                        printf("%s%s", j>0?" | ":" ", punion->items[j]);
+                    }
+                    printf(")");
+                }else if (opt.value_type != Clags_None){
+                    printf(" (%s)", clags__type_names[opt.value_type]);
+                }
                 printf("\n");
             }else if (opt.long_flag){
                 size_t buf_size = strlen(opt.long_flag) + (opt.field_name? strlen(opt.field_name):0) + 4;

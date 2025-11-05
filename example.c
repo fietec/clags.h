@@ -14,22 +14,13 @@ bool help = false;
 
 uint8_t quality = 0;
 
-clags_list_t list = clags_custom_list(sizeof(char*));
-
-bool check_algorithm(const char *arg_name, const char *arg, void *pvalue)
-{
-    if (strcmp(arg, "FIFO") == 0 || strcmp(arg, "LIFO") == 0){
-        *(char**)pvalue = (char*) arg;
-        return true;
-    }
-    fprintf(stderr, "Unknown %s: '%s'!\n", arg_name, arg);
-    return false;
-}
+const char *union_values[] = {"FIFO", "LIFO"};
+clags_union_t my_union = clags_union(union_values);
 
 clags_arg_t args[] = {
     clags_required(&input, "input_file", "the input file"),
-    clags_required_custom_list(&list, "algorithm", "the algorithm to use", &check_algorithm),
-    
+    clags_optional_union("-a", "--algorithm", &my_union, "algorithm", "the algorithm to use"),
+
     clags_optional("-o", "--output", &output, "FILE", "the output file"),
     clags_optional_uint8("-q", "--quality", &quality, "LEVEL", "the sample quality"),
 
@@ -47,12 +38,8 @@ int main(int argc, char **argv)
         clags_usage(argv[0], args);
         return 0;
     }
-    printf("input: %s, output: %s, algorithm: %s\n", input, output, algorithm);
+    printf("input: %s, algorithm: %s\n", input, clags_union_value(my_union));
+    printf("output: %s\n", output);
     printf("quality: %"PRId8"\n", quality);
-    printf("list with %zu items:\n", list.count);
-    for (size_t i=0; i<list.count; ++i){
-        printf("'%s'\n", ((char**) list.items)[i]);
-    }
-    free(list.items);
     return 0;
 }
