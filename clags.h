@@ -35,9 +35,11 @@
 #include <assert.h>
 #include <errno.h>
 #include <float.h>
+#include <ctype.h>
 
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *pvalue);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+
 
 bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
 bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
@@ -165,14 +167,14 @@ typedef struct{
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
 
-#define clags_list              (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
-#define clags_custom_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}
-#define clags_bool_list         (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
-#define clags_int8_list         (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
-#define clags_uint8_list        (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
-#define clags_int32_list        (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
-#define clags_uint32_list       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
-#define clags_double_list       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
+#define clags_list()            (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
+#define clags_custom_list(size) (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=(size)}
+#define clags_bool_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
+#define clags_int8_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
+#define clags_uint8_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
+#define clags_int32_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
+#define clags_uint32_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
+#define clags_double_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
 
 #define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
 
@@ -436,8 +438,17 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                 goto next_arg;
             }
         }
-        if (arg[0] == '-' && arg[1] != '-' && strlen(arg) > 2) {
-            for (size_t c = 1; c < strlen(arg); ++c) {
+        if (arg[0] == '-' && !isdigit(arg[1])){
+            size_t arg_len = strlen(arg);
+            if (arg_len == 1){
+                fprintf(stderr, "[ERROR] Missing flag name: '%s'!\n", arg);
+                return false;
+            }
+            if (arg[1] == '-'){
+                fprintf(stderr, "[ERROR] Unknown long flag: '%s'!\n", arg);
+                return false;
+            }
+            for (size_t c = 1; c < arg_len; ++c) {
                 char short_flag_str[3] = { '-', arg[c], '\0' };
                 bool matched = false;
                 for (size_t i = 0; i < args.flag_count; ++i) {
@@ -450,16 +461,15 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                     }
                 }
                 if (!matched) {
-                    fprintf(stderr, "[ERROR] Unknown short flag in combination: '-%c'\n", arg[c]);
+                    if (arg_len > 2){
+                        fprintf(stderr, "[ERROR] Unknown short flag in combination '%s': '%s'\n", arg, short_flag_str);
+                    } else{
+                        fprintf(stderr, "[ERROR] Unknown short flag: '%s'!\n", short_flag_str);
+                    }
                     return false;
                 }
             }
             goto next_arg;
-        }
-
-        if (*arg == '-'){
-            fprintf(stderr, "[ERROR] Unknown option: '%s'!\n", arg);
-            return false;
         }
 
         if (required_found >= args.required_count){
