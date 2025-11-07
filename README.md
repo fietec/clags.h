@@ -53,3 +53,21 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
+For an incorrect input, such as 
+```
+./example -a QUICK_SORT input.txt
+```
+**clags** will print the following error message and usage:
+```
+[ERROR] Invalid choice for argument '-a': 'QUICK_SORT'!
+Usage: ./example [OPTIONS] [FLAGS] <input_file>
+  Arguments:
+    input_file               : the input file
+  Options:
+    -a, --algorithm(=)ALG    : the algorithm to use (choice: FIFO | LIFO)
+    -o, --output(=)FILE      : the output file
+    -q, --quality(=)LEVEL    : the sample quality (uint8)
+  Flags:
+    -w                       : print warnings
+    -h, --help               : print this help dialog
+```
