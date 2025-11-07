@@ -1,9 +1,16 @@
 # clags.h
 A lightweight command line argument parser.
 
+## Features
+- Required and optional arguments
+- Flags and help flag support
+- Typed arguments: `int8`, `uint8`, `bool`, and more
+- Choice arguments: restrict values to a fixed set (like an enum)
+- Custom parsing functions for user-defined types
+
 ## How to use
 `clags.h` is an stb-style library, which means a single header file
-and headers and implementations seperated by the `CLAGS_IMPLEMENTATION` header guard.  
+and headers and implementations separated by the `CLAGS_IMPLEMENTATION` header guard.  
 
 ### Example
 ```c
