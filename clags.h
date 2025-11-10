@@ -38,18 +38,18 @@
 #include <ctype.h>
 
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *pvalue);
-typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
 
 
-bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_bool   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_int8   (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_uint8  (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
-bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func);
+bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_bool   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_int8   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_uint8  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, void *func);
 
 #define clags__types\
     X(Clags_None,   clags__verify_none,    NULL)    \
@@ -77,16 +77,21 @@ typedef struct{
 } clags_list_t;
 
 typedef struct{
-    const char **items;
-    size_t item_count;
-    size_t value;
+    const char *value;
+    const char *description;
 } clags_choice_t;
+
+typedef struct{
+    clags_choice_t *items;
+    size_t count;
+    bool print_details;
+} clags_choices_t;
 
 typedef struct{
     const char *name;
     clags_value_type_t value_type;
     void *value;
-    clags_value_func_t value_func;
+    void *value_func;
     const char *description;
     bool is_list;
 } clags_req_t;
@@ -96,7 +101,7 @@ typedef struct{
     const char *long_flag;
     clags_value_type_t value_type;
     void *value;
-    clags_value_func_t value_func;
+    void *value_func;
     const char *field_name;
     const char *description;
 } clags_opt_t;
@@ -135,24 +140,25 @@ typedef struct{
 
 #define CLAGS_USAGE_ALIGNMENT -24
 
-#define clags_required(val, n, desc)               (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL,.is_list=false}}
-#define clags_required_custom(val, n, desc, vfunc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Custom,.value_func=(vfunc),.is_list=false}}
-#define clags_required_bool(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Bool,.value_func=NULL,.is_list=false}}
-#define clags_required_int8(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int8,.value_func=NULL,.is_list=false}}
-#define clags_required_uint8(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL,.is_list=false}}
-#define clags_required_int32(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=false}}
-#define clags_required_uint32(val, n, desc)        (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=false}}
-#define clags_required_double(val, n, desc)        (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=false}}
-#define clags_required_choice(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=NULL,.is_list=false}}
+#define clags_required(val, n, desc)                (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL,.is_list=false}}
+#define clags_required_custom(val, n, desc, vfunc)  (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Custom,.value_func=(vfunc),.is_list=false}}
+#define clags_required_bool(val, n, desc)           (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Bool,.value_func=NULL,.is_list=false}}
+#define clags_required_int8(val, n, desc)           (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int8,.value_func=NULL,.is_list=false}}
+#define clags_required_uint8(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL,.is_list=false}}
+#define clags_required_int32(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=false}}
+#define clags_required_uint32(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=false}}
+#define clags_required_double(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=false}}
+#define clags_required_choice(choice, val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=(choice),.is_list=false}}
 
-#define clags_required_list(val, n, desc)               (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL,.is_list=true}}
-#define clags_required_custom_list(val, n, desc, vfunc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Custom,.value_func=(vfunc),.is_list=true}}
-#define clags_required_bool_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Bool,.value_func=NULL,.is_list=true}}
-#define clags_required_int8_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int8,.value_func=NULL,.is_list=true}}
-#define clags_required_uint8_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL,.is_list=true}}
-#define clags_required_int32_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=true}}
-#define clags_required_uint32_list(val, n, desc)        (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=true}}
-#define clags_required_double_list(val, n, desc)        (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=true}}
+#define clags_required_list(val, n, desc)                (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL,.is_list=true}}
+#define clags_required_custom_list(val, n, desc, vfunc)  (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Custom,.value_func=(vfunc),.is_list=true}}
+#define clags_required_bool_list(val, n, desc)           (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Bool,.value_func=NULL,.is_list=true}}
+#define clags_required_int8_list(val, n, desc)           (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int8,.value_func=NULL,.is_list=true}}
+#define clags_required_uint8_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL,.is_list=true}}
+#define clags_required_int32_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=true}}
+#define clags_required_uint32_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=true}}
+#define clags_required_double_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=true}}
+#define clags_required_choice_list(choice, val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=(choice),.is_list=true}}
 
 #define clags_optional(sf, lf, val, f_name, desc)               (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_None,.value_func=NULL}}
 #define clags_optional_custom(sf, lf, val, f_name, desc, vfunc) (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Custom,.value_func=(vfunc)}}
@@ -162,7 +168,7 @@ typedef struct{
 #define clags_optional_int32(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int32,.value_func=NULL}}
 #define clags_optional_uint32(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt32,.value_func=NULL}}
 #define clags_optional_double(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Double,.value_func=NULL}}
-#define clags_optional_choice(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Choice,.value_func=NULL}}
+#define clags_optional_choice(sf, lf, choice, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Choice,.value_func=(choice)}}
 
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
@@ -175,17 +181,19 @@ typedef struct{
 #define clags_int32_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
 #define clags_uint32_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
 #define clags_double_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
+#define clags_choice_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
 #define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
 
-#define clags_choice(arr) (clags_choice_t){.items=(arr), .item_count=clags_arr_len(arr), .value=0}
-#define clags_choice_value(un) (un).items[(un).value]
+#define clags_choice(arr, details) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), .print_details=(details)}
+#define clags_choice_list_value(choice_list, i) ((clags_choice_t**)((choice_list).items))[(i)]->value
 
 #define clags_parse(argc, argv, args) clags__parse((argc), (argv), (args), clags_arr_len(args))
 bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
 
 #define clags_usage(pn, args) clags__usage((pn), (args), clags_arr_len(args))
 void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count);
+void clags__choice_usage(clags_choices_t *choices, bool is_list);
 
 void clags_list_free(clags_list_t *list);
 
@@ -205,7 +213,7 @@ static const char *clags__type_names[] = {
 };
 #undef X
 
-bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     (void) arg_name;
@@ -213,7 +221,7 @@ bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, cla
     return true;
 }
 
-bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     if (strcmp(arg, "true") == 0) {
@@ -228,7 +236,7 @@ bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, cla
 }
 
 
-bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     char *endptr;
@@ -248,7 +256,7 @@ bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, cla
     return true;
 }
 
-bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     char *endptr;
@@ -268,7 +276,7 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, cl
     return true;
 }
 
-bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     char *endptr;
@@ -288,7 +296,7 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, cl
     return true;
 }
 
-bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     char *endptr;
@@ -308,7 +316,7 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, c
     return true;
 }
 
-bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
     char *endptr;
@@ -328,14 +336,16 @@ bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, c
     return true;
 }
 
-bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void) func;
     if (pvalue == NULL) return false;
-    clags_choice_t *pchoice = (clags_choice_t*)pvalue;
-    for (size_t i=0; i<pchoice->item_count; ++i){
-        if (strcmp(pchoice->items[i], arg) == 0){
-            pchoice->value = i;
+    clags_choice_t  **pchoice = (clags_choice_t**) pvalue;
+    clags_choices_t  *choices = (clags_choices_t*) func;
+    for (size_t i=0; i<choices->count; ++i){
+        clags_choice_t *choice = choices->items + i;
+        if (strcmp(choice->value, arg) == 0){
+            *pchoice = choice;
             return true;
         }
     }
@@ -343,9 +353,10 @@ bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, c
     return false;
 }
 
-bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, clags_value_func_t func)
+bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
-    if (!func(arg_name, (char*)arg, pvalue)) {
+    clags_value_func_t value_func = (clags_value_func_t) func;
+    if (!value_func(arg_name, (char*)arg, pvalue)) {
         fprintf(stderr, "[ERROR] Value for argument '%s' does not match custom criteria: '%s'!\n", arg_name, arg);
         return false;
     }
@@ -527,12 +538,7 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
             clags_req_t req = args.required[i];
             printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, req.name, req.description);
             if (req.value_type == Clags_Choice){
-                printf(" (%s:", clags__type_names[req.value_type]);
-                clags_choice_t *pchoice = (clags_choice_t*) req.value;
-                for (size_t j=0; j<pchoice->item_count; ++j){
-                    printf("%s%s", j>0?" | ":" ", pchoice->items[j]);
-                }
-                printf(")");
+                clags__choice_usage((clags_choices_t*)req.value_func, req.is_list);
             }else if (req.value_type != Clags_None){
                 printf(" (%s%s)", clags__type_names[req.value_type], req.is_list?"[]":"");
             }
@@ -553,12 +559,7 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
                 if (opt.value_type == Clags_Choice){
-                    printf(" (%s:", clags__type_names[opt.value_type]);
-                    clags_choice_t *pchoice = (clags_choice_t*) opt.value;
-                    for (size_t j=0; j<pchoice->item_count; ++j){
-                        printf("%s%s", j>0?" | ":" ", pchoice->items[j]);
-                    }
-                    printf(")");
+                    clags__choice_usage((clags_choices_t *)opt.value_func, false);
                 }else if (opt.value_type != Clags_None){
                     printf(" (%s)", clags__type_names[opt.value_type]);
                 }
@@ -590,6 +591,23 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                 printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
             }
         }
+    }
+}
+
+void clags__choice_usage(clags_choices_t *choices, bool is_list)
+{
+    if (choices->print_details || choices->count >= 6){
+        printf(" (%s%s)\n        Choices:\n", clags__type_names[Clags_Choice], is_list?"[]":"");
+        for (size_t j=0; j<choices->count; ++j){
+            clags_choice_t choice = choices->items[j];
+            printf("          - %*s : %s\n", CLAGS_USAGE_ALIGNMENT+8, choice.value, choice.description);
+        }
+    } else{
+        printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
+        for (size_t j=0; j<choices->count; ++j){
+            printf("%s%s", j>0?" | ":" ", choices->items[j].value);
+        }
+        printf(")");
     }
 }
 
