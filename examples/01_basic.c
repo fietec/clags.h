@@ -1,0 +1,50 @@
+#include <stdio.h>
+
+// This includes the function implemnetations and only has to be done once per translation unit
+#define CLAGS_IMPLEMENTATION
+#include "../clags.h"
+
+
+// Declare argument variables with optional default values
+const char *input_file = NULL;
+const char *output_file = "a.out";
+bool warnings = false;
+bool help = false;
+
+// Declare all expected arguments
+clags_arg_t args[] = {
+    // Required (positional) arguments are parsed in the order they are defined here
+    // Signature: clags_required(<argument_variable>, <argument_name>, <description>)
+    clags_required(&input_file, "input_file", "the input file"),
+    
+    // Optional arguments support both short and long flags
+    // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
+    // Signature: clags_optional(<short_flag>, <long_flag>, <argument_variable>, <argument_name>, <description>)
+    clags_optional("-o", "--output", &output_file, "FILE", "the output file"),
+
+
+    // Use flags set boolean values on occurence
+    // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
+    // Signature: clags_flag(<short_flag>, <long_flag>, <flag_variable>, <description>, <exit_on_occurence>)
+    clags_flag("-w", "--warnings", &warnings, "print warnings", false),
+    // This is a neat short-hand since the `--help` flags are so common
+    // Signature: clags_flag_help(<flag_variable>)
+    clags_flag_help(&help),
+};
+
+int main(int argc, char **argv)
+{
+    // Parse the arguments using the previously defined rules, returns `false` on error
+    if (!clags_parse(argc, argv, args)){
+        // Print an automatic usage
+        clags_usage(argv[0], args);
+        return 1;
+    }
+    // You can now use the set argument variables
+    if (help){
+        clags_usage(argv[0], args);
+        return 0;
+    }
+    printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");
+    return 0;
+}

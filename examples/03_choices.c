@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "clags.h"
+#include "../clags.h"
 
 char *input = NULL;
 char *algorithm = NULL;
