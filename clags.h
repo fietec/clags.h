@@ -241,7 +241,7 @@ bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, voi
     (void)func;
     char *endptr;
     errno = 0;
-    long value = strtol(arg, &endptr, 10);
+    long value = strtol(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         fprintf(stderr, "[ERROR] Invalid int8 value for argument '%s': '%s'!\n", arg_name, arg);
@@ -261,7 +261,7 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, vo
     (void)func;
     char *endptr;
     errno = 0;
-    unsigned long value = strtoul(arg, &endptr, 10);
+    unsigned long value = strtoul(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         fprintf(stderr, "[ERROR] Invalid uint8 value for argument '%s': '%s'!\n", arg_name, arg);
@@ -281,7 +281,7 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, vo
     (void)func;
     char *endptr;
     errno = 0;
-    long value = strtol(arg, &endptr, 10);
+    long value = strtol(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         fprintf(stderr, "[ERROR] Invalid int32 value for argument '%s': '%s'!\n", arg_name, arg);
@@ -301,7 +301,7 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, v
     (void)func;
     char *endptr;
     errno = 0;
-    unsigned long value = strtoul(arg, &endptr, 10);
+    unsigned long value = strtoul(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         fprintf(stderr, "[ERROR] Invalid uint32 value for argument '%s': '%s'!\n", arg_name, arg);
