@@ -267,7 +267,7 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, vo
         fprintf(stderr, "[ERROR] Invalid uint8 value for argument '%s': '%s'!\n", arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value > UINT8_MAX) {
+    if (errno == ERANGE || value > UINT8_MAX || *arg == '-') {
         fprintf(stderr, "[ERROR] uint8 value out of range (0 to %u) for argument '%s': '%s'!\n", UINT8_MAX, arg_name, arg);
         return false;
     }
@@ -307,7 +307,7 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, v
         fprintf(stderr, "[ERROR] Invalid uint32 value for argument '%s': '%s'!\n", arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value > UINT32_MAX) {
+    if (errno == ERANGE || value > UINT32_MAX || *arg == '-') {
         fprintf(stderr, "[ERROR] uint32 value out of range (0 to %u) for argument '%s': '%s'!\n", UINT32_MAX, arg_name, arg);
         return false;
     }
