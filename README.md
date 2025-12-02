@@ -4,7 +4,7 @@ A lightweight command line argument parser.
 ## Features
 - Required and optional arguments
 - Flags and help flag support
-- Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `double`
+- Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `double`, `path`
 - Choice arguments: restrict values to a fixed set (like an enum)
 - Custom parsing functions for user-defined types
 

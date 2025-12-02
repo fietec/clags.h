@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <float.h>
 #include <ctype.h>
+#include <sys/stat.h>
 
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *pvalue);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
@@ -50,6 +51,7 @@ bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, 
 bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_path   (const char *arg_name, const char *arg, void *pvalue, void *func);
 
 #define clags__types\
     X(Clags_None,   clags__verify_none,    NULL)    \
@@ -61,7 +63,12 @@ bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, 
     X(Clags_UInt32, clags__verify_uint32, "uint32") \
     X(Clags_Double, clags__verify_double, "double") \
     X(Clags_Choice, clags__verify_choice, "choice") \
+    X(Clags_Path,   clags__verify_path,   "path")   \
 
+#define clags__path_types\
+    X(Clags_Path_All,  "all")\
+    X(Clags_Path_File, "file")\
+    X(Clags_Path_Dir,  "dir")\
 
 #define X(type, func, name) type,
 typedef enum{
@@ -129,6 +136,12 @@ typedef enum{
     Clags_Flag
 } clags_arg_type_t;
 
+#define X(type, name) type,
+typedef enum{
+    clags__path_types
+} clags_path_t;
+#undef X
+
 typedef struct{
     clags_arg_type_t type;
     union{
@@ -148,6 +161,7 @@ typedef struct{
 #define clags_required_int32(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=false}}
 #define clags_required_uint32(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=false}}
 #define clags_required_double(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=false}}
+#define clags_required_path(val, n, desc, t)     (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Path,.value_func=(void*)(t),.is_list=false}}
 #define clags_required_choice(choice, val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=(choice),.is_list=false}}
 
 #define clags_required_list(val, n, desc)                (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_None,.value_func=NULL,.is_list=true}}
@@ -158,6 +172,7 @@ typedef struct{
 #define clags_required_int32_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=true}}
 #define clags_required_uint32_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=true}}
 #define clags_required_double_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=true}}
+#define clags_required_path_list(val, n, desc, t)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Path,.value_func=(void*)(t),.is_list=true}}
 #define clags_required_choice_list(choice, val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=(choice),.is_list=true}}
 
 #define clags_optional(sf, lf, val, f_name, desc)               (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_None,.value_func=NULL}}
@@ -168,12 +183,14 @@ typedef struct{
 #define clags_optional_int32(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int32,.value_func=NULL}}
 #define clags_optional_uint32(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt32,.value_func=NULL}}
 #define clags_optional_double(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Double,.value_func=NULL}}
+#define clags_optional_path(sf, lf, val, f_name, desc, t)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Path,.value_func=(void*)(t)}}
 #define clags_optional_choice(sf, lf, choice, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Choice,.value_func=(choice)}}
 
 #define clags_flag(sf, lf, val, desc, ex) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sf), .long_flag=(lf), .value=(val), .description=(desc), .exit=(ex)}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", true)
 
 #define clags_list()            (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
+#define clags_path_list()       clags_list()
 #define clags_custom_list(size) (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=(size)}
 #define clags_bool_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
 #define clags_int8_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
@@ -194,6 +211,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count);
 #define clags_usage(pn, args) clags__usage((pn), (args), clags_arr_len(args))
 void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count);
 void clags__choice_usage(clags_choices_t *choices, bool is_list);
+void clags__type_usage(clags_value_type_t type, void *func, bool is_list);
 
 void clags_list_free(clags_list_t *list);
 
@@ -212,6 +230,13 @@ static const char *clags__type_names[] = {
     clags__types
 };
 #undef X
+
+#define X(type, name) [type] = name,
+static const char *clags__path_names[] = {
+    clags__path_types
+};
+#undef X
+
 
 bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
@@ -345,11 +370,33 @@ bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, v
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
         if (strcmp(choice->value, arg) == 0){
-            *pchoice = choice;
+            if (pchoice) *pchoice = choice;
             return true;
         }
     }
     fprintf(stderr, "[ERROR] Invalid choice for argument '%s': '%s'!\n", arg_name, arg);
+    return false;
+}
+
+bool clags__verify_path(const char *arg_name, const char *arg, void *pvalue, void *func)
+{
+    clags_path_t path_t = (clags_path_t) func;
+
+    struct stat attr;
+    if (stat(arg, &attr) == -1){
+        fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
+        return false;
+    }
+    if (path_t < Clags_Path_All || path_t > Clags_Path_Dir){
+        fprintf(stderr, "[ERROR] Path rejected because of invalid path type for argument '%s': %d\n", arg_name, path_t);
+        return false;
+    }
+    if (path_t == Clags_Path_File && !S_ISREG(attr.st_mode)) goto error;
+    if (path_t == Clags_Path_Dir && !S_ISDIR(attr.st_mode))  goto error;
+    if (pvalue) *(char**)pvalue = (char*) arg;
+    return true;
+error:
+    fprintf(stderr, "[ERROR] Path is not of type '%s' for argument '%s': '%s'!\n", clags__path_names[path_t], arg_name, arg);
     return false;
 }
 
@@ -537,12 +584,7 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
         for (size_t i=0; i<args.required_count; ++i){
             clags_req_t req = args.required[i];
             printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, req.name, req.description);
-            if (req.value_type == Clags_Choice){
-                clags__choice_usage((clags_choices_t*)req.value_func, req.is_list);
-            }else if (req.value_type != Clags_None){
-                printf(" (%s%s)", clags__type_names[req.value_type], req.is_list?"[]":"");
-            }
-            printf("\n");
+            clags__type_usage(req.value_type, req.value_func, req.is_list);
         }
     }
     if (args.optional_count){
@@ -558,19 +600,13 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                 } else{
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
-                if (opt.value_type == Clags_Choice){
-                    clags__choice_usage((clags_choices_t *)opt.value_func, false);
-                }else if (opt.value_type != Clags_None){
-                    printf(" (%s)", clags__type_names[opt.value_type]);
-                }
-                printf("\n");
+                clags__type_usage(opt.value_type, opt.value_func, false);
             }else if (opt.long_flag){
                 size_t buf_size = strlen(opt.long_flag) + (opt.field_name? strlen(opt.field_name):0) + 4;
                 char buf[buf_size];
                 snprintf(buf, buf_size, "%s(=)%s", opt.long_flag, opt.field_name);
                 printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
-                if (opt.value_type != Clags_None) printf(" (%s)", clags__type_names[opt.value_type]);
-                printf("\n");
+                clags__type_usage(opt.value_type, opt.value_func, false);
             }
         }
     }
@@ -609,6 +645,18 @@ void clags__choice_usage(clags_choices_t *choices, bool is_list)
         }
         printf(")");
     }
+}
+
+void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
+{
+    if (type == Clags_Choice){
+        clags__choice_usage((clags_choices_t *)func, is_list);
+    }else if (type == Clags_Path){
+        printf(" (%s%s: %s)", clags__type_names[type], is_list?"[]":"", clags__path_names[(clags_path_t) func]);
+    }else if (type != Clags_None){
+        printf(" (%s)", clags__type_names[type]);
+    }
+    printf("\n");
 }
 
 void clags_list_free(clags_list_t *list)
