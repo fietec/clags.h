@@ -1,14 +1,13 @@
 #include <stdio.h>
+
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
 char *path = NULL;
 bool help = false;
 
-clags_list_t paths = clags_path_list();
-
 clags_arg_t args[] = {
-    clags_required_path_list(&paths, "paths", "the paths to open", Clags_Path_Dir),
+    clags_required_path(&path, "path", "the path to open", Clags_Path_All),
     clags_flag_help(&help),
 };
 
@@ -23,9 +22,6 @@ int main(int argc, char **argv)
         clags_usage(program_name, args);
         return 0;
     }
-    for (size_t i=0; i<paths.count; ++i){
-        printf("%zu: %s\n", i, ((char**)paths.items)[i]);
-    }
-    clags_list_free(&paths);
+    printf("provided path: '%s'\n", path);
     return 0;
 }
