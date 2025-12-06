@@ -421,7 +421,11 @@ bool clags__append_to_list(clags_req_t req, const char *arg)
         assert(list->items && "Buy more RAM lol");
     }
     char *ptr = (char*) list->items;
-    return clags__verify_funcs[req.value_type](req.name, arg, ptr+item_size*list->count++, req.value_func);
+    if (clags__verify_funcs[req.value_type](req.name, arg, ptr+item_size*list->count, req.value_func)){
+	list->count++;
+	return true;
+    }
+    return false;
 }
 
 void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
