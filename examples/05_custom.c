@@ -1,3 +1,8 @@
+/*
+  Example 5: Custom Verifiers
+      This example shows how to use custom verification functions.
+*/
+
 #include <stdio.h>
 #include <stdbool.h>
 
