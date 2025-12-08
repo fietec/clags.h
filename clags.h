@@ -200,7 +200,7 @@ typedef struct{
 #define clags_double_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
 #define clags_choice_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
-#define clags_arr_len(arr) (sizeof(arr)/sizeof(arr[0]))
+#define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
 #define clags_choice(arr, details) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), .print_details=(details)}
 #define clags_choice_list_value(choice_list, i) ((clags_choice_t**)((choice_list).items))[(i)]->value
@@ -450,6 +450,7 @@ void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
 
 bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
 {
+    if (_args == NULL) return true;
     clags_req_t required[arg_count];
     clags_opt_t optional[arg_count];
     clags_flag_t flags[arg_count];
@@ -567,6 +568,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
 
 void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count)
 {
+    if (_args == NULL) return;
     clags_req_t required[arg_count];
     clags_opt_t optional[arg_count];
     clags_flag_t flags[arg_count];
