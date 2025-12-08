@@ -49,6 +49,8 @@ bool clags__verify_int8   (const char *arg_name, const char *arg, void *pvalue, 
 bool clags__verify_uint8  (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_int64  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_uint64 (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_path   (const char *arg_name, const char *arg, void *pvalue, void *func);
@@ -61,6 +63,8 @@ bool clags__verify_path   (const char *arg_name, const char *arg, void *pvalue, 
     X(Clags_UInt8,  clags__verify_uint8,  "uint8")  \
     X(Clags_Int32,  clags__verify_int32,  "int32")  \
     X(Clags_UInt32, clags__verify_uint32, "uint32") \
+    X(Clags_Int64,  clags__verify_int64,  "int64")  \
+    X(Clags_UInt64, clags__verify_uint64, "uint64") \
     X(Clags_Double, clags__verify_double, "double") \
     X(Clags_Choice, clags__verify_choice, "choice") \
     X(Clags_Path,   clags__verify_path,   "path")   \
@@ -160,6 +164,8 @@ typedef struct{
 #define clags_required_uint8(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL,.is_list=false}}
 #define clags_required_int32(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=false}}
 #define clags_required_uint32(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=false}}
+#define clags_required_int64(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int64,.value_func=NULL,.is_list=false}}
+#define clags_required_uint64(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt64,.value_func=NULL,.is_list=false}}
 #define clags_required_double(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=false}}
 #define clags_required_path(val, n, desc, t)     (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Path,.value_func=(void*)(t),.is_list=false}}
 #define clags_required_choice(choice, val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=(choice),.is_list=false}}
@@ -171,6 +177,8 @@ typedef struct{
 #define clags_required_uint8_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt8,.value_func=NULL,.is_list=true}}
 #define clags_required_int32_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int32,.value_func=NULL,.is_list=true}}
 #define clags_required_uint32_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt32,.value_func=NULL,.is_list=true}}
+#define clags_required_int64_list(val, n, desc)          (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Int64,.value_func=NULL,.is_list=true}}
+#define clags_required_uint64_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_UInt64,.value_func=NULL,.is_list=true}}
 #define clags_required_double_list(val, n, desc)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Double,.value_func=NULL,.is_list=true}}
 #define clags_required_path_list(val, n, desc, t)         (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Path,.value_func=(void*)(t),.is_list=true}}
 #define clags_required_choice_list(choice, val, n, desc) (clags_arg_t){.type=Clags_Required,.req=(clags_req_t){.name=(n),.value=(val),.description=(desc),.value_type=Clags_Choice,.value_func=(choice),.is_list=true}}
@@ -182,6 +190,8 @@ typedef struct{
 #define clags_optional_uint8(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt8,.value_func=NULL}}
 #define clags_optional_int32(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int32,.value_func=NULL}}
 #define clags_optional_uint32(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt32,.value_func=NULL}}
+#define clags_optional_int64(sf, lf, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Int64,.value_func=NULL}}
+#define clags_optional_uint64(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_UInt64,.value_func=NULL}}
 #define clags_optional_double(sf, lf, val, f_name, desc)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Double,.value_func=NULL}}
 #define clags_optional_path(sf, lf, val, f_name, desc, t)        (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Path,.value_func=(void*)(t)}}
 #define clags_optional_choice(sf, lf, choice, val, f_name, desc)         (clags_arg_t){.type=Clags_Optional,.opt=(clags_opt_t){.short_flag=(sf),.long_flag=(lf),.value=(val),.description=(desc),.field_name=(f_name),.value_type=Clags_Choice,.value_func=(choice)}}
@@ -197,6 +207,8 @@ typedef struct{
 #define clags_uint8_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
 #define clags_int32_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
 #define clags_uint32_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
+#define clags_int64_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int64_t)}
+#define clags_uint64_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint64_t)}
 #define clags_double_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
 #define clags_choice_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
@@ -338,6 +350,46 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, v
     }
 
     if (pvalue) *(uint32_t*)pvalue = (uint32_t)value;
+    return true;
+}
+
+bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, void *func)
+{
+    (void)func;
+    char *endptr;
+    errno = 0;
+    long long value = strtoll(arg, &endptr, 0);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid int64 value for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value < INT64_MIN || value > INT64_MAX) {
+        fprintf(stderr, "[ERROR] int64 value out of range (%ld to %ld) for argument '%s': '%s'!\n", INT64_MIN, INT64_MAX, arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(int64_t*)pvalue = (int64_t)value;
+    return true;
+}
+
+bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, void *func)
+{
+    (void)func;
+    char *endptr;
+    errno = 0;
+    unsigned long value = strtoull(arg, &endptr, 0);
+
+    if (*endptr != '\0') {
+        fprintf(stderr, "[ERROR] Invalid uint64 value for argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value > UINT64_MAX || *arg == '-') {
+        fprintf(stderr, "[ERROR] uint64 value out of range (0 to %lu) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(uint64_t*)pvalue = (uint64_t)value;
     return true;
 }
 
