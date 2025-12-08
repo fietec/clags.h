@@ -1,0 +1,43 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+#define CLAGS_IMPLEMENTATION
+#include "../clags.h"
+
+bool verify_lower_case(const char *arg_name, char *arg, void *pvalue)
+{
+    (void) arg_name;
+    if (arg && islower(*arg)){
+        *(char**)pvalue = arg;
+        return true;
+    }
+    fprintf(stderr, "[ERROR] String is not lower case: '%s'!\n", arg);
+    return false;
+}
+
+clags_list_t list = clags_custom_list(sizeof(char*));
+bool help = false;
+
+clags_arg_t args[] = {
+    clags_required_custom_list(&list, "values", "lower case strings", verify_lower_case),
+    clags_flag_help(&help),
+};
+
+int main(int argc, char **argv)
+{
+    const char *program_name = argv[0];
+    if (!clags_parse(argc, argv, args)){
+        clags_usage(program_name, args);
+        return 1;
+    }
+    if (help){
+        clags_usage(program_name, args);
+        return 0;
+    }
+    printf("The lower case inputs are:\n");
+    for (size_t i=0; i<list.count; ++i){
+        printf("%3zu: '%s'\n", i, ((char**)list.items)[i]);
+    }
+    clags_list_free(&list);
+    return 0;
+}
