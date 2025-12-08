@@ -1,3 +1,8 @@
+/*
+  Example 3: Choices
+      Choices allow the user to define a set of an 'enum-like' type which only accepts self-defined literals.
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>

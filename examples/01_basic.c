@@ -1,4 +1,10 @@
+/*
+  Example 1: Basic
+      This is a very simple example of how to use clags
+*/
+
 #include <stdio.h>
+#include <stdbool.h>
 
 // This includes the function implemnetations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
