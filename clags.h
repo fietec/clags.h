@@ -150,11 +150,11 @@ typedef struct{
 
 #define CLAGS_USAGE_ALIGNMENT -24
 
-#define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req={.variable=(var), .arg_name=(name), .description=(desc), .value_type=Clags_None, .verify=NULL, .is_list=false, __VA_ARGS__}}
+#define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_req_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
-#define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_opt_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), .value_type=Clags_None, .verify=NULL, __VA_ARGS__}}
+#define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_opt_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
-#define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), .exit=false, __VA_ARGS__}}
+#define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", .exit=true)
 
 #define clags_list()            (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
