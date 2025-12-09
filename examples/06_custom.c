@@ -9,7 +9,8 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-bool verify_lower_case(const char *arg_name, char *arg, void *pvalue)
+// a custom verification function of type `clags_value_func_t`
+bool verify_lower_case(const char *arg_name, char *arg, void *variable)
 {
     (void) arg_name;
     if (arg && islower(*arg)){

@@ -38,9 +38,8 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
-typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *pvalue);
+typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
-
 
 bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, void *func);

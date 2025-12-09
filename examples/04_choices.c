@@ -19,13 +19,16 @@ bool help = false;
 
 uint8_t quality = 0;
 
+// define an array of possible choices
 clags_choice_t choice_values[] = {
     {"LIFO", "last-in first-out"},
     {"FIFO", "first-in first_out"},
     {"RANDOM", "random order"}
 };
 
+// create a wrapper for the choices
 clags_choices_t choices = clags_choice(choice_values, true);
+// create variable to hold the pointer of the chosen choice
 clags_choice_t *choice = &choice_values[0];
 
 clags_arg_t args[] = {
