@@ -1,5 +1,5 @@
 /*
-  Example 2: Lists
+  Example 3: Lists
      This example shows how to work with lists.
      Lists are only supported as required arguments and can also be typed, similarily to normal arguments
 */

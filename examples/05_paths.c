@@ -1,5 +1,5 @@
 /*
-  Example 4: Paths
+  Example 5: Paths
       This is exactly the same example program as `01_basic`,
       only that here, we require a valid file input for the `input_file` argument 
 */

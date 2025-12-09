@@ -1,5 +1,5 @@
 /*
-  Example 5: Custom Verifiers
+  Example 6: Custom Verifiers
       This example shows how to use custom verification functions.
 */
 

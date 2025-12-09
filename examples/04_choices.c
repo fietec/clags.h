@@ -1,5 +1,5 @@
 /*
-  Example 3: Choices
+  Example 4: Choices
       Choices allow the user to define a set of an 'enum-like' type which only accepts self-defined literals.
 */
 
