@@ -677,13 +677,16 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                     size_t buf_size = strlen(flag.short_flag) + strlen(flag.long_flag) + 12;
                     char buf[buf_size];
                     snprintf(buf, buf_size, "%s, %s", flag.short_flag, flag.long_flag);
-                    printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, buf, flag.description);
+                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, flag.description);
                 } else{
-                    printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
+                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
                 }
             } else if (flag.long_flag){
-                printf("    %*s : %s\n", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
+                printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
+            } else{
+                continue;
             }
+            printf("%s\n", flag.exit?" and exit":"");
         }
     }
 }
