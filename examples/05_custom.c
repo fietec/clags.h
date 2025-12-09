@@ -24,7 +24,7 @@ clags_list_t list = clags_custom_list(sizeof(char*));
 bool help = false;
 
 clags_arg_t args[] = {
-    clags_required_custom_list(&list, "values", "lower case strings", verify_lower_case),
+    clags_required(&list, "values", "lower case strings", .value_type=Clags_Custom, .verify=verify_lower_case, .is_list=true),
     clags_flag_help(&help),
 };
 

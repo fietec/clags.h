@@ -15,7 +15,7 @@ bool help = false;
 clags_list_t list = clags_list();
 
 clags_arg_t args[] = {
-    clags_required_list(&list, "strings", "the strings to print"),
+    clags_required(&list, "strings", "the strings to print", .is_list=true),
     clags_flag_help(&help),
 };
 
@@ -31,8 +31,7 @@ int main(int argc, char **argv)
         return 0;
     }
     for (size_t i=0; i<list.count; ++i){
-        // accessing the list values requries casting the `items` field
-        printf("String %zu: '%s'\n", i+1, ((char**)list.items)[i]);
+        printf("String %zu: '%s'\n", i+1, clags_list_element(list, char*, i));
     }
 
     // this is mandatory if you don't want to leek all the list's precious memory

@@ -17,10 +17,10 @@ bool help = false;
 
 clags_arg_t args[] = {
     // Force the inputted string to be a valid path to a file
-    clags_required_path(&input_file, "input_file", "the input file", Clags_Path_File),
+    clags_required(&input_file, "input_file", "the input file", .value_type=Clags_File),
     
     clags_optional("-o", "--output", &output_file, "FILE", "the output file"),
-    clags_flag("-w", "--warnings", &warnings, "print warnings", false),
+    clags_flag("-w", "--warnings", &warnings, "print warnings"),
     clags_flag_help(&help),
 };
 
