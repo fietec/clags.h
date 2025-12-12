@@ -519,7 +519,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                         return false;
                     }
                     result = argv[++index];
-                    if (clags__ignore_prefix && !strncmp(clags__ignore_prefix, result, strlen(clags__ignore_prefix)) == 0) break;
+                    if (!clags__ignore_prefix || !strncmp(clags__ignore_prefix, result, strlen(clags__ignore_prefix)) == 0) break;
                     ignored = true;
                 }
                 if (!clags__verify_funcs[opt.value_type](arg, result, opt.variable, opt.verify)) return false;
@@ -705,8 +705,10 @@ void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
 {
     if (type == Clags_Choice){
         clags__choice_usage((clags_choices_t *)func, is_list);
-    }else if (type != Clags_None){
-        printf(" (%s)", clags__type_names[type]);
+    }else if (type == Clags_None){
+        printf(" ([])");
+    } else{
+        printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
     }
     printf("\n");
 }
