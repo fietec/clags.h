@@ -14,7 +14,7 @@ bool verify_lower_case(const char *arg_name, char *arg, void *variable)
 {
     (void) arg_name;
     if (arg && islower(*arg)){
-        *(char**)pvalue = arg;
+        *(char**)variable = arg;
         return true;
     }
     fprintf(stderr, "[ERROR] String is not lower case: '%s'!\n", arg);
