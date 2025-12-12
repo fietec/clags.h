@@ -7,6 +7,15 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+// Optional argument-ignore feature.
+// Define CLAGS_IGNORE_PREFIX to enable ignoring of arguments that begin with the
+// specified prefix. Any argument whose string starts with this prefix will be
+// skipped by the parser and not added to the argument list.
+//
+// This can be useful when repeatedly invoking the same command and temporarily
+// disabling specific arguments without removing them.
+#define CLAGS_IGNORE_PREFIX "!"
+
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 

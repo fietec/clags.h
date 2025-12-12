@@ -38,6 +38,10 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
+#ifndef CLAGS_IGNORE_PREFIX          // argument prefix to ignore, disabled by default
+#define CLAGS_IGNORE_PREFIX NULL
+#endif // CLAGS_IGNORE_PREFIX
+
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
 
@@ -191,6 +195,8 @@ void clags_list_free(clags_list_t *list);
 #endif // CLAGS_H
 
 #ifdef CLAGS_IMPLEMENTATION
+
+static char* clags__ignore_prefix = CLAGS_IGNORE_PREFIX;
 
 #define X(type, func, name) [type] = func,
 static clags_value_verify_t clags__verify_funcs[] = {
@@ -489,8 +495,13 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
     clags__sort_args(&args, _args, arg_count);
 
     size_t required_found = 0;
+    bool ignored = false;
     for (size_t index=1; index<(size_t)argc; ++index){
         char *arg = argv[index];
+        if (clags__ignore_prefix && strncmp(clags__ignore_prefix, arg, strlen(clags__ignore_prefix)) == 0){
+            ignored = true;
+            continue;
+        }
         if (strcmp(arg, "--") == 0){
             if (in_list){
                 in_list = false;
@@ -501,11 +512,16 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
         for (size_t i=0; i<args.optional_count; ++i){
             clags_opt_t opt = args.optional[i];
             if ((opt.short_flag != NULL && strcmp(arg, opt.short_flag) == 0) || (opt.long_flag != NULL && strcmp(arg, opt.long_flag) == 0)){
-                if (argc-index <= 1){
-                    fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
-                    return false;
+                char *result = NULL;
+                while (true){
+                    if (argc-index <= 1){
+                        fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
+                        return false;
+                    }
+                    result = argv[++index];
+                    if (clags__ignore_prefix && !strncmp(clags__ignore_prefix, result, strlen(clags__ignore_prefix)) == 0) break;
+                    ignored = true;
                 }
-                char *result = argv[++index];
                 if (!clags__verify_funcs[opt.value_type](arg, result, opt.variable, opt.verify)) return false;
                 goto next_arg;
             } else if (opt.long_flag != NULL && strncmp(arg, opt.long_flag, strlen(opt.long_flag)) == 0){
@@ -583,6 +599,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
         }
     }
     if (in_list) required_found++;
+    if (ignored) printf("[WARNING] Arguments were ignored because they were prefixed with CLAGS_IGNORE_PREFIX ('%s')\n", clags__ignore_prefix);
     if (required_found != args.required_count){
         fprintf(stderr, "[ERROR] Missing required arguments:");
         for (size_t i=required_found; i<args.required_count; ++i){
