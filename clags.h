@@ -215,10 +215,10 @@ bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, voi
 bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     (void)func;
-    if (strcmp(arg, "true") == 0) {
+    if (strcmp(arg, "true") == 0 || strcmp(arg, "True") == 0) {
         if (pvalue) *(bool*)pvalue = true;
         return true;
-    } else if (strcmp(arg, "false") == 0) {
+    } else if (strcmp(arg, "false") == 0 || strcmp(arg, "False") == 0) {
         if (pvalue) *(bool*)pvalue = false;
         return true;
     }
