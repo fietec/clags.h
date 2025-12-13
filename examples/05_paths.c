@@ -36,6 +36,6 @@ int main(int argc, char **argv)
         clags_usage(argv[0], args);
         return 0;
     }
-    printf("input: %s, size: %llu, output: %s, warnings:%s\n", input_file, size, output_file, warnings?"true":"false");
+    printf("input: %s, size: %lu, output: %s, warnings:%s\n", input_file, size, output_file, warnings?"true":"false");
     return 0;
 }

@@ -464,7 +464,7 @@ bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, voi
     }
     
     if (errno == ERANGE || value > UINT64_MAX/factor || *arg == '-') {
-        fprintf(stderr, "[ERROR] clags_fsize_t value out of range (0 to %llu) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        fprintf(stderr, "[ERROR] clags_fsize_t value out of range (0 to %lu) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
         return false;
     }
     if (pvalue) *(clags_fsize_t*)pvalue = (clags_fsize_t)value * factor;
