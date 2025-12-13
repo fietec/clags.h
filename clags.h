@@ -44,6 +44,7 @@
 
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
+typedef uint64_t clags_fsize_t;
 
 bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, void *func);
@@ -59,6 +60,7 @@ bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, 
 bool clags__verify_path   (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_file   (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_dir    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_size   (const char *arg_name, const char *arg, void *pvalue, void *func);
 
 #define clags__types\
     X(Clags_None,   clags__verify_none,    NULL   )\
@@ -75,6 +77,7 @@ bool clags__verify_dir    (const char *arg_name, const char *arg, void *pvalue, 
     X(Clags_Path,   clags__verify_path,   "path"  )\
     X(Clags_File,   clags__verify_file,   "file"  )\
     X(Clags_Dir,    clags__verify_dir,    "dir"   )\
+    X(Clags_Size,   clags__verify_size,   "size"  )\
 
 #define X(type, func, name) type,
 typedef enum{
@@ -338,7 +341,7 @@ bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, v
     (void)func;
     char *endptr;
     errno = 0;
-    unsigned long value = strtoull(arg, &endptr, 0);
+    unsigned long long value = strtoull(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         fprintf(stderr, "[ERROR] Invalid uint64 value for argument '%s': '%s'!\n", arg_name, arg);
@@ -434,6 +437,40 @@ bool clags__verify_dir(const char *arg_name, const char *arg, void *pvalue, void
     return true;
 }
 
+bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, void *func)
+{
+    (void) func;
+    char *endptr;
+    errno = 0;
+    unsigned long long value = strtoull(arg, &endptr, 10);
+
+    if (endptr == arg){
+        fprintf(stderr, "[ERROR] No leading number in size argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    clags_fsize_t factor;
+    if (*endptr == '\0' || strcmp(endptr, "B") == 0) factor = 1;
+    else if (strcmp(endptr, "KiB") == 0)             factor = 1ULL << 10;
+    else if (strcmp(endptr, "KB")  == 0)             factor = 1000;
+    else if (strcmp(endptr, "MiB") == 0)             factor = 1ULL << 20;
+    else if (strcmp(endptr, "MB")  == 0)             factor = 1000000;
+    else if (strcmp(endptr, "GiB") == 0)             factor = 1ULL << 30;
+    else if (strcmp(endptr, "GB")  == 0)             factor = 1000000000;
+    else if (strcmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
+    else if (strcmp(endptr, "TB")  == 0)             factor = 1000000000000;
+    else {
+        fprintf(stderr, "[ERROR] Invalid size suffix for argument '%s': '%s'!\n", arg_name, endptr);
+        return false;
+    }
+    
+    if (errno == ERANGE || value > UINT64_MAX/factor || *arg == '-') {
+        fprintf(stderr, "[ERROR] clags_fsize_t value out of range (0 to %llu) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        return false;
+    }
+    if (pvalue) *(clags_fsize_t*)pvalue = (clags_fsize_t)value * factor;
+    return true;
+}
+
 bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
     clags_value_func_t value_func = (clags_value_func_t) func;
@@ -519,7 +556,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count)
                         return false;
                     }
                     result = argv[++index];
-                    if (clags__ignore_prefix && !strncmp(clags__ignore_prefix, result, strlen(clags__ignore_prefix)) == 0) break;
+                    if (!clags__ignore_prefix || !strncmp(clags__ignore_prefix, result, strlen(clags__ignore_prefix)) == 0) break;
                     ignored = true;
                 }
                 if (!clags__verify_funcs[opt.value_type](arg, result, opt.variable, opt.verify)) return false;

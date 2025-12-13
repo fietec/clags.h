@@ -11,6 +11,7 @@
 #include "../clags.h"
 
 const char *input_file = NULL;
+clags_fsize_t size = 1000;
 const char *output_file = "a.out";
 bool warnings = false;
 bool help = false;
@@ -18,7 +19,8 @@ bool help = false;
 clags_arg_t args[] = {
     // Force the inputted string to be a valid path to a file
     clags_required(&input_file, "input_file", "the input file", .value_type=Clags_File),
-    
+
+    clags_optional("-s", "--size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
     clags_optional("-o", "--output", &output_file, "FILE", "the output file"),
     clags_flag("-w", "--warnings", &warnings, "print warnings"),
     clags_flag_help(&help),
@@ -34,6 +36,6 @@ int main(int argc, char **argv)
         clags_usage(argv[0], args);
         return 0;
     }
-    printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");
+    printf("input: %s, size: %llu, output: %s, warnings:%s\n", input_file, size, output_file, warnings?"true":"false");
     return 0;
 }
