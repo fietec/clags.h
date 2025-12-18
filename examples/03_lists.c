@@ -7,15 +7,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-// Optional argument-ignore feature.
-// Define CLAGS_IGNORE_PREFIX to enable ignoring of arguments that begin with the
-// specified prefix. Any argument whose string starts with this prefix will be
-// skipped by the parser and not added to the argument list.
-//
-// This can be useful when repeatedly invoking the same command and temporarily
-// disabling specific arguments without removing them.
-#define CLAGS_IGNORE_PREFIX "!"
-
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
@@ -31,7 +22,14 @@ clags_arg_t args[] = {
 int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
-    if (!clags_parse(argc, argv, args)){
+    // Optional argument-ignore feature.
+    // Set `.ignore_prefix` to enable ignoring of arguments that begin with the
+    // specified prefix. Any argument whose string starts with this prefix will be
+    // skipped by the parser and not added to the argument list.
+    //
+    // This can be useful when repeatedly invoking the same command and temporarily
+    // disabling specific arguments without removing them.
+    if (!clags_parse(argc, argv, args, .ignore_prefix="!")){
         clags_usage(program_name, args);
         return 1;
     }
