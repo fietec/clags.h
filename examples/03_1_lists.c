@@ -35,6 +35,7 @@ int main(int argc, char **argv)
     }
     if (help){
         clags_usage(program_name, args);
+        clags_list_free(&list);
         return 0;
     }
     for (size_t i=0; i<list.count; ++i){

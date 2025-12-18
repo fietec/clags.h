@@ -152,6 +152,7 @@ typedef struct{
 
 typedef struct{
     const char *ignore_prefix;
+    const char *list_terminator;
 } clags_parse_opt_t;
 
 #define CLAGS_USAGE_ALIGNMENT -24
@@ -532,6 +533,9 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
 
     const char *ignore_prefix = options.ignore_prefix;
     size_t ignore_prefix_len = ignore_prefix?strlen(ignore_prefix):0;
+
+    const char *list_term = options.list_terminator;
+    
     size_t required_found = 0;
     bool ignored = false;
     for (size_t index=1; index<(size_t)argc; ++index){
@@ -540,7 +544,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
             ignored = true;
             continue;
         }
-        if (strcmp(arg, "--") == 0){
+        if (list_term && strcmp(arg, list_term) == 0){
             if (in_list){
                 in_list = false;
                 required_found++;
