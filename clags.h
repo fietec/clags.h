@@ -176,6 +176,7 @@ typedef struct{
 #define clags_int64_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int64_t)}
 #define clags_uint64_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint64_t)}
 #define clags_double_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
+#define clags_size_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_fsize_t)}
 #define clags_choice_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
 #define clags_list_element(list, value_type, i) ((value_type*)(list).items)[i]
