@@ -106,7 +106,7 @@ typedef struct{
     clags_value_type_t value_type;
     void *verify;
     bool is_list;
-} clags_req_t;
+} clags_required_t;
 
 typedef struct{
     const char *short_flag;
@@ -116,7 +116,7 @@ typedef struct{
     const char *description;
     clags_value_type_t value_type;
     void *verify;
-} clags_opt_t;
+} clags_optional_t;
 
 typedef struct{
     const char *short_flag;
@@ -127,9 +127,9 @@ typedef struct{
 } clags_flag_t;
 
 typedef struct{
-    clags_req_t *required;
+    clags_required_t *required;
     size_t required_count;
-    clags_opt_t *optional;
+    clags_optional_t *optional;
     size_t optional_count;
     clags_flag_t *flags;
     size_t flag_count;
@@ -144,8 +144,8 @@ typedef enum{
 typedef struct{
     clags_arg_type_t type;
     union{
-        clags_req_t req;
-        clags_opt_t opt;
+        clags_required_t req;
+        clags_optional_t opt;
         clags_flag_t flag;
     };
 } clags_arg_t;
@@ -153,13 +153,13 @@ typedef struct{
 typedef struct{
     const char *ignore_prefix;
     const char *list_terminator;
-} clags_parse_opt_t;
+} clags_options_t;
 
 #define CLAGS_USAGE_ALIGNMENT -24
 
-#define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_req_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
+#define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_required_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
-#define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_opt_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
+#define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_optional_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
 #define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", .exit=true)
@@ -187,11 +187,11 @@ typedef struct{
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
-#define clags_parse(argc, argv, args, ...) clags__parse((argc), (argv), (args), clags_arr_len(args), (clags_parse_opt_t){__VA_ARGS__})
-bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count, clags_parse_opt_t options);
+#define clags_parse(argc, argv, args, opts) clags__parse((argc), (argv), (args), clags_arr_len(args), (opts))
+bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count, clags_options_t options);
 
-#define clags_usage(pn, args) clags__usage((pn), (args), clags_arr_len(args))
-void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count);
+#define clags_usage(pn, args, opts) clags__usage((pn), (args), clags_arr_len(args), (opts))
+void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count, clags_options_t options);
 void clags__choice_usage(clags_choices_t *choices, bool is_list);
 void clags__type_usage(clags_value_type_t type, void *func, bool is_list);
 
@@ -481,7 +481,7 @@ bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__append_to_list(clags_req_t req, const char *arg)
+bool clags__append_to_list(clags_required_t req, const char *arg)
 {
     clags_list_t *list = (clags_list_t*) req.variable;
     size_t item_size = list->item_size;
@@ -522,8 +522,8 @@ void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
 bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, clags_parse_opt_t options)
 {
     if (_args == NULL) return true;
-    clags_req_t required[arg_count];
-    clags_opt_t optional[arg_count];
+    clags_required_t required[arg_count];
+    clags_optional_t optional[arg_count];
     clags_flag_t flags[arg_count];
     bool in_list = false;
 
@@ -552,7 +552,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
             continue;
         }
         for (size_t i=0; i<args.optional_count; ++i){
-            clags_opt_t opt = args.optional[i];
+            clags_optional_t opt = args.optional[i];
             if ((opt.short_flag != NULL && strcmp(arg, opt.short_flag) == 0) || (opt.long_flag != NULL && strcmp(arg, opt.long_flag) == 0)){
                 char *result = NULL;
                 while (true){
@@ -625,13 +625,13 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
             fprintf(stderr, "[ERROR] Unknown additional argument (%zu/%zu): '%s'!\n", required_found+1, args.required_count, arg);
             return false;
         }
-        clags_req_t current_req = args.required[required_found];
+        clags_required_t current_req = args.required[required_found];
         if (current_req.is_list){
             in_list = true;
             if (!clags__append_to_list(current_req, arg)) return false;
             continue;
         } else{
-            clags_req_t req = args.required[required_found++];
+            clags_required_t req = args.required[required_found++];
             if (!clags__verify_funcs[req.value_type](req.arg_name, arg, req.variable, req.verify)) return false;
         }
     next_arg:
@@ -656,8 +656,8 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
 void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count)
 {
     if (_args == NULL) return;
-    clags_req_t required[arg_count];
-    clags_opt_t optional[arg_count];
+    clags_required_t required[arg_count];
+    clags_optional_t optional[arg_count];
     clags_flag_t flags[arg_count];
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
@@ -675,7 +675,7 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
     if (args.required_count){
         printf("  Arguments:\n");
         for (size_t i=0; i<args.required_count; ++i){
-            clags_req_t req = args.required[i];
+            clags_required_t req = args.required[i];
             printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, req.arg_name, req.description);
             clags__type_usage(req.value_type, req.verify, req.is_list);
         }
@@ -683,7 +683,7 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
     if (args.optional_count){
         printf("  Options:\n");
         for (size_t i=0; i<args.optional_count; ++i){
-            clags_opt_t opt = args.optional[i];
+            clags_optional_t opt = args.optional[i];
             if (opt.short_flag){
                 if (opt.long_flag){
                     size_t buf_size = strlen(opt.short_flag) + strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
