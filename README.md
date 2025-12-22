@@ -75,7 +75,7 @@ For an incorrect input, such as
 **clags** will print the following error message and usage:
 ```
 [ERROR] Invalid choice for argument '-a': 'QUICK_SORT'!
-Usage: ./00_readme [OPTIONS] [FLAGS] <input_file>
+Usage: ./example [OPTIONS] [FLAGS] <input_file>
   Arguments:
     input_file               : the input file ([])
   Options:
