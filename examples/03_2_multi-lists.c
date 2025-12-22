@@ -1,3 +1,10 @@
+/*
+  Example 3.2: Multiple Lists
+     This example shows how to work with multiple lists.
+     To terminate a list, use the custom `list_terminator` feature
+*/
+
+
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -20,20 +27,22 @@ clags_arg_t args[] = {
     clags_flag_help(&help),
 };
 
+// Having multiple lists or, in fact, any other required arguments directly after a list,
+// requires for a delimeter that terminates the list.
+// Since this is not really standard, a custom terminator must be defined manually here.
+clags_config_t config = clags_config(args, .list_terminator="--", .ignore_prefix="!");
+
 int main(int argc, char **argv)
 {
     int result = 0;
     const char *program_name = argv[0];
-    
-    // Having multiple lists or, in fact, any other required arguments directly after a list,
-    // requires for a delimeter that terminates the list.
-    // Since this is not really standard, a custom terminator must be defined manually here.
-    if (!clags_parse(argc, argv, args, .list_terminator="--")){
-        clags_usage(program_name, args);
+
+    if (!clags_parse(argc, argv, config)){
+        clags_usage(program_name, config);
         return_defer(1);
     }
     if (help){
-        clags_usage(program_name, args);
+        clags_usage(program_name, config);
         return_defer(0);
     }
 
@@ -51,3 +60,4 @@ defer:
     clags_list_free(&int_list);
     return result;
 }
+        

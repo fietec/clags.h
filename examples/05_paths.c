@@ -26,14 +26,16 @@ clags_arg_t args[] = {
     clags_flag_help(&help),
 };
 
+clags_config_t config = clags_config(args);
+
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, args)){
-        clags_usage(argv[0], args);
+    if (!clags_parse(argc, argv, config)){
+        clags_usage(argv[0], config);
         return 1;
     }
     if (help){
-        clags_usage(argv[0], args);
+        clags_usage(argv[0], config);
         return 0;
     }
     printf("input: %s, size: %lu, output: %s, warnings:%s\n", input_file, size, output_file, warnings?"true":"false");

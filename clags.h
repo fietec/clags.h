@@ -155,7 +155,15 @@ typedef struct{
     const char *list_terminator;
 } clags_options_t;
 
+typedef struct{
+    clags_arg_t *args;
+    size_t args_count;
+    clags_options_t options;
+} clags_config_t;
+
 #define CLAGS_USAGE_ALIGNMENT -24
+
+#define clags_config(args, ...) (clags_config_t){.args=(args), .args_count=clags_arr_len(args), .options=(clags_options_t){__VA_ARGS__}}
 
 #define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_required_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
@@ -187,15 +195,13 @@ typedef struct{
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
-#define clags_parse(argc, argv, args, opts) clags__parse((argc), (argv), (args), clags_arr_len(args), (opts))
-bool clags__parse(int argc, char **argv, clags_arg_t *args, size_t arg_count, clags_options_t options);
+bool clags_parse(int argc, char **argv, const clags_config_t config);
+void clags_usage(const char *program_name, const clags_config_t config);
+void clags_list_free(clags_list_t *list);
 
-#define clags_usage(pn, args, opts) clags__usage((pn), (args), clags_arr_len(args), (opts))
-void clags__usage(const char *program_name, clags_arg_t *args, size_t arg_count, clags_options_t options);
 void clags__choice_usage(clags_choices_t *choices, bool is_list);
 void clags__type_usage(clags_value_type_t type, void *func, bool is_list);
 
-void clags_list_free(clags_list_t *list);
 
 #endif // CLAGS_H
 
@@ -519,22 +525,22 @@ void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
     }
 }
 
-bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, clags_parse_opt_t options)
+bool clags_parse(int argc, char **argv, const clags_config_t config)
 {
-    if (_args == NULL) return true;
-    clags_required_t required[arg_count];
-    clags_optional_t optional[arg_count];
-    clags_flag_t flags[arg_count];
+    if (config.args == NULL) return true;
+    clags_required_t required[config.args_count];
+    clags_optional_t optional[config.args_count];
+    clags_flag_t flags[config.args_count];
     bool in_list = false;
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
 
-    clags__sort_args(&args, _args, arg_count);
+    clags__sort_args(&args, config.args, config.args_count);
 
-    const char *ignore_prefix = options.ignore_prefix;
+    const char *ignore_prefix = config.options.ignore_prefix;
     size_t ignore_prefix_len = ignore_prefix?strlen(ignore_prefix):0;
 
-    const char *list_term = options.list_terminator;
+    const char *list_term = config.options.list_terminator;
     
     size_t required_found = 0;
     bool ignored = false;
@@ -641,7 +647,7 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
         }
     }
     if (in_list) required_found++;
-    if (ignored) printf("[WARNING] Arguments were ignored because they were prefixed with ('%s')\n", ignore_prefix);
+    if (ignored) printf("[WARNING] Arguments were ignored because they were prefixed with '%s'\n", ignore_prefix);
     if (required_found != args.required_count){
         fprintf(stderr, "[ERROR] Missing required arguments:");
         for (size_t i=required_found; i<args.required_count; ++i){
@@ -653,22 +659,34 @@ bool clags__parse(int argc, char **argv, clags_arg_t *_args, size_t arg_count, c
     return true;
 }
 
-void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count)
+void clags_usage(const char *program_name, const clags_config_t config)
 {
-    if (_args == NULL) return;
-    clags_required_t required[arg_count];
-    clags_optional_t optional[arg_count];
-    clags_flag_t flags[arg_count];
+    if (config.args == NULL) return;
+    clags_required_t required[config.args_count];
+    clags_optional_t optional[config.args_count];
+    clags_flag_t flags[config.args_count];
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
 
-    clags__sort_args(&args, _args, arg_count);
+    clags__sort_args(&args, config.args, config.args_count);
 
+    clags_options_t options = config.options;
+    
     printf("Usage: %s", program_name);
     if (args.optional_count) printf(" [OPTIONS]");
     if (args.flag_count) printf(" [FLAGS]");
+    bool last_was_list = false;
     for (size_t i=0; i<args.required_count; ++i){
-        printf(" <%s%s>", args.required[i].arg_name, args.required[i].is_list?"..":"");
+        if (last_was_list) {
+            printf(" %s", config.options.list_terminator);
+            last_was_list = false;
+        }
+        if (args.required[i].is_list){
+            printf(" <%s..>", args.required[i].arg_name);
+            last_was_list = true;
+        } else{
+            printf(" <%s>", args.required[i].arg_name);
+        }
     }
     printf("\n");
 
@@ -722,6 +740,15 @@ void clags__usage(const char *program_name, clags_arg_t *_args, size_t arg_count
                 continue;
             }
             printf("%s\n", flag.exit?" and exit":"");
+        }
+    }
+    if (options.list_terminator || options.ignore_prefix){
+        printf("\n  Notes:\n");
+        if (options.list_terminator){
+            printf("    '%s' terminates a list argument when followed by another argument.\n", options.list_terminator);
+        }
+        if (options.ignore_prefix){
+            printf("    Arguments prefixed with '%s' are ignored.\n", options.ignore_prefix);
         }
     }
 }

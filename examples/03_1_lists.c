@@ -1,5 +1,5 @@
 /*
-  Example 3: Lists
+  Example 3.1: Lists
      This example shows how to work with lists.
      Lists are only supported as required arguments and can also be typed, similarily to normal arguments
 */
@@ -19,22 +19,24 @@ clags_arg_t args[] = {
     clags_flag_help(&help),
 };
 
+// Optional argument-ignore feature.
+// Set `.ignore_prefix` to enable ignoring of arguments that begin with the
+// specified prefix. Any argument whose string starts with this prefix will be
+// skipped by the parser and not added to the argument list.
+//
+// This can be useful when repeatedly invoking the same command and temporarily
+// disabling specific arguments without removing them.
+clags_config_t config = clags_config(args, .ignore_prefix="!");
+
 int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
-    // Optional argument-ignore feature.
-    // Set `.ignore_prefix` to enable ignoring of arguments that begin with the
-    // specified prefix. Any argument whose string starts with this prefix will be
-    // skipped by the parser and not added to the argument list.
-    //
-    // This can be useful when repeatedly invoking the same command and temporarily
-    // disabling specific arguments without removing them.
-    if (!clags_parse(argc, argv, args, .ignore_prefix="!")){
-        clags_usage(program_name, args);
+    if (!clags_parse(argc, argv, config)){
+        clags_usage(program_name, config);
         return 1;
     }
     if (help){
-        clags_usage(program_name, args);
+        clags_usage(program_name, config);
         clags_list_free(&list);
         return 0;
     }

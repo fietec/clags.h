@@ -50,14 +50,16 @@ clags_arg_t args[] = {
     clags_flag_help(&help),
 };
 
+clags_config_t config = clags_config(args);
+
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, args)){
-        clags_usage(argv[0], args);
+    if (!clags_parse(argc, argv, config)){
+        clags_usage(argv[0], config);
         return 1;
     }
     if (help){
-        clags_usage(argv[0], args);
+        clags_usage(argv[0], config);
         return 0;
     }
     printf("input: %s, algorithm: %s\n", input, choice->value);
@@ -73,11 +75,11 @@ For an incorrect input, such as
 **clags** will print the following error message and usage:
 ```
 [ERROR] Invalid choice for argument '-a': 'QUICK_SORT'!
-Usage: ./example [OPTIONS] [FLAGS] <input_file>
+Usage: ./00_readme [OPTIONS] [FLAGS] <input_file>
   Arguments:
-    input_file               : the input file
+    input_file               : the input file ([])
   Options:
-    -o, --output(=)FILE      : the output file
+    -o, --output(=)FILE      : the output file ([])
     -a, --algorithm(=)ALG    : the algorithm to use (choice)
         Choices:
           - LIFO             : last-in first-out
@@ -86,6 +88,6 @@ Usage: ./example [OPTIONS] [FLAGS] <input_file>
 
     -q, --quality(=)LEVEL    : the sample quality (uint8)
   Flags:
-    -w                       : print warnings
-    -h, --help               : print this help dialog
+    -w, --warnings           : print warnings
+    -h, --help               : print this help dialog and exit
 ```
