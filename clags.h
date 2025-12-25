@@ -191,7 +191,8 @@ typedef struct{
 #define clags_list_element(list, value_type, i) ((value_type*)(list).items)[i]
 #define clags_list_choice_element(list, i) clags_list_element((list), (clags_choice_t*), (i))->value
 
-#define clags_choice(arr, details) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), .print_details=(details)}
+#define clags_choice(arr, ...) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), __VA_ARGS__}
+#define clags_choice_default(choices, index) (&(choices)[index])
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
@@ -201,7 +202,6 @@ void clags_list_free(clags_list_t *list);
 
 void clags__choice_usage(clags_choices_t *choices, bool is_list);
 void clags__type_usage(clags_value_type_t type, void *func, bool is_list);
-
 
 #endif // CLAGS_H
 
