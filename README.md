@@ -37,7 +37,7 @@ clags_choice_t choice_values[] = {
 };
 
 clags_choices_t choices = clags_choice(choice_values, true);
-clags_choice_t *choice = &choice_values[0];
+clags_choice_t *choice = clags_choice_default(choice_values, 0);
 
 clags_arg_t args[] = {
     clags_required(&input, "input_file", "the input file"),
@@ -77,9 +77,9 @@ For an incorrect input, such as
 [ERROR] Invalid choice for argument '-a': 'QUICK_SORT'!
 Usage: ./example [OPTIONS] [FLAGS] <input_file>
   Arguments:
-    input_file               : the input file ([])
+    input_file               : the input file
   Options:
-    -o, --output(=)FILE      : the output file ([])
+    -o, --output(=)FILE      : the output file
     -a, --algorithm(=)ALG    : the algorithm to use (choice)
         Choices:
           - LIFO             : last-in first-out
