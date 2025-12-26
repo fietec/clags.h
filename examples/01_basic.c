@@ -39,14 +39,14 @@ clags_config_t config = clags_config(args);
 int main(int argc, char **argv)
 {
     // Parse the arguments using the previously defined rules, returns `false` on error
-    if (!clags_parse(argc, argv, config)){
+    if (!clags_parse(argc, argv, &config)){
         // Print an automatic usage
-        clags_usage(argv[0], config);
+        clags_usage(argv[0], &config);
         return 1;
     }
     // You can now use the set argument variables
     if (help){
-        clags_usage(argv[0], config);
+        clags_usage(argv[0], &config);
         return 0;
     }
     printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");

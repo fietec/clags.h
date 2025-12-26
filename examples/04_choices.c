@@ -46,12 +46,12 @@ clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, config)){
-        clags_usage(argv[0], config);
+    if (!clags_parse(argc, argv, &config)){
+        clags_usage(argv[0], &config);
         return 1;
     }
     if (help){
-        clags_usage(argv[0], config);
+        clags_usage(argv[0], &config);
         return 0;
     }
     printf("input: %s, algorithm: %s\n", input, choice->value);

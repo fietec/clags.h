@@ -103,6 +103,7 @@ typedef struct{
     void *variable;
     const char *arg_name;
     const char *description;
+    // options
     clags_value_type_t value_type;
     void *verify;
     bool is_list;
@@ -114,6 +115,7 @@ typedef struct{
     void *variable;
     const char *arg_name;
     const char *description;
+    // options
     clags_value_type_t value_type;
     void *verify;
 } clags_optional_t;
@@ -123,6 +125,7 @@ typedef struct{
     const char *long_flag;
     bool *variable;
     const char *description;
+    // options
     bool exit;
 } clags_flag_t;
 
@@ -161,6 +164,7 @@ typedef struct{
     clags_arg_t *args;
     size_t args_count;
     clags_options_t options;
+    bool invalid;
 } clags_config_t;
 
 #define CLAGS_USAGE_ALIGNMENT -24
@@ -202,8 +206,8 @@ typedef struct{
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
-bool clags_parse(int argc, char **argv, const clags_config_t config);
-void clags_usage(const char *program_name, const clags_config_t config);
+bool clags_parse(int argc, char **argv, clags_config_t *config);
+void clags_usage(const char *program_name, clags_config_t *config);
 void clags_list_free(clags_list_t *list);
 
 void clags__choice_usage(clags_choices_t *choices, bool is_list);
@@ -510,18 +514,57 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
     return false;
 }
 
-void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
+bool clags__validate_config(clags_config_t *config)
 {
-    for (size_t i=0; i<arg_count; ++i){
-        switch(_args[i].type){
+    bool last_was_list = false;
+    const char *last_req_name = NULL;
+    for (size_t i=0; i<config->args_count; ++i){
+        switch (config->args[i].type){
             case Clags_Required:{
-                args->required[args->required_count++] = _args[i].req;
+                clags_required_t req = config->args[i].req;
+                if (last_was_list && config->options.list_terminator == NULL){
+                    fprintf(stderr, "[CONFIG_ERROR] required argument '%s' is unreachable after list '%s'! Define '.list_terminator' in 'clags_config' to separate them", req.arg_name, last_req_name);
+                    if (!req.is_list) {
+                        fprintf(stderr, " or make '%s' optional", req.arg_name);
+                    }
+                    printf(".\n");
+                    config->invalid = true;
+                    return false;
+                }
+                last_was_list = req.is_list;
+                last_req_name = req.arg_name;
             } break;
             case Clags_Optional:{
-                args->optional[args->optional_count++] = _args[i].opt;
+                last_was_list = false;
+                clags_optional_t opt = config->args[i].opt;
+                if (opt.short_flag == NULL && opt.long_flag == NULL){
+                    fprintf(stderr, "[CONFIG_WARNING] optional argument is unreachable. Define at least one of `short_flag` and `long_flag`.\n");
+                }
             } break;
             case Clags_Flag:{
-                args->flags[args->flag_count++] = _args[i].flag;
+                last_was_list = false;
+                clags_flag_t flag = config->args[i].flag;
+                if (flag.short_flag == NULL && flag.long_flag == NULL){
+                    fprintf(stderr, "[CONFIG_WARNING] flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.\n");
+                }
+            } break;
+        }
+    }
+    return true;
+}
+
+void clags__sort_args(clags_args_t *args, clags_config_t *config)
+{
+    for (size_t i=0; i<config->args_count; ++i){
+        switch(config->args[i].type){
+            case Clags_Required:{
+                args->required[args->required_count++] = config->args[i].req;
+            } break;
+            case Clags_Optional:{
+                args->optional[args->optional_count++] = config->args[i].opt;
+            } break;
+            case Clags_Flag:{
+                args->flags[args->flag_count++] = config->args[i].flag;
             } break;
             default: {
                 assert(0 && "Unreachable");
@@ -530,22 +573,21 @@ void clags__sort_args(clags_args_t *args, clags_arg_t *_args, size_t arg_count)
     }
 }
 
-bool clags_parse(int argc, char **argv, const clags_config_t config)
+bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
-    if (config.args == NULL) return true;
-    clags_required_t required[config.args_count];
-    clags_optional_t optional[config.args_count];
-    clags_flag_t flags[config.args_count];
+    if (config->args == NULL) return true;
+    clags_required_t required[config->args_count];
+    clags_optional_t optional[config->args_count];
+    clags_flag_t flags[config->args_count];
     bool in_list = false;
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
+    if (!clags__validate_config(config)) return false;
+    clags__sort_args(&args, config);
 
-    clags__sort_args(&args, config.args, config.args_count);
-
-    const char *ignore_prefix = config.options.ignore_prefix;
+    const char *ignore_prefix = config->options.ignore_prefix;
     size_t ignore_prefix_len = ignore_prefix?strlen(ignore_prefix):0;
-
-    const char *list_term = config.options.list_terminator;
+    const char *list_term = config->options.list_terminator;
     
     size_t required_found = 0;
     bool ignored = false;
@@ -593,7 +635,6 @@ bool clags_parse(int argc, char **argv, const clags_config_t config)
         for (size_t i=0; i<args.flag_count; ++i){
             clags_flag_t flag = args.flags[i];
             if ((flag.short_flag != NULL && strcmp(arg, flag.short_flag) == 0) || (flag.long_flag != NULL && strcmp(arg, flag.long_flag) == 0)){
-                printf("found flag %s\n", arg);
                 if (flag.variable != NULL) *flag.variable = true;
                 if (flag.exit) return true;
                 goto next_arg;
@@ -665,26 +706,26 @@ bool clags_parse(int argc, char **argv, const clags_config_t config)
     return true;
 }
 
-void clags_usage(const char *program_name, const clags_config_t config)
+void clags_usage(const char *program_name, clags_config_t *config)
 {
-    if (config.args == NULL) return;
-    clags_required_t required[config.args_count];
-    clags_optional_t optional[config.args_count];
-    clags_flag_t flags[config.args_count];
+    if (config->args == NULL || config->invalid) return;
+    clags_required_t required[config->args_count];
+    clags_optional_t optional[config->args_count];
+    clags_flag_t flags[config->args_count];
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
 
-    clags__sort_args(&args, config.args, config.args_count);
+    clags__sort_args(&args, config);
 
-    clags_options_t options = config.options;
-    
+    clags_options_t options = config->options;
+        
     printf("Usage: %s", program_name);
     if (args.optional_count) printf(" [OPTIONS]");
     if (args.flag_count) printf(" [FLAGS]");
     bool last_was_list = false;
     for (size_t i=0; i<args.required_count; ++i){
         if (last_was_list) {
-            printf(" %s", config.options.list_terminator);
+            printf(" %s", options.list_terminator);
             last_was_list = false;
         }
         if (args.required[i].is_list){
