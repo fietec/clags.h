@@ -141,6 +141,7 @@ typedef enum{
     Clags_Flag
 } clags_arg_type_t;
 
+// construct with `clags_requried`, `clags_optional` and `clags_flag` macros
 typedef struct{
     clags_arg_type_t type;
     union{
@@ -155,6 +156,7 @@ typedef struct{
     const char *list_terminator;
 } clags_options_t;
 
+// construct with `clags_config` macro
 typedef struct{
     clags_arg_t *args;
     size_t args_count;
@@ -163,12 +165,16 @@ typedef struct{
 
 #define CLAGS_USAGE_ALIGNMENT -24
 
+// constructs a config from an array of clags_arg_t args
 #define clags_config(args, ...) (clags_config_t){.args=(args), .args_count=clags_arr_len(args), .options=(clags_options_t){__VA_ARGS__}}
 
+// a required, positional argument, can be typed
 #define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_required_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
+// an optional argument, can be typed
 #define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_optional_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
+// a boolean flag argument
 #define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
 #define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", .exit=true)
 
@@ -240,7 +246,6 @@ bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, voi
     fprintf(stderr, "[ERROR] Invalid boolean value for argument '%s': '%s'!\n", arg_name, arg);
     return false;
 }
-
 
 bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
@@ -588,6 +593,7 @@ bool clags_parse(int argc, char **argv, const clags_config_t config)
         for (size_t i=0; i<args.flag_count; ++i){
             clags_flag_t flag = args.flags[i];
             if ((flag.short_flag != NULL && strcmp(arg, flag.short_flag) == 0) || (flag.long_flag != NULL && strcmp(arg, flag.long_flag) == 0)){
+                printf("found flag %s\n", arg);
                 if (flag.variable != NULL) *flag.variable = true;
                 if (flag.exit) return true;
                 goto next_arg;
@@ -775,7 +781,7 @@ void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
     if (type == Clags_Choice){
         clags__choice_usage((clags_choices_t *)func, is_list);
     }else if (type == Clags_None){
-        printf(" ([])");
+        if (is_list) printf(" ([])");
     } else{
         printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
     }
