@@ -97,7 +97,7 @@ typedef struct{
 typedef struct{
     clags_choice_t *items;
     size_t count;
-    bool print_details;
+    bool print_no_details;
 } clags_choices_t;
 
 typedef struct{
@@ -158,6 +158,7 @@ typedef struct{
 typedef struct{
     const char *ignore_prefix;
     const char *list_terminator;
+    bool print_no_notes;
 } clags_options_t;
 
 // construct with `clags_config` macro
@@ -207,18 +208,15 @@ typedef struct{
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
-// Parse arguments according to the given configuration.
-// Returns true if parsing succeeded, false otherwise.
+// parse arguments according to the given configuration.
+// returns true if parsing succeeded, false otherwise.
 bool clags_parse(int argc, char **argv, clags_config_t *config);
 
-// Print usage information for the program, based on the given configuration.
+// print usage information for the program, based on the given configuration.
 void clags_usage(const char *program_name, clags_config_t *config);
 
-// Free all memory associated with a clags_list_t instance.
+// free all memory associated with a clags_list_t instance.
 void clags_list_free(clags_list_t *list);
-
-void clags__choice_usage(clags_choices_t *choices, bool is_list);
-void clags__type_usage(clags_value_type_t type, void *func, bool is_list);
 
 #endif // CLAGS_H
 
@@ -596,6 +594,35 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
     }
 }
 
+void clags__choice_usage(clags_choices_t *choices, bool is_list)
+{
+    if (!choices->print_no_details || choices->count >= 6){
+        printf(" (%s%s)\n        Choices:\n", clags__type_names[Clags_Choice], is_list?"[]":"");
+        for (size_t j=0; j<choices->count; ++j){
+            clags_choice_t choice = choices->items[j];
+            printf("          - %*s : %s\n", CLAGS_USAGE_ALIGNMENT+8, choice.value, choice.description);
+        }
+    } else{
+        printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
+        for (size_t j=0; j<choices->count; ++j){
+            printf("%s%s", j>0?" | ":" ", choices->items[j].value);
+        }
+        printf(")");
+    }
+}
+
+void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
+{
+    if (type == Clags_Choice){
+        clags__choice_usage((clags_choices_t *)func, is_list);
+    }else if (type == Clags_None){
+        if (is_list) printf(" ([])");
+    } else{
+        printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
+    }
+    printf("\n");
+}
+
 bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
     if (config->args == NULL) return true;
@@ -643,7 +670,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                 return false;
             }
 
-            // parse long optionals
+            // parse long option
             for (size_t i=0; i<args.optional_count; ++i){
                 clags_optional_t opt = args.optional[i];
                 if (opt.long_flag == NULL) continue;
@@ -848,7 +875,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
             printf("%s\n", flag.exit?" and exit":"");
         }
     }
-    if (options.list_terminator || options.ignore_prefix){
+    if (!options.print_no_notes && (options.list_terminator || options.ignore_prefix)){
         printf("\n  Notes:\n");
         if (options.list_terminator){
             printf("    '%s' terminates a list argument when followed by another argument.\n", options.list_terminator);
@@ -857,35 +884,6 @@ void clags_usage(const char *program_name, clags_config_t *config)
             printf("    Arguments prefixed with '%s' are ignored.\n", options.ignore_prefix);
         }
     }
-}
-
-void clags__choice_usage(clags_choices_t *choices, bool is_list)
-{
-    if (choices->print_details || choices->count >= 6){
-        printf(" (%s%s)\n        Choices:\n", clags__type_names[Clags_Choice], is_list?"[]":"");
-        for (size_t j=0; j<choices->count; ++j){
-            clags_choice_t choice = choices->items[j];
-            printf("          - %*s : %s\n", CLAGS_USAGE_ALIGNMENT+8, choice.value, choice.description);
-        }
-    } else{
-        printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
-        for (size_t j=0; j<choices->count; ++j){
-            printf("%s%s", j>0?" | ":" ", choices->items[j].value);
-        }
-        printf(")");
-    }
-}
-
-void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
-{
-    if (type == Clags_Choice){
-        clags__choice_usage((clags_choices_t *)func, is_list);
-    }else if (type == Clags_None){
-        if (is_list) printf(" ([])");
-    } else{
-        printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
-    }
-    printf("\n");
 }
 
 void clags_list_free(clags_list_t *list)

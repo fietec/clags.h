@@ -36,7 +36,7 @@ clags_choice_t choice_values[] = {
     {"RANDOM", "random order"}
 };
 
-clags_choices_t choices = clags_choice(choice_values, true);
+clags_choices_t choices = clags_choice(choice_values);
 clags_choice_t *choice = clags_choice_default(choice_values, 0);
 
 clags_arg_t args[] = {

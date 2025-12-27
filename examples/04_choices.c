@@ -27,7 +27,7 @@ clags_choice_t choice_values[] = {
 };
 
 // create a wrapper for the choices
-clags_choices_t choices = clags_choice(choice_values, .print_details=true);
+clags_choices_t choices = clags_choice(choice_values);
 // create variable to hold the pointer of the chosen choice
 clags_choice_t *choice = clags_choice_default(choice_values, 0);
 
