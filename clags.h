@@ -58,22 +58,23 @@ bool clags__verify_file   (const char *arg_name, const char *arg, void *pvalue, 
 bool clags__verify_dir    (const char *arg_name, const char *arg, void *pvalue, void *func);
 bool clags__verify_size   (const char *arg_name, const char *arg, void *pvalue, void *func);
 
+// the defintions of all supported value types. Format: (EnumValue, verification_function, type_name)
 #define clags__types\
-    X(Clags_None,   clags__verify_none,    NULL   )\
-    X(Clags_Custom, clags__verify_custom, "custom")\
-    X(Clags_Bool,   clags__verify_bool,   "bool"  )\
-    X(Clags_Int8,   clags__verify_int8,   "int8"  )\
-    X(Clags_UInt8,  clags__verify_uint8,  "uint8" )\
-    X(Clags_Int32,  clags__verify_int32,  "int32" )\
-    X(Clags_UInt32, clags__verify_uint32, "uint32")\
-    X(Clags_Int64,  clags__verify_int64,  "int64" )\
-    X(Clags_UInt64, clags__verify_uint64, "uint64")\
-    X(Clags_Double, clags__verify_double, "double")\
-    X(Clags_Choice, clags__verify_choice, "choice")\
-    X(Clags_Path,   clags__verify_path,   "path"  )\
-    X(Clags_File,   clags__verify_file,   "file"  )\
-    X(Clags_Dir,    clags__verify_dir,    "dir"   )\
-    X(Clags_Size,   clags__verify_size,   "size"  )\
+   X(Clags_None,   clags__verify_none,    NULL   )\  // the default type, a normal string
+   X(Clags_Custom, clags__verify_custom, "custom")\  // a type implemented by a custom verification function
+   X(Clags_Bool,   clags__verify_bool,   "bool"  )\  
+   X(Clags_Int8,   clags__verify_int8,   "int8"  )\ 
+   X(Clags_UInt8,  clags__verify_uint8,  "uint8" )\
+   X(Clags_Int32,  clags__verify_int32,  "int32" )\
+   X(Clags_UInt32, clags__verify_uint32, "uint32")\
+   X(Clags_Int64,  clags__verify_int64,  "int64" )\
+   X(Clags_UInt64, clags__verify_uint64, "uint64")\
+   X(Clags_Double, clags__verify_double, "double")\
+   X(Clags_Choice, clags__verify_choice, "choice")\  // an 'enum-like' value
+   X(Clags_Path,   clags__verify_path,   "path"  )\  // a valid path to an existing file or dir
+   X(Clags_File,   clags__verify_file,   "file"  )\  // a valid path to an existing file
+   X(Clags_Dir,    clags__verify_dir,    "dir"   )\  // a valid path to an existing dir
+   X(Clags_Size,   clags__verify_size,   "size"  )\  // a clags_fsize_t byte size as a human readable string
 
 #define X(type, func, name) type,
 typedef enum{
@@ -206,8 +207,14 @@ typedef struct{
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 
+// Parse arguments according to the given configuration.
+// Returns true if parsing succeeded, false otherwise.
 bool clags_parse(int argc, char **argv, clags_config_t *config);
+
+// Print usage information for the program, based on the given configuration.
 void clags_usage(const char *program_name, clags_config_t *config);
+
+// Free all memory associated with a clags_list_t instance.
 void clags_list_free(clags_list_t *list);
 
 void clags__choice_usage(clags_choices_t *choices, bool is_list);
@@ -508,8 +515,8 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
     }
     char *ptr = (char*) list->items;
     if (clags__verify_funcs[req.value_type](req.arg_name, arg, ptr+item_size*list->count, req.verify)){
-	list->count++;
-	return true;
+        list->count++;
+        return true;
     }
     return false;
 }
@@ -542,7 +549,7 @@ bool clags__validate_config(clags_config_t *config)
                 }
                 if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
                     fprintf(stderr,
-                            "[CONFIG_WARNING] Optional long flag '%s' should not start with '--'. "
+                            "[CONFIG_WARNING] optional long flag '%s' should not start with '--'. "
                             "The parser automatically handles leading '--' for long flags, "
                             "so including it in the config may cause incorrect parsing.\n",
                             opt.long_flag);
@@ -592,6 +599,8 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
 bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
     if (config->args == NULL) return true;
+
+    // validate the configuration, exit on fatal error
     if (!clags__validate_config(config)) return false;
     
     // sort arguments by type
@@ -627,14 +636,14 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
             continue;
         }
         if (strncmp(arg, "--", 2) == 0){
-            // long flag
+            // parse long flag or option
             arg += 2;
             if (*arg == '\0'){
                 fprintf(stderr, "[ERROR] Missing flag or option name: '--%s'!\n", arg);
                 return false;
             }
 
-            // parse optional long_flag
+            // parse long optionals
             for (size_t i=0; i<args.optional_count; ++i){
                 clags_optional_t opt = args.optional[i];
                 if (opt.long_flag == NULL) continue;
@@ -642,6 +651,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                 if (strncmp(arg, opt.long_flag, long_flag_len) == 0){
                     char *value = arg + long_flag_len;
                     if (*value == '\0'){
+                        // get value from the next not-ignored argument
                         while (true){
                             if (argc-index <= 1){
                                 fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
@@ -663,7 +673,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                     goto next;
                 }
             }
-
+            // parse long flags
             for (size_t i=0; i<args.flag_count; ++i){
                 clags_flag_t flag = args.flags[i];
                 if (flag.long_flag && strcmp(arg, flag.long_flag) == 0){
@@ -675,17 +685,19 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
             fprintf(stderr, "[ERROR] Unknown long flag or option: '--%s'!\n", arg);
             return false;
         } else if (*arg == '-' && !isdigit((unsigned char)arg[1])){
-            // short flag
+            // parse short flag or option
             arg += 1;
             size_t flag_len = strlen(arg);
             if (flag_len == 0){
-                fprintf(stderr, "[ERROR] Missing flag name: '-'!\n");
+                fprintf(stderr, "[ERROR] Missing flag or option name: '-'!\n");
                 return false;                
             }
             if (flag_len == 1){
+                // short option with value cannot be part of a flag combination
                 for (size_t i=0; i<args.optional_count; ++i){
                     clags_optional_t opt = args.optional[i];
                     if (*arg == opt.short_flag){
+                        // get value from the next not-ignored argument
                         char *value = NULL;
                         while (true){
                             if (argc-index <= 1){
@@ -701,6 +713,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                     }
                 }
             }
+            // parse short flag combination
             for (char* c=arg; c<arg+flag_len; ++c){
                 bool matched = false;
                 for (size_t i=0; i<args.flag_count; ++i){
@@ -727,6 +740,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                 return false;
             }
 
+            // verify and write argument
             clags_required_t req = args.required[required_count];
             if (req.is_list){
                 in_list = true;
@@ -740,6 +754,8 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
     }
     if (in_list) required_count += 1;
     if (arguments_ignored) printf("[WARNING] Arguments were ignored because they were prefixed with '%s'\n", ignore_prefix);
+
+    // report missing required arguments
     if (required_count != args.required_count){
         fprintf(stderr, "[ERROR] Missing required arguments:");
         for (size_t i=required_count; i<args.required_count; ++i){
