@@ -110,7 +110,7 @@ typedef struct{
 } clags_required_t;
 
 typedef struct{
-    const char *short_flag;
+    char short_flag;
     const char *long_flag;
     void *variable;
     const char *arg_name;
@@ -121,7 +121,7 @@ typedef struct{
 } clags_optional_t;
 
 typedef struct{
-    const char *short_flag;
+    char short_flag;
     const char *long_flag;
     bool *variable;
     const char *description;
@@ -180,7 +180,7 @@ typedef struct{
 
 // a boolean flag argument
 #define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
-#define clags_flag_help(val) clags_flag("-h", "--help", val, "print this help dialog", .exit=true)
+#define clags_flag_help(val) clags_flag('h', "help", val, "print this help dialog", .exit=true)
 
 #define clags_list()            (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
 #define clags_path_list()       clags_list()
@@ -537,15 +537,31 @@ bool clags__validate_config(clags_config_t *config)
             case Clags_Optional:{
                 last_was_list = false;
                 clags_optional_t opt = config->args[i].opt;
-                if (opt.short_flag == NULL && opt.long_flag == NULL){
+                if (opt.short_flag == '\0' && opt.long_flag == NULL){
                     fprintf(stderr, "[CONFIG_WARNING] optional argument is unreachable. Define at least one of `short_flag` and `long_flag`.\n");
+                }
+                if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
+                    fprintf(stderr,
+                            "[CONFIG_WARNING] Optional long flag '%s' should not start with '--'. "
+                            "The parser automatically handles leading '--' for long flags, "
+                            "so including it in the config may cause incorrect parsing.\n",
+                            opt.long_flag);
+
                 }
             } break;
             case Clags_Flag:{
                 last_was_list = false;
                 clags_flag_t flag = config->args[i].flag;
-                if (flag.short_flag == NULL && flag.long_flag == NULL){
+                if (flag.short_flag == '\0' && flag.long_flag == NULL){
                     fprintf(stderr, "[CONFIG_WARNING] flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.\n");
+                }
+                if (flag.long_flag && strncmp(flag.long_flag, "--", 2) == 0){
+                    fprintf(stderr,
+                            "[CONFIG_WARNING] long flag '%s' should not start with '--'. "
+                            "The parser automatically handles leading '--' for long flags, "
+                            "so including it in the config may cause incorrect parsing.\n",
+                            flag.long_flag);
+
                 }
             } break;
         }
@@ -576,128 +592,157 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
 bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
     if (config->args == NULL) return true;
+    if (!clags__validate_config(config)) return false;
+    
+    // sort arguments by type
     clags_required_t required[config->args_count];
     clags_optional_t optional[config->args_count];
     clags_flag_t flags[config->args_count];
-    bool in_list = false;
-
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
-    if (!clags__validate_config(config)) return false;
     clags__sort_args(&args, config);
 
     const char *ignore_prefix = config->options.ignore_prefix;
     size_t ignore_prefix_len = ignore_prefix?strlen(ignore_prefix):0;
     const char *list_term = config->options.list_terminator;
-    
-    size_t required_found = 0;
-    bool ignored = false;
-    for (size_t index=1; index<(size_t)argc; ++index){
+
+    // parse arguments
+    bool arguments_ignored = false;
+    bool in_list = false;
+    size_t required_count = 0;
+    for (size_t index=1; index<(size_t) argc; ++index){
         char *arg = argv[index];
-        if (ignore_prefix && strncmp(ignore_prefix, arg, ignore_prefix_len) == 0){
-            ignored = true;
+        
+        // ignore arguments prefixed with `ignore_prefix`
+        if (ignore_prefix && strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
+            arguments_ignored = true;
             continue;
         }
+
+        // detect list terminator
         if (list_term && strcmp(arg, list_term) == 0){
             if (in_list){
                 in_list = false;
-                required_found++;
+                required_count += 1;
             }
             continue;
         }
-        for (size_t i=0; i<args.optional_count; ++i){
-            clags_optional_t opt = args.optional[i];
-            if ((opt.short_flag != NULL && strcmp(arg, opt.short_flag) == 0) || (opt.long_flag != NULL && strcmp(arg, opt.long_flag) == 0)){
-                char *result = NULL;
-                while (true){
-                    if (argc-index <= 1){
-                        fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
-                        return false;
-                    }
-                    result = argv[++index];
-                    if (!ignore_prefix || !strncmp(ignore_prefix, result, ignore_prefix_len) == 0) break;
-                    ignored = true;
-                }
-                if (!clags__verify_funcs[opt.value_type](arg, result, opt.variable, opt.verify)) return false;
-                goto next_arg;
-            } else if (opt.long_flag != NULL && strncmp(arg, opt.long_flag, strlen(opt.long_flag)) == 0){
-                char *value = arg+strlen(opt.long_flag);
-                if (*value++ == '='){
-                    if (*value == '\0'){
-                        fprintf(stderr, "[ERROR] Designated option assignment may not have an empty value: '%s'!\n", arg);
-                        return false;
-                    }
-                    if (!clags__verify_funcs[opt.value_type](opt.long_flag, value, opt.variable, opt.verify)) return false;
-                    goto next_arg;
-                }
+        if (strncmp(arg, "--", 2) == 0){
+            // long flag
+            arg += 2;
+            if (*arg == '\0'){
+                fprintf(stderr, "[ERROR] Missing flag or option name: '--%s'!\n", arg);
+                return false;
             }
-        }
 
-        for (size_t i=0; i<args.flag_count; ++i){
-            clags_flag_t flag = args.flags[i];
-            if ((flag.short_flag != NULL && strcmp(arg, flag.short_flag) == 0) || (flag.long_flag != NULL && strcmp(arg, flag.long_flag) == 0)){
-                if (flag.variable != NULL) *flag.variable = true;
-                if (flag.exit) return true;
-                goto next_arg;
+            // parse optional long_flag
+            for (size_t i=0; i<args.optional_count; ++i){
+                clags_optional_t opt = args.optional[i];
+                if (opt.long_flag == NULL) continue;
+                size_t long_flag_len = strlen(opt.long_flag);
+                if (strncmp(arg, opt.long_flag, long_flag_len) == 0){
+                    char *value = arg + long_flag_len;
+                    if (*value == '\0'){
+                        while (true){
+                            if (argc-index <= 1){
+                                fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
+                                return false;
+                            }
+                            value = argv[++index];
+                            if (!ignore_prefix || strncmp(value, ignore_prefix, ignore_prefix_len) != 0) break;
+                            arguments_ignored = true;
+                        }
+                    } else if (*value++ == '='){
+                        if (*value == '\0'){
+                            fprintf(stderr, "[ERROR] Designated option assignment may not have an empty value: '%s'!\n", arg);
+                            return false;
+                        }
+                    } else {
+                        continue;
+                    }
+                    if (!clags__verify_funcs[opt.value_type](arg, value, opt.variable, opt.verify)) return false;
+                    goto next;
+                }
             }
-        }
-        if (arg[0] == '-' && !isdigit(arg[1])){
-            size_t arg_len = strlen(arg);
-            if (arg_len == 1){
-                fprintf(stderr, "[ERROR] Missing flag name: '%s'!\n", arg);
-                return false;
+
+            for (size_t i=0; i<args.flag_count; ++i){
+                clags_flag_t flag = args.flags[i];
+                if (flag.long_flag && strcmp(arg, flag.long_flag) == 0){
+                    if (flag.variable != NULL) *flag.variable = true;
+                    if (flag.exit) return true;
+                    goto next;
+                }
             }
-            if (arg[1] == '-'){
-                fprintf(stderr, "[ERROR] Unknown long flag: '%s'!\n", arg);
-                return false;
+            fprintf(stderr, "[ERROR] Unknown long flag or option: '--%s'!\n", arg);
+            return false;
+        } else if (*arg == '-' && !isdigit((unsigned char)arg[1])){
+            // short flag
+            arg += 1;
+            size_t flag_len = strlen(arg);
+            if (flag_len == 0){
+                fprintf(stderr, "[ERROR] Missing flag name: '-'!\n");
+                return false;                
             }
-            for (size_t c = 1; c < arg_len; ++c) {
-                char short_flag_str[3] = { '-', arg[c], '\0' };
+            if (flag_len == 1){
+                for (size_t i=0; i<args.optional_count; ++i){
+                    clags_optional_t opt = args.optional[i];
+                    if (*arg == opt.short_flag){
+                        char *value = NULL;
+                        while (true){
+                            if (argc-index <= 1){
+                                fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
+                                return false;
+                            }
+                            value = argv[++index];
+                            if (!ignore_prefix || strncmp(value, ignore_prefix, ignore_prefix_len) != 0) break;
+                            arguments_ignored = true;
+                        }
+                        if (!clags__verify_funcs[opt.value_type](arg, value, opt.variable, opt.verify)) return false;
+                        goto next;
+                    }
+                }
+            }
+            for (char* c=arg; c<arg+flag_len; ++c){
                 bool matched = false;
-                for (size_t i = 0; i < args.flag_count; ++i) {
+                for (size_t i=0; i<args.flag_count; ++i){
                     clags_flag_t flag = args.flags[i];
-                    if (flag.short_flag && (strcmp(flag.short_flag, short_flag_str) == 0 || (*flag.short_flag!='-' && strcmp(flag.short_flag, short_flag_str+1) == 0))) {
+                    if (*c == flag.short_flag){
                         if (flag.variable) *flag.variable = true;
                         if (flag.exit) return true;
                         matched = true;
-                        break;
                     }
                 }
-                if (!matched) {
-                    if (arg_len > 2){
-                        fprintf(stderr, "[ERROR] Unknown short flag in combination '%s': '%s'\n", arg, short_flag_str);
+                if (!matched){
+                    if (flag_len > 1){
+                        fprintf(stderr, "[ERROR] Unknown short flag '-%c' in combination '-%s'!\n", *c, arg);
                     } else{
-                        fprintf(stderr, "[ERROR] Unknown short flag: '%s'!\n", short_flag_str);
+                        fprintf(stderr, "[ERROR] Unknown short flag '-%c'!\n", *c);
                     }
                     return false;
                 }
             }
-            goto next_arg;
-        }
+        } else {
+            // parse required argument
+            if (required_count >= args.required_count){
+                fprintf(stderr, "[ERROR] Unknown additional argument (%zu/%zu): '%s'!\n", required_count+1, args.required_count, arg);
+                return false;
+            }
 
-        if (required_found >= args.required_count){
-            fprintf(stderr, "[ERROR] Unknown additional argument (%zu/%zu): '%s'!\n", required_found+1, args.required_count, arg);
-            return false;
+            clags_required_t req = args.required[required_count];
+            if (req.is_list){
+                in_list = true;
+                if (!clags__append_to_list(req, arg)) return false;
+            } else{
+                required_count += 1;
+                if (!clags__verify_funcs[req.value_type](req.arg_name, arg, req.variable, req.verify)) return false;
+            }
         }
-        clags_required_t current_req = args.required[required_found];
-        if (current_req.is_list){
-            in_list = true;
-            if (!clags__append_to_list(current_req, arg)) return false;
-            continue;
-        } else{
-            clags_required_t req = args.required[required_found++];
-            if (!clags__verify_funcs[req.value_type](req.arg_name, arg, req.variable, req.verify)) return false;
-        }
-    next_arg:
-        if (in_list){
-            required_found++;
-            in_list = false;
-        }
+    next:
     }
-    if (in_list) required_found++;
-    if (ignored) printf("[WARNING] Arguments were ignored because they were prefixed with '%s'\n", ignore_prefix);
-    if (required_found != args.required_count){
+    if (in_list) required_count += 1;
+    if (arguments_ignored) printf("[WARNING] Arguments were ignored because they were prefixed with '%s'\n", ignore_prefix);
+    if (required_count != args.required_count){
         fprintf(stderr, "[ERROR] Missing required arguments:");
-        for (size_t i=required_found; i<args.required_count; ++i){
+        for (size_t i=required_count; i<args.required_count; ++i){
             fprintf(stderr, " <%s>", args.required[i].arg_name);
         }
         fprintf(stderr, "!\n");
@@ -751,18 +796,18 @@ void clags_usage(const char *program_name, clags_config_t *config)
             clags_optional_t opt = args.optional[i];
             if (opt.short_flag){
                 if (opt.long_flag){
-                    size_t buf_size = strlen(opt.short_flag) + strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
+                    size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 10;
                     char buf[buf_size];
-                    snprintf(buf, buf_size, "%s, %s(=)%s>", opt.short_flag, opt.long_flag, opt.arg_name);
+                    snprintf(buf, buf_size, "-%c, --%s(=)%s>", opt.short_flag, opt.long_flag, opt.arg_name);
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
                 } else{
-                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
+                    printf("    -%*c : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
                 clags__type_usage(opt.value_type, opt.verify, false);
             }else if (opt.long_flag){
-                size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 4;
+                size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
                 char buf[buf_size];
-                snprintf(buf, buf_size, "%s(=)%s", opt.long_flag, opt.arg_name);
+                snprintf(buf, buf_size, "--%s(=)%s", opt.long_flag, opt.arg_name);
                 printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
                 clags__type_usage(opt.value_type, opt.verify, false);
             }
@@ -774,15 +819,15 @@ void clags_usage(const char *program_name, clags_config_t *config)
             clags_flag_t flag = args.flags[i];
             if (flag.short_flag){
                 if (flag.long_flag){
-                    size_t buf_size = strlen(flag.short_flag) + strlen(flag.long_flag) + 12;
+                    size_t buf_size = + strlen(flag.long_flag) + 16;
                     char buf[buf_size];
-                    snprintf(buf, buf_size, "%s, %s", flag.short_flag, flag.long_flag);
+                    snprintf(buf, buf_size, "-%c, --%s", flag.short_flag, flag.long_flag);
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, flag.description);
                 } else{
-                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
+                    printf("    -%*c : %s", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
                 }
             } else if (flag.long_flag){
-                printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
+                printf("    --%*s : %s", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
             } else{
                 continue;
             }

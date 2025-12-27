@@ -20,9 +20,9 @@ clags_arg_t args[] = {
     // Force the inputted string to be a valid path to a file
     clags_required(&input_file, "input_file", "the input file", .value_type=Clags_File),
 
-    clags_optional("-s", "--size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
-    clags_optional("-o", "--output", &output_file, "FILE", "the output file"),
-    clags_flag("-w", "--warnings", &warnings, "print warnings"),
+    clags_optional('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
+    clags_optional('o', "output", &output_file, "FILE", "the output file"),
+    clags_flag('w', "warnings", &warnings, "print warnings"),
     clags_flag_help(&help),
 };
 

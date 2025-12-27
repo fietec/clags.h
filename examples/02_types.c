@@ -17,17 +17,19 @@ uint8_t quality = 100;
 bool help = false;
 bool warnings = false;
 bool version = false;
+bool test = false;
 
 clags_arg_t args[] = {
     // to add type verification to an argument, simply set the `value_type` field
     // Note: it is the user's responsibility to provide a variable pointer matching the type specified
     clags_required(&input_file, "input_file", "the file to read", .value_type=Clags_File),
-    clags_optional("-o", "--output", &output_file, "FILE", "the file to write"),
+    clags_optional('o', "output", &output_file, "FILE", "the file to write"),
     // here &quality is expected to be uint8_t*
-    clags_optional("-q", "--quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
-    clags_flag("-w", "--warnings", &warnings, "print warnings"),
+    clags_optional('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
+    clags_flag('w', "warnings", &warnings, "print warnings"),
+    clags_flag('t', "test", &test, "a test flag"),
     // this is how you create a flag that exits the parsing on occurence
-    clags_flag("-v", "--version", &version, "print the version", .exit=true),
+    clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help(&help),
 };
 
@@ -48,6 +50,6 @@ int main(int argc, char **argv)
         printf("02_types: v1.0.0\n");
         return 0;
     }
-    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8"\n", input_file, output_file, quality);
+    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Warnings: %d, Test: %d\n", input_file, output_file, quality, warnings, test);
     return 0;
 }

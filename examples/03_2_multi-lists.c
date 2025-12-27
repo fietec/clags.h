@@ -30,7 +30,7 @@ clags_arg_t args[] = {
 // Having multiple lists or, in fact, any other required arguments directly after a list,
 // requires for a delimeter that terminates the list.
 // Since this is not really standard, a custom terminator must be defined manually here.
-clags_config_t config = clags_config(args, .ignore_prefix="!");
+clags_config_t config = clags_config(args, .list_terminator="--", .ignore_prefix="!");
 
 int main(int argc, char **argv)
 {

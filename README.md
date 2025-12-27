@@ -42,11 +42,11 @@ clags_choice_t *choice = clags_choice_default(choice_values, 0);
 clags_arg_t args[] = {
     clags_required(&input, "input_file", "the input file"),
     
-    clags_optional("-o", "--output", &output, "FILE", "the output file"),
-    clags_optional("-a", "--algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .verify=&choices),
-    clags_optional("-q", "--quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8),
+    clags_optional('o', "output", &output, "FILE", "the output file"),
+    clags_optional('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .verify=&choices),
+    clags_optional('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8),
 
-    clags_flag("-w", "--warnings", &warnings, "print warnings"),
+    clags_flag('w', "warnings", &warnings, "print warnings"),
     clags_flag_help(&help),
 };
 
