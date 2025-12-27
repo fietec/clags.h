@@ -44,7 +44,7 @@ int main(int argc, char **argv)
         printf("String %zu: '%s'\n", i+1, clags_list_element(list, char*, i));
     }
 
-    // this is mandatory if you don't want to leek all the list's precious memory
+    // this is mandatory if you don't want to leak all the list's precious memory
     clags_list_free(&list);
     return 0;
 }

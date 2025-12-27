@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     }
     printf("The lower case inputs are:\n");
     for (size_t i=0; i<list.count; ++i){
-        printf("%3zu: '%s'\n", i, ((char**)list.items)[i]);
+        printf("%3zu: '%s'\n", i, clags_list_element(list, char*, i));
     }
     clags_list_free(&list);
     return 0;
