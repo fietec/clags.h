@@ -60,21 +60,21 @@ bool clags__verify_size   (const char *arg_name, const char *arg, void *pvalue, 
 
 // the defintions of all supported value types. Format: (EnumValue, verification_function, type_name)
 #define clags__types\
-   X(Clags_None,   clags__verify_none,    NULL   )\  // the default type, a normal string
-   X(Clags_Custom, clags__verify_custom, "custom")\  // a type implemented by a custom verification function
-   X(Clags_Bool,   clags__verify_bool,   "bool"  )\  
-   X(Clags_Int8,   clags__verify_int8,   "int8"  )\ 
+   X(Clags_None,   clags__verify_none,    NULL   )\
+   X(Clags_Custom, clags__verify_custom, "custom")\
+   X(Clags_Bool,   clags__verify_bool,   "bool"  )\
+   X(Clags_Int8,   clags__verify_int8,   "int8"  )\
    X(Clags_UInt8,  clags__verify_uint8,  "uint8" )\
    X(Clags_Int32,  clags__verify_int32,  "int32" )\
    X(Clags_UInt32, clags__verify_uint32, "uint32")\
    X(Clags_Int64,  clags__verify_int64,  "int64" )\
    X(Clags_UInt64, clags__verify_uint64, "uint64")\
    X(Clags_Double, clags__verify_double, "double")\
-   X(Clags_Choice, clags__verify_choice, "choice")\  // an 'enum-like' value
-   X(Clags_Path,   clags__verify_path,   "path"  )\  // a valid path to an existing file or dir
-   X(Clags_File,   clags__verify_file,   "file"  )\  // a valid path to an existing file
-   X(Clags_Dir,    clags__verify_dir,    "dir"   )\  // a valid path to an existing dir
-   X(Clags_Size,   clags__verify_size,   "size"  )\  // a clags_fsize_t byte size as a human readable string
+   X(Clags_Choice, clags__verify_choice, "choice")\
+   X(Clags_Path,   clags__verify_path,   "path"  )\
+   X(Clags_File,   clags__verify_file,   "file"  )\
+   X(Clags_Dir,    clags__verify_dir,    "dir"   )\
+   X(Clags_Size,   clags__verify_size,   "size"  )\
 
 #define X(type, func, name) type,
 typedef enum{
