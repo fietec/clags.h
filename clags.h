@@ -692,29 +692,27 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                 fprintf(stderr, "[ERROR] Missing flag or option name: '-'!\n");
                 return false;                
             }
-            if (flag_len == 1){
-                // short option with value cannot be part of a flag combination
+            for (char* c=arg; c<arg+flag_len; ++c){
+                // check for short option
                 for (size_t i=0; i<args.optional_count; ++i){
                     clags_optional_t opt = args.optional[i];
-                    if (*arg == opt.short_flag){
-                        // get value from the next not-ignored argument
-                        char *value = NULL;
-                        while (true){
-                            if (argc-index <= 1){
-                                fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
-                                return false;
+                    if (*c == opt.short_flag){
+                        char *value = c+1;
+                        if (*value == '\0'){
+                            while (true){
+                                if (argc-index <= 1){
+                                    fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
+                                    return false;
+                                }
+                                value = argv[++index];
+                                if (!ignore_prefix || strncmp(value, ignore_prefix, ignore_prefix_len) != 0) break;
+                                arguments_ignored = true;
                             }
-                            value = argv[++index];
-                            if (!ignore_prefix || strncmp(value, ignore_prefix, ignore_prefix_len) != 0) break;
-                            arguments_ignored = true;
                         }
                         if (!clags__verify_funcs[opt.value_type](arg, value, opt.variable, opt.verify)) return false;
                         goto next;
                     }
                 }
-            }
-            // parse short flag combination
-            for (char* c=arg; c<arg+flag_len; ++c){
                 bool matched = false;
                 for (size_t i=0; i<args.flag_count; ++i){
                     clags_flag_t flag = args.flags[i];
