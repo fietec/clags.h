@@ -187,7 +187,7 @@ typedef struct{
 #define CLAGS_USAGE_ALIGNMENT -24
 
 // constructs a config from an array of clags_arg_t args
-#define clags_config(args, ...) (clags_config_t){.args=(args), .args_count=clags_arr_len(args), .options=(clags_options_t){__VA_ARGS__}}
+#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .options=(clags_options_t){__VA_ARGS__}}
 
 // a required, positional argument, can be typed
 #define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_required_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
@@ -704,7 +704,7 @@ void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
 
 bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
-    if (config->args == NULL) return true;
+    if (config == NULL || config->args == NULL) return true;
     // validate the configuration, exit and mark config as invalid on fatal error
     if (!clags__validate_config(config)){
         config->invalid = true;
