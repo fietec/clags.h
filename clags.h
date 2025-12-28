@@ -41,40 +41,45 @@
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
 typedef uint64_t clags_fsize_t;
+typedef uint64_t clags_time_t;
 
-bool clags__verify_none   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_custom (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_bool   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_int8   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_uint8  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_int32  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_uint32 (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_int64  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_uint64 (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_double (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_choice (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_path   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_file   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_dir    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_size   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_none    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_custom  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_bool    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_int8    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_uint8   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_int32   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_uint32  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_int64   (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_uint64  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_double  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_choice  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_path    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_file    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_dir     (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_size    (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_time_s  (const char *arg_name, const char *arg, void *pvalue, void *func);
+bool clags__verify_time_ns (const char *arg_name, const char *arg, void *pvalue, void *func);
 
 // the defintions of all supported value types. Format: (EnumValue, verification_function, type_name)
 #define clags__types\
-   X(Clags_None,   clags__verify_none,    NULL   )\
-   X(Clags_Custom, clags__verify_custom, "custom")\
-   X(Clags_Bool,   clags__verify_bool,   "bool"  )\
-   X(Clags_Int8,   clags__verify_int8,   "int8"  )\
-   X(Clags_UInt8,  clags__verify_uint8,  "uint8" )\
-   X(Clags_Int32,  clags__verify_int32,  "int32" )\
-   X(Clags_UInt32, clags__verify_uint32, "uint32")\
-   X(Clags_Int64,  clags__verify_int64,  "int64" )\
-   X(Clags_UInt64, clags__verify_uint64, "uint64")\
-   X(Clags_Double, clags__verify_double, "double")\
-   X(Clags_Choice, clags__verify_choice, "choice")\
-   X(Clags_Path,   clags__verify_path,   "path"  )\
-   X(Clags_File,   clags__verify_file,   "file"  )\
-   X(Clags_Dir,    clags__verify_dir,    "dir"   )\
-   X(Clags_Size,   clags__verify_size,   "size"  )\
+   X(Clags_None,   clags__verify_none,    NULL      ) \
+   X(Clags_Custom, clags__verify_custom,  "custom"  ) \
+   X(Clags_Bool,   clags__verify_bool,    "bool"    ) \
+   X(Clags_Int8,   clags__verify_int8,    "int8"    ) \
+   X(Clags_UInt8,  clags__verify_uint8,   "uint8"   ) \
+   X(Clags_Int32,  clags__verify_int32,   "int32"   ) \
+   X(Clags_UInt32, clags__verify_uint32,  "uint32"  ) \
+   X(Clags_Int64,  clags__verify_int64,   "int64"   ) \
+   X(Clags_UInt64, clags__verify_uint64,  "uint64"  ) \
+   X(Clags_Double, clags__verify_double,  "double"  ) \
+   X(Clags_Choice, clags__verify_choice,  "choice"  ) \
+   X(Clags_Path,   clags__verify_path,    "path"    ) \
+   X(Clags_File,   clags__verify_file,    "file"    ) \
+   X(Clags_Dir,    clags__verify_dir,     "dir"     ) \
+   X(Clags_Size,   clags__verify_size,    "size"    ) \
+   X(Clags_TimeS,  clags__verify_time_s,  "time_s"  ) \
+   X(Clags_TimeNS, clags__verify_time_ns, "time_ns" ) \
 
 #define X(type, func, name) type,
 typedef enum{
@@ -480,7 +485,7 @@ bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, voi
     else if (strcmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
     else if (strcmp(endptr, "TB")  == 0)             factor = 1000000000000;
     else {
-        fprintf(stderr, "[ERROR] Invalid size suffix for argument '%s': '%s'!\n", arg_name, endptr);
+        fprintf(stderr, "[ERROR] Invalid size unit for argument '%s': '%s'!\n", arg_name, endptr);
         return false;
     }
     
@@ -489,6 +494,63 @@ bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, voi
         return false;
     }
     if (pvalue) *(clags_fsize_t*)pvalue = (clags_fsize_t)value * factor;
+    return true;
+}
+
+bool clags__verify_time_s(const char *arg_name, const char *arg, void *pvalue, void *func)
+{
+    (void) func;
+    char *endptr;
+    errno = 0;
+    double value = strtod(arg, &endptr);
+    if (endptr == arg){
+        fprintf(stderr, "[ERROR] No leading number in time argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    clags_time_t factor;
+    if (*endptr == '\0' || strcmp(endptr, "s") == 0)  factor =       1;
+    else if (strcmp(endptr, "m")  == 0)               factor =      60;
+    else if (strcmp(endptr, "h")  == 0)               factor =    3600;
+    else if (strcmp(endptr, "d")  == 0)               factor = 24*3600;
+    else {
+        fprintf(stderr, "[ERROR] Invalid time unit for argument '%s': '%s'!\n", arg_name, endptr);
+        return false;
+    }
+    if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
+        fprintf(stderr, "[ERROR] clags_time_t value out of range (0s to %"PRIu64"s) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        return false;
+    }
+    if (pvalue) *(clags_time_t*)pvalue = (clags_time_t)(value * factor);
+    return true;
+}
+
+bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, void *func)
+{
+    (void) func;
+    char *endptr;
+    errno = 0;
+    double value = strtod(arg, &endptr);
+    if (endptr == arg){
+        fprintf(stderr, "[ERROR] No leading number in time argument '%s': '%s'!\n", arg_name, arg);
+        return false;
+    }
+    clags_time_t factor;
+    if (*endptr == '\0' || strcmp(endptr, "ns") == 0) factor =           1;
+    else if (strcmp(endptr, "us") == 0)               factor =         1e3;
+    else if (strcmp(endptr, "ms") == 0)               factor =         1e6;
+    else if (strcmp(endptr, "s")  == 0)               factor =         1e9;
+    else if (strcmp(endptr, "m")  == 0)               factor =      60*1e9;
+    else if (strcmp(endptr, "h")  == 0)               factor =    3600*1e9;
+    else if (strcmp(endptr, "d")  == 0)               factor = 24*3600*1e9;
+    else {
+        fprintf(stderr, "[ERROR] Invalid time unit for argument '%s': '%s'!\n", arg_name, endptr);
+        return false;
+    }
+    if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
+        fprintf(stderr, "[ERROR] clags_time_t value out of range (0ns to %"PRIu64"ns) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        return false;
+    }
+    if (pvalue) *(clags_time_t*)pvalue = (clags_time_t)(value * factor);
     return true;
 }
 
@@ -522,11 +584,11 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
 
 bool clags__validate_config(clags_config_t *config)
 {
-    if (strcmp(config->options.list_terminator, "--") == 0){
+    if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
         fprintf(stderr, "[CONFIG_ERROR] '.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!\n");
         return false;
     }
-    if (strcmp(config->options.ignore_prefix, "--") == 0){
+    if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
         fprintf(stderr, "[CONFIG_ERROR] '.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!\n");
         return false;
     }
@@ -634,13 +696,11 @@ void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
 bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
     if (config->args == NULL) return true;
-
     // validate the configuration, exit and mark config as invalid on fatal error
     if (!clags__validate_config(config)){
         config->invalid = true;
         return false;
     }
-    
     // sort arguments by type
     clags_required_t required[config->args_count];
     clags_optional_t optional[config->args_count];
