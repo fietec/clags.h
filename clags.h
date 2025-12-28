@@ -159,6 +159,7 @@ typedef struct{
     const char *ignore_prefix;
     const char *list_terminator;
     bool print_no_notes;
+    bool allow_option_parsing_toggle;
 } clags_options_t;
 
 // construct with `clags_config` macro
@@ -521,6 +522,14 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
 
 bool clags__validate_config(clags_config_t *config)
 {
+    if (strcmp(config->options.list_terminator, "--") == 0){
+        fprintf(stderr, "[CONFIG_ERROR] '.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!\n");
+        return false;
+    }
+    if (strcmp(config->options.ignore_prefix, "--") == 0){
+        fprintf(stderr, "[CONFIG_ERROR] '.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!\n");
+        return false;
+    }
     bool last_was_list = false;
     const char *last_req_name = NULL;
     for (size_t i=0; i<config->args_count; ++i){
@@ -533,7 +542,6 @@ bool clags__validate_config(clags_config_t *config)
                         fprintf(stderr, " or make '%s' optional", req.arg_name);
                     }
                     printf(".\n");
-                    config->invalid = true;
                     return false;
                 }
                 last_was_list = req.is_list;
@@ -627,8 +635,11 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
 {
     if (config->args == NULL) return true;
 
-    // validate the configuration, exit on fatal error
-    if (!clags__validate_config(config)) return false;
+    // validate the configuration, exit and mark config as invalid on fatal error
+    if (!clags__validate_config(config)){
+        config->invalid = true;
+        return false;
+    }
     
     // sort arguments by type
     clags_required_t required[config->args_count];
@@ -644,9 +655,18 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
     // parse arguments
     bool arguments_ignored = false;
     bool in_list = false;
+    bool accept_options = true;
     size_t required_count = 0;
     for (size_t index=1; index<(size_t) argc; ++index){
         char *arg = argv[index];
+
+        // toggle option and flag parsing based on '--'
+        if (strcmp(arg, "--") == 0){
+            if (accept_options || config->options.allow_option_parsing_toggle){
+                accept_options = !accept_options;
+                continue;
+            }
+        }
         
         // ignore arguments prefixed with `ignore_prefix`
         if (ignore_prefix && strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
@@ -662,7 +682,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
             }
             continue;
         }
-        if (strncmp(arg, "--", 2) == 0){
+        if (accept_options && strncmp(arg, "--", 2) == 0){
             // parse long flag or option
             arg += 2;
             if (*arg == '\0'){
@@ -711,7 +731,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
             }
             fprintf(stderr, "[ERROR] Unknown long flag or option: '--%s'!\n", arg);
             return false;
-        } else if (*arg == '-' && !isdigit((unsigned char)arg[1])){
+        } else if (accept_options && *arg == '-' && !isdigit((unsigned char)arg[1])){
             // parse short flag or option
             arg += 1;
             size_t flag_len = strlen(arg);
@@ -875,14 +895,18 @@ void clags_usage(const char *program_name, clags_config_t *config)
             printf("%s\n", flag.exit?" and exit":"");
         }
     }
-    if (!options.print_no_notes && (options.list_terminator || options.ignore_prefix)){
+    if (!options.print_no_notes && (options.list_terminator || options.ignore_prefix || options.allow_option_parsing_toggle)){
         printf("\n  Notes:\n");
+        if (options.allow_option_parsing_toggle){
+            printf("    '--' toggles option and flag parsing and can re-enable parsing when provided again.\n");
+        }
         if (options.list_terminator){
             printf("    '%s' terminates a list argument when followed by another argument.\n", options.list_terminator);
         }
         if (options.ignore_prefix){
             printf("    Arguments prefixed with '%s' are ignored.\n", options.ignore_prefix);
         }
+
     }
 }
 
