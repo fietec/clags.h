@@ -37,6 +37,15 @@
 #include <float.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <inttypes.h>
+
+#ifndef CLAGS_FREE
+#define CLAGS_FREE free
+#endif // CLAGS_FREE
+
+#ifndef CLAGS_REALLOC
+#define CLAGS_REALLOC realloc
+#endif // CLAGS_REALLOC
 
 typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
@@ -570,7 +579,7 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
     size_t item_size = list->item_size;
     if (list->count >= list->capacity){
         size_t new_capacity = list->capacity==0? 8:list->capacity*2;
-        list->items = realloc(list->items, new_capacity*item_size);
+        list->items = CLAGS_REALLOC(list->items, new_capacity*item_size);
         list->capacity = new_capacity;
         assert(list->items && "Buy more RAM lol");
     }
@@ -972,7 +981,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
 
 void clags_list_free(clags_list_t *list)
 {
-    free(list->items);
+    CLAGS_FREE(list->items);
     list->items = NULL;
     list->count = list->capacity = 0;
 }
