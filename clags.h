@@ -47,6 +47,10 @@
 #define CLAGS_REALLOC realloc
 #endif // CLAGS_REALLOC
 
+#ifndef CLAGS_LIST_INIT_CAPACITY
+#define CLAGS_LIST_INIT_CAPACITY 8
+#endif // CLAGS_LIST_INIT_CAPACITY
+
 typedef bool (*clags_custom_verify_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (clags_verify_func_t)(const char *arg_name, const char *arg, void *variable, void *verify);
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
@@ -586,7 +590,7 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
     clags_list_t *list = (clags_list_t*) req.variable;
     size_t item_size = list->item_size;
     if (list->count >= list->capacity){
-        size_t new_capacity = list->capacity==0? 8:list->capacity*2;
+        size_t new_capacity = list->capacity==0? CLAGS_LIST_INIT_CAPACITY:list->capacity*2;
         list->items = CLAGS_REALLOC(list->items, new_capacity*item_size);
         list->capacity = new_capacity;
         assert(list->items && "Buy more RAM lol");
