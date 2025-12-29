@@ -47,28 +47,29 @@
 #define CLAGS_REALLOC realloc
 #endif // CLAGS_REALLOC
 
-typedef bool (*clags_value_func_t)(const char *arg_name, const char *arg, void *variable);
-typedef bool (*clags_value_verify_t) (const char *arg_name, const char *arg, void *pvalue, void *func);
+typedef bool (*clags_custom_verify_func_t)(const char *arg_name, const char *arg, void *variable);
+typedef bool (clags_verify_func_t)(const char *arg_name, const char *arg, void *variable, void *verify);
+typedef clags_verify_func_t *clags_verify_func_ptr_t;
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
-bool clags__verify_none    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_custom  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_bool    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_int8    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_uint8   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_int32   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_uint32  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_int64   (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_uint64  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_double  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_choice  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_path    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_file    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_dir     (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_size    (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_time_s  (const char *arg_name, const char *arg, void *pvalue, void *func);
-bool clags__verify_time_ns (const char *arg_name, const char *arg, void *pvalue, void *func);
+clags_verify_func_t clags__verify_none;
+clags_verify_func_t clags__verify_custom;
+clags_verify_func_t clags__verify_bool;
+clags_verify_func_t clags__verify_int8;
+clags_verify_func_t clags__verify_uint8;
+clags_verify_func_t clags__verify_int32;
+clags_verify_func_t clags__verify_uint32;
+clags_verify_func_t clags__verify_int64;
+clags_verify_func_t clags__verify_uint64;
+clags_verify_func_t clags__verify_double;
+clags_verify_func_t clags__verify_choice;
+clags_verify_func_t clags__verify_path;
+clags_verify_func_t clags__verify_file;
+clags_verify_func_t clags__verify_dir;
+clags_verify_func_t clags__verify_size;
+clags_verify_func_t clags__verify_time_s;
+clags_verify_func_t clags__verify_time_ns;
 
 // the defintions of all supported value types. Format: (EnumValue, verification_function, type_name)
 #define clags__types\
@@ -238,7 +239,7 @@ void clags_list_free(clags_list_t *list);
 #ifdef CLAGS_IMPLEMENTATION
 
 #define X(type, func, name) [type] = func,
-static clags_value_verify_t clags__verify_funcs[] = {
+static clags_verify_func_ptr_t clags__verify_funcs[] = {
     clags__types
 };
 #undef X
@@ -565,7 +566,7 @@ bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, 
 
 bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, void *func)
 {
-    clags_value_func_t value_func = (clags_value_func_t) func;
+    clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) func;
     if (!value_func(arg_name, (char*)arg, pvalue)) {
         fprintf(stderr, "[ERROR] Value for argument '%s' does not match custom criteria: '%s'!\n", arg_name, arg);
         return false;
