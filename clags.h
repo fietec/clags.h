@@ -51,6 +51,10 @@
 #define CLAGS_LIST_INIT_CAPACITY 8
 #endif // CLAGS_LIST_INIT_CAPACITY
 
+#ifndef CLAGS_USAGE_ALIGNMENT
+#define CLAGS_USAGE_ALIGNMENT -24
+#endif // CLAGS_USAGE_ALIGNMENT
+
 typedef bool (*clags_custom_verify_func_t)(const char *arg_name, const char *arg, void *variable);
 typedef bool (clags_verify_func_t)(const char *arg_name, const char *arg, void *variable, void *verify);
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
@@ -196,8 +200,6 @@ typedef struct{
     clags_options_t options;
     bool invalid;
 } clags_config_t;
-
-#define CLAGS_USAGE_ALIGNMENT -24
 
 // constructs a config from an array of clags_arg_t args
 #define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .options=(clags_options_t){__VA_ARGS__}}
@@ -642,7 +644,6 @@ bool clags__validate_config(clags_config_t *config)
                             "The parser automatically handles leading '--' for long flags, "
                             "so including it in the config may cause incorrect parsing.\n",
                             opt.long_flag);
-
                 }
             } break;
             case Clags_Flag:{
@@ -657,7 +658,6 @@ bool clags__validate_config(clags_config_t *config)
                             "The parser automatically handles leading '--' for long flags, "
                             "so including it in the config may cause incorrect parsing.\n",
                             flag.long_flag);
-
                 }
             } break;
         }
@@ -987,7 +987,6 @@ void clags_usage(const char *program_name, clags_config_t *config)
         if (options.ignore_prefix){
             printf("    Arguments prefixed with '%s' are ignored.\n", options.ignore_prefix);
         }
-
     }
 }
 
