@@ -121,7 +121,11 @@ typedef struct{
     const char *description;
     // options
     clags_value_type_t value_type;
-    void *verify;
+    union{
+        clags_custom_verify_func_t verify;
+        clags_choices_t *choices;
+        void *_data;
+    };
     bool is_list;
 } clags_required_t;
 
@@ -133,7 +137,11 @@ typedef struct{
     const char *description;
     // options
     clags_value_type_t value_type;
-    void *verify;
+    union{
+        clags_custom_verify_func_t verify;
+        clags_choices_t *choices;
+        void *_data;
+    };
 } clags_optional_t;
 
 typedef struct{
@@ -250,17 +258,17 @@ static const char *clags__type_names[] = {
 };
 #undef X
 
-bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     (void) arg_name;
     if (pvalue) *(char**)pvalue = (char*)arg;
     return true;
 }
 
-bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     if (strcmp(arg, "true") == 0 || strcmp(arg, "True") == 0) {
         if (pvalue) *(bool*)pvalue = true;
         return true;
@@ -272,9 +280,9 @@ bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, voi
     return false;
 }
 
-bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     long value = strtol(arg, &endptr, 0);
@@ -292,9 +300,9 @@ bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, voi
     return true;
 }
 
-bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     unsigned long value = strtoul(arg, &endptr, 0);
@@ -312,9 +320,9 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, vo
     return true;
 }
 
-bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     long value = strtol(arg, &endptr, 0);
@@ -332,9 +340,9 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, vo
     return true;
 }
 
-bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     unsigned long value = strtoul(arg, &endptr, 0);
@@ -352,9 +360,9 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     long long value = strtoll(arg, &endptr, 0);
@@ -372,9 +380,9 @@ bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, vo
     return true;
 }
 
-bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     unsigned long long value = strtoull(arg, &endptr, 0);
@@ -392,9 +400,9 @@ bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void)func;
+    (void) data;
     char *endptr;
     errno = 0;
     double value = strtod(arg, &endptr);
@@ -412,12 +420,11 @@ bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
     if (pvalue == NULL) return false;
     clags_choice_t  **pchoice = (clags_choice_t**) pvalue;
-    clags_choices_t  *choices = (clags_choices_t*) func;
+    clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
         if (strcmp(choice->value, arg) == 0){
@@ -429,9 +436,9 @@ bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, v
     return false;
 }
 
-bool clags__verify_path(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_path(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
+    (void) data;
     struct stat attr;
     if (stat(arg, &attr) == -1){
         fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
@@ -441,9 +448,9 @@ bool clags__verify_path(const char *arg_name, const char *arg, void *pvalue, voi
     return true;
 }
 
-bool clags__verify_file(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_file(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
+    (void) data;
     struct stat attr;
     if (stat(arg, &attr) == -1){
         fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
@@ -457,9 +464,9 @@ bool clags__verify_file(const char *arg_name, const char *arg, void *pvalue, voi
     return true;
 }
 
-bool clags__verify_dir(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_dir(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
+    (void) data;
     struct stat attr;
     if (stat(arg, &attr) == -1){
         fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
@@ -473,9 +480,9 @@ bool clags__verify_dir(const char *arg_name, const char *arg, void *pvalue, void
     return true;
 }
 
-bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
+    (void) data;
     char *endptr;
     errno = 0;
     unsigned long long value = strtoull(arg, &endptr, 10);
@@ -507,9 +514,9 @@ bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, voi
     return true;
 }
 
-bool clags__verify_time_s(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_time_s(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
+    (void) data;
     char *endptr;
     errno = 0;
     double value = strtod(arg, &endptr);
@@ -534,9 +541,9 @@ bool clags__verify_time_s(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) func;
+    (void) data;
     char *endptr;
     errno = 0;
     double value = strtod(arg, &endptr);
@@ -564,9 +571,9 @@ bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, 
     return true;
 }
 
-bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, void *func)
+bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) func;
+    clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) data;
     if (!value_func(arg_name, (char*)arg, pvalue)) {
         fprintf(stderr, "[ERROR] Value for argument '%s' does not match custom criteria: '%s'!\n", arg_name, arg);
         return false;
@@ -585,7 +592,7 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
         assert(list->items && "Buy more RAM lol");
     }
     char *ptr = (char*) list->items;
-    if (clags__verify_funcs[req.value_type](req.arg_name, arg, ptr+item_size*list->count, req.verify)){
+    if (clags__verify_funcs[req.value_type](req.arg_name, arg, ptr+item_size*list->count, req._data)){
         list->count++;
         return true;
     }
@@ -691,10 +698,10 @@ void clags__choice_usage(clags_choices_t *choices, bool is_list)
     }
 }
 
-void clags__type_usage(clags_value_type_t type, void *func, bool is_list)
+void clags__type_usage(clags_value_type_t type, void *data, bool is_list)
 {
     if (type == Clags_Choice){
-        clags__choice_usage((clags_choices_t *)func, is_list);
+        clags__choice_usage((clags_choices_t *)data, is_list);
     }else if (type == Clags_None){
         if (is_list) printf(" ([])");
     } else{
@@ -918,7 +925,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
         for (size_t i=0; i<args.required_count; ++i){
             clags_required_t req = args.required[i];
             printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, req.arg_name, req.description);
-            clags__type_usage(req.value_type, req.verify, req.is_list);
+            clags__type_usage(req.value_type, req._data, req.is_list);
         }
     }
     if (args.optional_count){
@@ -934,13 +941,13 @@ void clags_usage(const char *program_name, clags_config_t *config)
                 } else{
                     printf("    -%*c : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
-                clags__type_usage(opt.value_type, opt.verify, false);
+                clags__type_usage(opt.value_type, opt._data, false);
             }else if (opt.long_flag){
                 size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
                 char buf[buf_size];
                 snprintf(buf, buf_size, "--%s(=)%s", opt.long_flag, opt.arg_name);
                 printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
-                clags__type_usage(opt.value_type, opt.verify, false);
+                clags__type_usage(opt.value_type, opt._data, false);
             }
         }
     }

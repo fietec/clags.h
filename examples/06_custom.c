@@ -9,12 +9,12 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-// a custom verification function of type `clags_value_func_t`
-bool verify_lower_case(const char *arg_name, char *arg, void *variable)
+// a custom verification function of type `clags_custom_verify_func_t`
+bool verify_lower_case(const char *arg_name, const char *arg, void *variable)
 {
     (void) arg_name;
     if (arg && islower(*arg)){
-        *(char**)variable = arg;
+        *(char**)variable = (char*)arg;
         return true;
     }
     fprintf(stderr, "[ERROR] String is not lower case: '%s'!\n", arg);
