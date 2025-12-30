@@ -56,6 +56,10 @@
 #define CLAGS_USAGE_ALIGNMENT -24
 #endif // CLAGS_USAGE_ALIGNMENT
 
+#ifndef CLAGS_ARG_COUNT_LIMIT
+#define CLAGS_ARG_COUNT_LIMIT 256 // this limit exists so that no dynamic allocation is needed at the beginning of `clags_parse` and `clags_usage`
+#endif // CLAGS_ARG_COUNT_LIMIT
+
 #if defined(__GNUC__) || defined(__clang__)
 //   https://gcc.gnu.org/onlinedocs/gcc-4.7.2/gcc/Function-Attributes.html
 #    ifdef __MINGW_PRINTF_FORMAT
@@ -744,6 +748,10 @@ bool clags__validate_config(clags_config_t *config)
     }
     if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
         clags_log(config, Clags_ConfigError, "'.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!");
+        return false;
+    }
+    if (config->args_count > CLAGS_ARG_COUNT_LIMIT){
+        clags_log(config, Clags_ConfigError, "too many arguments in configuration (%zu/%u)!", config->args_count, CLAGS_ARG_COUNT_LIMIT);
         return false;
     }
     bool last_was_list = false;
