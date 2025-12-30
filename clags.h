@@ -38,6 +38,7 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <inttypes.h>
+#include <stdarg.h>
 
 #ifndef CLAGS_FREE
 #define CLAGS_FREE free
@@ -55,9 +56,31 @@
 #define CLAGS_USAGE_ALIGNMENT -24
 #endif // CLAGS_USAGE_ALIGNMENT
 
-typedef bool (*clags_custom_verify_func_t)(const char *arg_name, const char *arg, void *variable);
-typedef bool (clags_verify_func_t)(const char *arg_name, const char *arg, void *variable, void *verify);
+#if defined(__GNUC__) || defined(__clang__)
+//   https://gcc.gnu.org/onlinedocs/gcc-4.7.2/gcc/Function-Attributes.html
+#    ifdef __MINGW_PRINTF_FORMAT
+#        define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK) __attribute__ ((format (__MINGW_PRINTF_FORMAT, STRING_INDEX, FIRST_TO_CHECK)))
+#    else
+#        define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK) __attribute__ ((format (printf, STRING_INDEX, FIRST_TO_CHECK)))
+#    endif // __MINGW_PRINTF_FORMAT
+#else
+#    define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK)
+#endif
+
+typedef enum{
+    Clags_Info,
+    Clags_Warning,
+    Clags_Error,
+    Clags_ConfigWarning,
+    Clags_ConfigError,
+    Clags_NoLogs,
+} clags_log_level_t;
+
+typedef struct clags_config_t clags_config_t;
+typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable);
+typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify);
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
+typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
@@ -191,15 +214,27 @@ typedef struct{
     const char *list_terminator;
     bool print_no_notes;
     bool allow_option_parsing_toggle;
+    clags_log_handler_t log_handler;
+    clags_log_level_t min_log_level;
 } clags_options_t;
 
+typedef struct {
+    char *items;
+    size_t count;
+    size_t capacity;
+} clags_sb_t;
+
+//void clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS_PRINTF_FORMAT(2, 3);
+
+//#define clags_sb_free(sb) clags_list_free((clags_list_t*)(sb))
+
 // construct with `clags_config` macro
-typedef struct{
+struct clags_config_t{
     clags_arg_t *args;
     size_t args_count;
     clags_options_t options;
     bool invalid;
-} clags_config_t;
+};
 
 // constructs a config from an array of clags_arg_t args
 #define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .options=(clags_options_t){__VA_ARGS__}}
@@ -237,6 +272,19 @@ typedef struct{
 #define clags_choice_default(choices, index) (&(choices)[index])
 
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
+#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); abort();}}while(0)
+
+#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); abort();}while(0)
+
+// logging functions
+static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
+static inline void clags_sb_append_null(clags_sb_t *sb);
+static inline void clags_sb_free(clags_sb_t *sb);
+void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
+void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
+
+// free all memory associated with a clags_list_t instance.
+void clags_list_free(clags_list_t *list);
 
 // parse arguments according to the given configuration.
 // returns true if parsing succeeded, false otherwise.
@@ -244,9 +292,6 @@ bool clags_parse(int argc, char **argv, clags_config_t *config);
 
 // print usage information for the program, based on the given configuration.
 void clags_usage(const char *program_name, clags_config_t *config);
-
-// free all memory associated with a clags_list_t instance.
-void clags_list_free(clags_list_t *list);
 
 #endif // CLAGS_H
 
@@ -264,15 +309,101 @@ static const char *clags__type_names[] = {
 };
 #undef X
 
-bool clags__verify_none(const char *arg_name, const char *arg, void *pvalue, void *data)
+static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
+{
+    if (sb->capacity >= capacity) return;
+    if (sb->capacity == 0) sb->capacity = CLAGS_LIST_INIT_CAPACITY;
+    while (capacity > sb->capacity){
+        sb->capacity *= 2;
+    }
+    sb->items = CLAGS_REALLOC(sb->items, sb->capacity*sizeof(*sb->items));
+    clags_assert(sb->items != NULL, "Out of memory!");
+}
+
+static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
+{
+    va_list args;
+    
+    va_start(args, format);
+    int n = vsnprintf(NULL, 0, format, args);
+    va_end(args);
+
+    clags__sb_reserve(sb, sb->count + n + 1);
+    char *start = sb->items + sb->count;
+
+    va_start(args, format);
+    vsnprintf(start, n+1, format, args);
+    va_end(args);
+
+    sb->count += n;
+}
+
+static inline void clags_sb_append_null(clags_sb_t *sb)
+{
+    clags__sb_reserve(sb, sb->count+1);
+    sb->items[sb->count++] = '\0';
+}
+
+static inline void clags_sb_free(clags_sb_t *sb)
+{
+    if (!sb) return;
+    CLAGS_FREE(sb->items);
+    sb->items = NULL;
+    sb->count = sb->capacity = 0;
+}
+
+void clags_default_log_handler(clags_log_level_t level, const char *format, va_list args)
+{
+    switch(level){
+        case Clags_Info:{
+            fprintf(stderr, "[INFO] ");
+        }break;
+        case Clags_Warning:{
+            fprintf(stderr, "[WARNING] ");
+        }break;
+        case Clags_Error:{
+            fprintf(stderr, "[ERROR] ");
+        }break;
+        case Clags_ConfigWarning:{
+            fprintf(stderr, "[CONFIG_WARNING] ");
+        }break;
+        case Clags_ConfigError:{
+            fprintf(stderr, "[CONFIG_ERROR] ");
+        }break;
+        case Clags_Ignore: return;
+        default:{
+            clags_unreachable("Invalid clags_log_level_t!");
+        }
+    }
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+}
+
+void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...)
+{
+    if (config->options.min_log_level > level) return;
+    va_list args;
+    va_start(args, format);
+    clags_log_handler_t handler = (config && config->options.log_handler)? config->options.log_handler : clags_default_log_handler;
+    handler(level, format, args);
+    va_end(args);
+}
+
+void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb)
+{
+    clags_log(config, level, "%s", sb->items);
+}
+
+bool clags__verify_none(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     (void) arg_name;
+    (void) config;
     if (pvalue) *(char**)pvalue = (char*)arg;
     return true;
 }
 
-bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     if (strcmp(arg, "true") == 0 || strcmp(arg, "True") == 0) {
@@ -282,11 +413,11 @@ bool clags__verify_bool(const char *arg_name, const char *arg, void *pvalue, voi
         if (pvalue) *(bool*)pvalue = false;
         return true;
     }
-    fprintf(stderr, "[ERROR] Invalid boolean value for argument '%s': '%s'!\n", arg_name, arg);
+    clags_log(config, Clags_Error, "Invalid boolean value for argument '%s': '%s'!", arg_name, arg);
     return false;
 }
 
-bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -294,11 +425,11 @@ bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, voi
     long value = strtol(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid int8 value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid int8 value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value < INT8_MIN || value > INT8_MAX) {
-        fprintf(stderr, "[ERROR] int8 value out of range (%d to %d) for argument '%s': '%s'!\n", INT8_MIN, INT8_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "int8 value out of range (%d to %d) for argument '%s': '%s'!", INT8_MIN, INT8_MAX, arg_name, arg);
         return false;
     }
 
@@ -306,7 +437,7 @@ bool clags__verify_int8(const char *arg_name, const char *arg, void *pvalue, voi
     return true;
 }
 
-bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -314,11 +445,11 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, vo
     unsigned long value = strtoul(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid uint8 value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid uint8 value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value > UINT8_MAX || *arg == '-') {
-        fprintf(stderr, "[ERROR] uint8 value out of range (0 to %u) for argument '%s': '%s'!\n", UINT8_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "uint8 value out of range (0 to %u) for argument '%s': '%s'!", UINT8_MAX, arg_name, arg);
         return false;
     }
 
@@ -326,7 +457,7 @@ bool clags__verify_uint8(const char *arg_name, const char *arg, void *pvalue, vo
     return true;
 }
 
-bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -334,11 +465,11 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, vo
     long value = strtol(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid int32 value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid int32 value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value < INT32_MIN || value > INT32_MAX) {
-        fprintf(stderr, "[ERROR] int32 value out of range (%d to %d) for argument '%s': '%s'!\n", INT32_MIN, INT32_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "int32 value out of range (%d to %d) for argument '%s': '%s'!", INT32_MIN, INT32_MAX, arg_name, arg);
         return false;
     }
 
@@ -346,7 +477,7 @@ bool clags__verify_int32(const char *arg_name, const char *arg, void *pvalue, vo
     return true;
 }
 
-bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -354,11 +485,11 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, v
     unsigned long value = strtoul(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid uint32 value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid uint32 value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value > UINT32_MAX || *arg == '-') {
-        fprintf(stderr, "[ERROR] uint32 value out of range (0 to %u) for argument '%s': '%s'!\n", UINT32_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "uint32 value out of range (0 to %u) for argument '%s': '%s'!", UINT32_MAX, arg_name, arg);
         return false;
     }
 
@@ -366,7 +497,7 @@ bool clags__verify_uint32(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -374,11 +505,11 @@ bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, vo
     long long value = strtoll(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid int64 value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid int64 value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value < INT64_MIN || value > INT64_MAX) {
-        fprintf(stderr, "[ERROR] int64 value out of range (%ld to %ld) for argument '%s': '%s'!\n", INT64_MIN, INT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "int64 value out of range (%ld to %ld) for argument '%s': '%s'!", INT64_MIN, INT64_MAX, arg_name, arg);
         return false;
     }
 
@@ -386,7 +517,7 @@ bool clags__verify_int64(const char *arg_name, const char *arg, void *pvalue, vo
     return true;
 }
 
-bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -394,11 +525,11 @@ bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, v
     unsigned long long value = strtoull(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid uint64 value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid uint64 value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value > UINT64_MAX || *arg == '-') {
-        fprintf(stderr, "[ERROR] uint64 value out of range (0 to %lu) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "uint64 value out of range (0 to %lu) for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
 
@@ -406,7 +537,7 @@ bool clags__verify_uint64(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -414,11 +545,11 @@ bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, v
     double value = strtod(arg, &endptr);
 
     if (*endptr != '\0') {
-        fprintf(stderr, "[ERROR] Invalid double value for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid double value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value > DBL_MAX || value < -DBL_MAX) {
-        fprintf(stderr, "[ERROR] double value out of range for argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "double value out of range for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
 
@@ -426,7 +557,7 @@ bool clags__verify_double(const char *arg_name, const char *arg, void *pvalue, v
     return true;
 }
 
-bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     if (pvalue == NULL) return false;
     clags_choice_t  **pchoice = (clags_choice_t**) pvalue;
@@ -438,55 +569,55 @@ bool clags__verify_choice(const char *arg_name, const char *arg, void *pvalue, v
             return true;
         }
     }
-    fprintf(stderr, "[ERROR] Invalid choice for argument '%s': '%s'!\n", arg_name, arg);
+    clags_log(config, Clags_Error, "Invalid choice for argument '%s': '%s'!", arg_name, arg);
     return false;
 }
 
-bool clags__verify_path(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     struct stat attr;
     if (stat(arg, &attr) == -1){
-        fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
+        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
     if (pvalue) *(char**)pvalue = (char*) arg;
     return true;
 }
 
-bool clags__verify_file(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     struct stat attr;
     if (stat(arg, &attr) == -1){
-        fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
+        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
     if (!S_ISREG(attr.st_mode)){
-        fprintf(stderr, "[ERROR] Path for arguments '%s' is not a file: '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Path for arguments '%s' is not a file: '%s'!", arg_name, arg);
         return false;
     }
     if (pvalue) *(char**)pvalue = (char*) arg;
     return true;
 }
 
-bool clags__verify_dir(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     struct stat attr;
     if (stat(arg, &attr) == -1){
-        fprintf(stderr, "[ERROR] Invalid path for argument '%s': '%s' : %s!\n", arg_name, arg, strerror(errno));
+        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
     if (!S_ISDIR(attr.st_mode)){
-        fprintf(stderr, "[ERROR] Path for arguments '%s' is not a dir: '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "Path for arguments '%s' is not a dir: '%s'!", arg_name, arg);
         return false;
     }
     if (pvalue) *(char**)pvalue = (char*) arg;
     return true;
 }
 
-bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -494,7 +625,7 @@ bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, voi
     unsigned long long value = strtoull(arg, &endptr, 10);
 
     if (endptr == arg){
-        fprintf(stderr, "[ERROR] No leading number in size argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "No leading number in size argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     clags_fsize_t factor;
@@ -508,26 +639,26 @@ bool clags__verify_size(const char *arg_name, const char *arg, void *pvalue, voi
     else if (strcmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
     else if (strcmp(endptr, "TB")  == 0)             factor = 1000000000000;
     else {
-        fprintf(stderr, "[ERROR] Invalid size unit for argument '%s': '%s'!\n", arg_name, endptr);
+        clags_log(config, Clags_Error, "Invalid size unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
     }
     
     if (errno == ERANGE || value > UINT64_MAX/factor || *arg == '-') {
-        fprintf(stderr, "[ERROR] clags_fsize_t value out of range (0 to %lu) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "clags_fsize_t value out of range (0 to %lu) for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
     if (pvalue) *(clags_fsize_t*)pvalue = (clags_fsize_t)value * factor;
     return true;
 }
 
-bool clags__verify_time_s(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
     errno = 0;
     double value = strtod(arg, &endptr);
     if (endptr == arg){
-        fprintf(stderr, "[ERROR] No leading number in time argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     clags_time_t factor;
@@ -536,25 +667,25 @@ bool clags__verify_time_s(const char *arg_name, const char *arg, void *pvalue, v
     else if (strcmp(endptr, "h")  == 0)               factor =    3600;
     else if (strcmp(endptr, "d")  == 0)               factor = 24*3600;
     else {
-        fprintf(stderr, "[ERROR] Invalid time unit for argument '%s': '%s'!\n", arg_name, endptr);
+        clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
     }
     if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
-        fprintf(stderr, "[ERROR] clags_time_t value out of range (0s to %"PRIu64"s) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
     if (pvalue) *(clags_time_t*)pvalue = (clags_time_t)(value * factor);
     return true;
 }
 
-bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
     errno = 0;
     double value = strtod(arg, &endptr);
     if (endptr == arg){
-        fprintf(stderr, "[ERROR] No leading number in time argument '%s': '%s'!\n", arg_name, arg);
+        clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     clags_time_t factor;
@@ -566,39 +697,39 @@ bool clags__verify_time_ns(const char *arg_name, const char *arg, void *pvalue, 
     else if (strcmp(endptr, "h")  == 0)               factor =    3600*1e9;
     else if (strcmp(endptr, "d")  == 0)               factor = 24*3600*1e9;
     else {
-        fprintf(stderr, "[ERROR] Invalid time unit for argument '%s': '%s'!\n", arg_name, endptr);
+        clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
     }
     if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
-        fprintf(stderr, "[ERROR] clags_time_t value out of range (0ns to %"PRIu64"ns) for argument '%s': '%s'!\n", UINT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "clags_time_t value out of range (0ns to %"PRIu64"ns) for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
     if (pvalue) *(clags_time_t*)pvalue = (clags_time_t)(value * factor);
     return true;
 }
 
-bool clags__verify_custom(const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) data;
-    if (!value_func(arg_name, (char*)arg, pvalue)) {
-        fprintf(stderr, "[ERROR] Value for argument '%s' does not match custom criteria: '%s'!\n", arg_name, arg);
+    if (!value_func(config, arg_name, (char*)arg, pvalue)) {
+        clags_log(config, Clags_Error, "Value for argument '%s' does not match custom criteria: '%s'!", arg_name, arg);
         return false;
     }
     return true;
 }
 
-bool clags__append_to_list(clags_required_t req, const char *arg)
+bool clags__append_to_list(clags_config_t *config, clags_required_t req, const char *arg)
 {
     clags_list_t *list = (clags_list_t*) req.variable;
     size_t item_size = list->item_size;
     if (list->count >= list->capacity){
         size_t new_capacity = list->capacity==0? CLAGS_LIST_INIT_CAPACITY:list->capacity*2;
         list->items = CLAGS_REALLOC(list->items, new_capacity*item_size);
+        clags_assert(list->items != NULL, "Out of memory!");
         list->capacity = new_capacity;
-        assert(list->items && "Buy more RAM lol");
     }
     char *ptr = (char*) list->items;
-    if (clags__verify_funcs[req.value_type](req.arg_name, arg, ptr+item_size*list->count, req._data)){
+    if (clags__verify_funcs[req.value_type](config, req.arg_name, arg, ptr+item_size*list->count, req._data)){
         list->count++;
         return true;
     }
@@ -608,11 +739,11 @@ bool clags__append_to_list(clags_required_t req, const char *arg)
 bool clags__validate_config(clags_config_t *config)
 {
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
-        fprintf(stderr, "[CONFIG_ERROR] '.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!\n");
+        clags_log(config, Clags_ConfigError,"'.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!");
         return false;
     }
     if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
-        fprintf(stderr, "[CONFIG_ERROR] '.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!\n");
+        clags_log(config, Clags_ConfigError, "'.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!");
         return false;
     }
     bool last_was_list = false;
@@ -622,11 +753,14 @@ bool clags__validate_config(clags_config_t *config)
             case Clags_Required:{
                 clags_required_t req = config->args[i].req;
                 if (last_was_list && config->options.list_terminator == NULL){
-                    fprintf(stderr, "[CONFIG_ERROR] required argument '%s' is unreachable after list '%s'! Define '.list_terminator' in 'clags_config' to separate them", req.arg_name, last_req_name);
-                    if (!req.is_list) {
-                        fprintf(stderr, " or make '%s' optional", req.arg_name);
+                    clags_sb_t sb = {0};
+                    clags_sb_appendf(&sb, "required argument '%s' is unreachable after list '%s'! Define '.list_terminator' in 'clags_config' to separate them", req.arg_name, last_req_name);
+                    if (!req.is_list){
+                        clags_sb_appendf(&sb, " or make '%s' optional", req.arg_name);
                     }
-                    printf(".\n");
+                    clags_sb_appendf(&sb, ".");
+                    clags_log_sb(config, Clags_ConfigError, &sb);
+                    clags_sb_free(&sb);
                     return false;
                 }
                 last_was_list = req.is_list;
@@ -636,13 +770,13 @@ bool clags__validate_config(clags_config_t *config)
                 last_was_list = false;
                 clags_optional_t opt = config->args[i].opt;
                 if (opt.short_flag == '\0' && opt.long_flag == NULL){
-                    fprintf(stderr, "[CONFIG_WARNING] optional argument is unreachable. Define at least one of `short_flag` and `long_flag`.\n");
+                    clags_log(config, Clags_ConfigWarning, "optional argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
                 }
                 if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
-                    fprintf(stderr,
-                            "[CONFIG_WARNING] optional long flag '%s' should not start with '--'. "
+                    clags_log(config, Clags_ConfigWarning,
+                            "optional long flag '%s' should not start with '--'. "
                             "The parser automatically handles leading '--' for long flags, "
-                            "so including it in the config may cause incorrect parsing.\n",
+                            "so including it in the config may cause incorrect parsing.",
                             opt.long_flag);
                 }
             } break;
@@ -650,13 +784,13 @@ bool clags__validate_config(clags_config_t *config)
                 last_was_list = false;
                 clags_flag_t flag = config->args[i].flag;
                 if (flag.short_flag == '\0' && flag.long_flag == NULL){
-                    fprintf(stderr, "[CONFIG_WARNING] flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.\n");
+                    clags_log(config, Clags_ConfigWarning, "flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
                 }
                 if (flag.long_flag && strncmp(flag.long_flag, "--", 2) == 0){
-                    fprintf(stderr,
-                            "[CONFIG_WARNING] long flag '%s' should not start with '--'. "
+                    clags_log(config, Clags_ConfigWarning,
+                            "long flag '%s' should not start with '--'. "
                             "The parser automatically handles leading '--' for long flags, "
-                            "so including it in the config may cause incorrect parsing.\n",
+                            "so including it in the config may cause incorrect parsing.",
                             flag.long_flag);
                 }
             } break;
@@ -767,7 +901,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
             // parse long flag or option
             arg += 2;
             if (*arg == '\0'){
-                fprintf(stderr, "[ERROR] Missing flag or option name: '--%s'!\n", arg);
+                clags_log(config, Clags_Error, "Missing flag or option name: '--%s'!", arg);
                 return false;
             }
 
@@ -782,7 +916,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                         // get value from the next not-ignored argument
                         while (true){
                             if (argc-index <= 1){
-                                fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
+                                clags_log(config, Clags_Error, "Optional flag %s requires argument!", arg);
                                 return false;
                             }
                             value = argv[++index];
@@ -791,13 +925,13 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                         }
                     } else if (*value++ == '='){
                         if (*value == '\0'){
-                            fprintf(stderr, "[ERROR] Designated option assignment may not have an empty value: '%s'!\n", arg);
+                            clags_log(config, Clags_Error, "Designated option assignment may not have an empty value: '%s'!", arg);
                             return false;
                         }
                     } else {
                         continue;
                     }
-                    if (!clags__verify_funcs[opt.value_type](arg, value, opt.variable, opt.verify)) return false;
+                    if (!clags__verify_funcs[opt.value_type](config, arg, value, opt.variable, opt.verify)) return false;
                     goto next;
                 }
             }
@@ -810,14 +944,14 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                     goto next;
                 }
             }
-            fprintf(stderr, "[ERROR] Unknown long flag or option: '--%s'!\n", arg);
+            clags_log(config, Clags_Error, "Unknown long flag or option: '--%s'!", arg);
             return false;
         } else if (accept_options && *arg == '-' && !isdigit((unsigned char)arg[1])){
             // parse short flag or option
             arg += 1;
             size_t flag_len = strlen(arg);
             if (flag_len == 0){
-                fprintf(stderr, "[ERROR] Missing flag or option name: '-'!\n");
+                clags_log(config, Clags_Error, "Missing flag or option name: '-'!");
                 return false;                
             }
             for (char* c=arg; c<arg+flag_len; ++c){
@@ -829,7 +963,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                         if (*value == '\0'){
                             while (true){
                                 if (argc-index <= 1){
-                                    fprintf(stderr, "[ERROR] Optional flag %s requires argument!\n", arg);
+                                    clags_log(config, Clags_Error, "Optional flag %s requires argument!", arg);
                                     return false;
                                 }
                                 value = argv[++index];
@@ -837,7 +971,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                                 arguments_ignored = true;
                             }
                         }
-                        if (!clags__verify_funcs[opt.value_type](arg, value, opt.variable, opt.verify)) return false;
+                        if (!clags__verify_funcs[opt.value_type](config, arg, value, opt.variable, opt.verify)) return false;
                         goto next;
                     }
                 }
@@ -852,9 +986,9 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
                 }
                 if (!matched){
                     if (flag_len > 1){
-                        fprintf(stderr, "[ERROR] Unknown short flag '-%c' in combination '-%s'!\n", *c, arg);
+                        clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '-%s'!", *c, arg);
                     } else{
-                        fprintf(stderr, "[ERROR] Unknown short flag '-%c'!\n", *c);
+                        clags_log(config, Clags_Error, "Unknown short flag '-%c'!", *c);
                     }
                     return false;
                 }
@@ -862,7 +996,7 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
         } else {
             // parse required argument
             if (required_count >= args.required_count){
-                fprintf(stderr, "[ERROR] Unknown additional argument (%zu/%zu): '%s'!\n", required_count+1, args.required_count, arg);
+                clags_log(config, Clags_Error, "Unknown additional argument (%zu/%zu): '%s'!", required_count+1, args.required_count, arg);
                 return false;
             }
 
@@ -870,24 +1004,27 @@ bool clags_parse(int argc, char **argv, clags_config_t *config)
             clags_required_t req = args.required[required_count];
             if (req.is_list){
                 in_list = true;
-                if (!clags__append_to_list(req, arg)) return false;
+                if (!clags__append_to_list(config, req, arg)) return false;
             } else{
                 required_count += 1;
-                if (!clags__verify_funcs[req.value_type](req.arg_name, arg, req.variable, req.verify)) return false;
+                if (!clags__verify_funcs[req.value_type](config, req.arg_name, arg, req.variable, req.verify)) return false;
             }
         }
     next:
     }
     if (in_list) required_count += 1;
-    if (arguments_ignored) printf("[WARNING] Arguments were ignored because they were prefixed with '%s'\n", ignore_prefix);
+    if (arguments_ignored) clags_log(config, Clags_Warning, "Arguments were ignored because they were prefixed with '%s'", ignore_prefix);
 
     // report missing required arguments
     if (required_count != args.required_count){
-        fprintf(stderr, "[ERROR] Missing required arguments:");
+        clags_sb_t sb = {0};
+        clags_sb_appendf(&sb, "Missing required arguments:");
         for (size_t i=required_count; i<args.required_count; ++i){
-            fprintf(stderr, " <%s>", args.required[i].arg_name);
+            clags_sb_appendf(&sb, " <%s>", args.required[i].arg_name);
         }
-        fprintf(stderr, "!\n");
+        clags_sb_appendf(&sb, "!");
+        clags_log_sb(config, Clags_Error, &sb);
+        clags_sb_free(&sb);
         return false;
     }
     return true;
