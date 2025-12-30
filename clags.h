@@ -352,7 +352,7 @@ static inline void clags_sb_free(clags_sb_t *sb)
     sb->count = sb->capacity = 0;
 }
 
-void clags_default_log_handler(clags_log_level_t level, const char *format, va_list args)
+void clags__default_log_handler(clags_log_level_t level, const char *format, va_list args)
 {
     switch(level){
         case Clags_Info:{
@@ -370,7 +370,7 @@ void clags_default_log_handler(clags_log_level_t level, const char *format, va_l
         case Clags_ConfigError:{
             fprintf(stderr, "[CONFIG_ERROR] ");
         }break;
-        case Clags_Ignore: return;
+        case Clags_NoLogs: return;
         default:{
             clags_unreachable("Invalid clags_log_level_t!");
         }
@@ -384,7 +384,7 @@ void clags_log(clags_config_t *config, clags_log_level_t level, const char *form
     if (config->options.min_log_level > level) return;
     va_list args;
     va_start(args, format);
-    clags_log_handler_t handler = (config && config->options.log_handler)? config->options.log_handler : clags_default_log_handler;
+    clags_log_handler_t handler = (config && config->options.log_handler)? config->options.log_handler : clags__default_log_handler;
     handler(level, format, args);
     va_end(args);
 }
@@ -1129,6 +1129,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
 
 void clags_list_free(clags_list_t *list)
 {
+    if (list == NULL) return;
     CLAGS_FREE(list->items);
     list->items = NULL;
     list->count = list->capacity = 0;
