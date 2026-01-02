@@ -21,7 +21,7 @@ and headers and implementations separated by the `CLAGS_IMPLEMENTATION` header g
 
 // This includes the function implemenetations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include "clags.h"
 
 // Declare argument variables with optional default values
 const char *input_file = NULL;
