@@ -1218,7 +1218,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
             printf("    Arguments prefixed with '%s' are ignored.\n", options.ignore_prefix);
         }
         if (config->parent != NULL){
-            printf("    Options and flags of parent subcommands are not supported. Place them before the beginning of this subcommand.\n");
+            printf("    Options and flags of parent subcommands that are not listed above, are not supported. Place them before the beginning of this subcommand.\n");
         }
     }
 }
