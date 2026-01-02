@@ -1,7 +1,6 @@
 /*
   Example 5: Paths
-      This is almost exactly the same example program as `01_basic`,
-      only that here, we require a valid file input for the `input_file` argument 
+      This example demonstrates how to verify file paths
 */
 
 #include <stdio.h>
@@ -17,12 +16,13 @@ bool warnings = false;
 bool help = false;
 
 clags_arg_t args[] = {
-    // Force the inputted string to be a valid path to a file
+    // force the provided string to be a valid path to a file
     clags_required(&input_file, "input_file", "the input file", .value_type=Clags_File),
 
+    // verify that the provided string is a valid path, either to a dir or file
+    clags_optional('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path),
+    // verify a size string (like '1.4MB', '10B', '10') and convert to the number of bytes in `clags_fsize_t`
     clags_optional('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
-    clags_optional('o', "output", &output_file, "FILE", "the output file"),
-    clags_flag('w', "warnings", &warnings, "print warnings"),
     clags_flag_help(&help),
 };
 
@@ -30,7 +30,7 @@ clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, &config)){
+    if (clags_parse(argc, argv, &config) != NULL){
         clags_usage(argv[0], &config);
         return 1;
     }
@@ -38,6 +38,6 @@ int main(int argc, char **argv)
         clags_usage(argv[0], &config);
         return 0;
     }
-    printf("input: %s, size: %lu, output: %s, warnings:%s\n", input_file, size, output_file, warnings?"true":"false");
+    printf("input: %s, size: %lu, output: %s\n", input_file, size, output_file);
     return 0;
 }

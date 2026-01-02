@@ -20,15 +20,18 @@ bool version = false;
 bool test = false;
 
 clags_arg_t args[] = {
-    // to add type verification to an argument, simply set the `value_type` field
-    // Note: it is the user's responsibility to provide a variable pointer matching the type specified
-    clags_required(&input_file, "input_file", "the file to read", .value_type=Clags_File),
+    clags_required(&input_file, "input_file", "the file to read"),
     clags_optional('o', "output", &output_file, "FILE", "the file to write"),
-    // here &quality is expected to be uint8_t*
+
+    // to add type verification to an argument, simply set the `value_type` field
+    // for a list of all available types, see `clags__types` in clags.h
+    // Note: it is the user's responsibility to provide a variable pointer matching the type specified
+    //       so here, &quality is expected to be uint8_t*
     clags_optional('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
     clags_flag('w', "warnings", &warnings, "print warnings"),
     clags_flag('t', "test", &test, "a test flag"),
-    // this is how you create a flag that exits the parsing on occurence
+
+    // this is how you create a flag that exits the parsing on occurrence
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help(&help),
 };
@@ -38,7 +41,7 @@ clags_config_t config = clags_config(args);
 int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
-    if (!clags_parse(argc, argv, &config)){
+    if (clags_parse(argc, argv, &config) != NULL){
         clags_usage(program_name, &config);
         return 1;
     }

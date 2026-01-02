@@ -4,9 +4,10 @@ A lightweight command line argument parser.
 ## Features
 - Required and optional arguments
 - Flags and help flag support
-- Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `int64`, `uint64`, `double`, `path`, `size`
+- Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `int64`, `uint64`, `double`, `path`, `size`, `time_s`, `time_ns`
 - Choice arguments: restrict values to a fixed set (like an enum)
 - Custom parsing functions for user-defined types
+- Native and recursive subcommands
 
 ## How to use
 `clags.h` is an stb-style library, which means a single header file
@@ -14,39 +15,34 @@ and headers and implementations separated by the `CLAGS_IMPLEMENTATION` header g
 
 ### Example
 ```c
+
 #include <stdio.h>
-#include <stdint.h>
-#include <inttypes.h>
 #include <stdbool.h>
 
+// This includes the function implemenetations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
-#include "clags.h"
+#include "../clags.h"
 
-char *input = NULL;
-char *algorithm = NULL;
-char *output = "output.pdf";
+// Declare argument variables with optional default values
+const char *input_file = NULL;
+const char *output_file = "a.out";
 bool warnings = false;
 bool help = false;
 
-uint8_t quality = 0;
-
-clags_choice_t choice_values[] = {
-    {"LIFO", "last-in first-out"},
-    {"FIFO", "first-in first_out"},
-    {"RANDOM", "random order"}
-};
-
-clags_choices_t choices = clags_choice(choice_values);
-clags_choice_t *choice = clags_choice_default(choice_values, 0);
-
+// Declare all expected arguments
 clags_arg_t args[] = {
-    clags_required(&input, "input_file", "the input file"),
+    // Required (positional) arguments are parsed in the order they are defined here
+    clags_required(&input_file, "input_file", "the input file"),
     
-    clags_optional('o', "output", &output, "FILE", "the output file"),
-    clags_optional('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .verify=&choices),
-    clags_optional('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8),
+    // Optional arguments support both short and long flags
+    // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
+    clags_optional('o', "output", &output_file, "FILE", "the output file"),
 
+
+    // Use flags set boolean values on occurrence
+    // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
     clags_flag('w', "warnings", &warnings, "print warnings"),
+    // This is a neat short-hand since the `--help` flags are so common
     clags_flag_help(&help),
 };
 
@@ -54,39 +50,32 @@ clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, &config)){
+    // Parse the arguments using the previously defined rules, returns the config on error
+    if (clags_parse(argc, argv, &config) != NULL){
+        // Print an automatic usage, based on the defined config
         clags_usage(argv[0], &config);
         return 1;
     }
+    // You can now use the set argument variables
     if (help){
         clags_usage(argv[0], &config);
         return 0;
     }
-    printf("input: %s, algorithm: %s\n", input, choice->value);
-    printf("output: %s\n", output);
-    printf("quality: %"PRId8"\n", quality);
+    printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");
     return 0;
 }
 ```
-For an incorrect input, such as 
+When ran with this input:
 ```
-./example -a QUICK_SORT input.txt
+./example --help
 ```
-**clags** will print the following error message and usage:
+**clags** will print the following usage:
 ```
-[ERROR] Invalid choice for argument '-a': 'QUICK_SORT'!
 Usage: ./example [OPTIONS] [FLAGS] <input_file>
   Arguments:
     input_file               : the input file
   Options:
     -o, --output(=)FILE      : the output file
-    -a, --algorithm(=)ALG    : the algorithm to use (choice)
-        Choices:
-          - LIFO             : last-in first-out
-          - FIFO             : first-in first_out
-          - RANDOM           : random order
-
-    -q, --quality(=)LEVEL    : the sample quality (uint8)
   Flags:
     -w, --warnings           : print warnings
     -h, --help               : print this help dialog and exit

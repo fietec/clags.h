@@ -1,6 +1,7 @@
 /*
   Example 4: Choices
-      Choices allow the user to define a set of an 'enum-like' type which only accepts self-defined literals.
+      Choices allow the user to define a set of allowed literal strings (like an enum)
+      which the parser will accept. Invalid strings will trigger an error.
 */
 
 #include <stdio.h>
@@ -28,13 +29,15 @@ clags_choice_t choice_values[] = {
 
 // create a wrapper for the choices
 clags_choices_t choices = clags_choice(choice_values);
-// create variable to hold the pointer of the chosen choice
-clags_choice_t *choice = clags_choice_default(choice_values, 0);
+// create variable to hold the pointer to the chosen `clags_choice_t`
+clags_choice_t *choice = clags_choice_default(choice_values, 0); // this sets the default value to the first `clags_choice_t` in `choices`
 
 clags_arg_t args[] = {
     clags_required(&input, "input_file", "the input file"),
     
     clags_optional('o', "output", &output, "FILE", "the output file"),
+
+    // with `.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing
     clags_optional('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .choices=&choices),
     clags_optional('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8),
 
@@ -46,7 +49,7 @@ clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
-    if (!clags_parse(argc, argv, &config)){
+    if (clags_parse(argc, argv, &config) != NULL){
         clags_usage(argv[0], &config);
         return 1;
     }

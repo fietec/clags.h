@@ -1,15 +1,14 @@
 /*
   Example 1: Basic
-      This is a very simple example of how to use clags
+      This is a basic, POSIX-style, example of how to use clags
 */
 
 #include <stdio.h>
 #include <stdbool.h>
 
-// This includes the function implemnetations and only has to be done once per translation unit
+// This includes the function implemenetations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
-
 
 // Declare argument variables with optional default values
 const char *input_file = NULL;
@@ -27,7 +26,7 @@ clags_arg_t args[] = {
     clags_optional('o', "output", &output_file, "FILE", "the output file"),
 
 
-    // Use flags set boolean values on occurence
+    // Use flags set boolean values on occurrence
     // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
     clags_flag('w', "warnings", &warnings, "print warnings"),
     // This is a neat short-hand since the `--help` flags are so common
@@ -38,9 +37,9 @@ clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
-    // Parse the arguments using the previously defined rules, returns `false` on error
-    if (!clags_parse(argc, argv, &config)){
-        // Print an automatic usage
+    // Parse the arguments using the previously defined rules, returns the config on error
+    if (clags_parse(argc, argv, &config) != NULL){
+        // Print an automatic usage, based on the defined config
         clags_usage(argv[0], &config);
         return 1;
     }

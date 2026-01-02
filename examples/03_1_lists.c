@@ -31,7 +31,7 @@ clags_config_t config = clags_config(args, .ignore_prefix="!");
 int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
-    if (!clags_parse(argc, argv, &config)){
+    if (clags_parse(argc, argv, &config) != NULL){
         clags_usage(program_name, &config);
         return 1;
     }
