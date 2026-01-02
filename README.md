@@ -80,3 +80,5 @@ Usage: ./example [OPTIONS] [FLAGS] <input_file>
     -w, --warnings           : print warnings
     -h, --help               : print this help dialog and exit
 ```
+For more advanced examples see the [examples](/examples) directory.
+

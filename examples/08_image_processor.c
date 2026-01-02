@@ -1,6 +1,6 @@
 /*
     Example 8: Image Processor
-      This is a full example of most of clags's features and indents to show 
+      This is a full example of most of clags's features and shows a realistic use case for clags.
       It implements the cli for an image processor that is capable of converting, resizing and tagging images.
 */
 
