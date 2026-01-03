@@ -1,17 +1,18 @@
 # clags.h
-A lightweight command line argument parser.
+A simple declarative command line argument parser, written in C.
+Compilable in C99+ and no dependencies besides libc.
 
 ## Features
-- Required and optional arguments
-- Flags and help flag support
+- Required, optional and flag arguments
 - Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `int64`, `uint64`, `double`, `path`, `size`, `time_s`, `time_ns`
 - Choice arguments: restrict values to a fixed set (like an enum)
 - Custom parsing functions for user-defined types
-- Native and recursive subcommands
+- Native recursive subcommands
 
 ## How to use
 `clags.h` is an stb-style library, which means a single header file
 and headers and implementations separated by the `CLAGS_IMPLEMENTATION` header guard.  
+You can compile the library with any `C99+` compiler. No further dependencies are required.
 
 ### Example
 ```c
@@ -19,7 +20,7 @@ and headers and implementations separated by the `CLAGS_IMPLEMENTATION` header g
 #include <stdio.h>
 #include <stdbool.h>
 
-// This includes the function implemenetations and only has to be done once per translation unit
+// This includes the function implementations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
 #include "clags.h"
 
@@ -39,7 +40,7 @@ clags_arg_t args[] = {
     clags_optional('o', "output", &output_file, "FILE", "the output file"),
 
 
-    // Use flags set boolean values on occurrence
+    // Use flags to set boolean values on occurrence
     // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
     clags_flag('w', "warnings", &warnings, "print warnings"),
     // This is a neat short-hand since the `--help` flags are so common
@@ -65,12 +66,12 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
-When ran with this input:
-```
+When run with this input:
+```console
 ./example --help
 ```
 **clags** will print the following usage:
-```
+```console
 Usage: ./example [OPTIONS] [FLAGS] <input_file>
   Arguments:
     input_file               : the input file
