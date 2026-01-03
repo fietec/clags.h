@@ -31,8 +31,8 @@ clags_choice_t convert_choices[] = {
     {"TIFF", ""},
 };
 
-clags_choices_t choices = clags_choice(convert_choices, .print_no_details=true);
-clags_choice_t *convert_format = clags_choice_default(convert_choices, 0);
+clags_choices_t choices = clags_choices(convert_choices, .print_no_details=true);
+clags_choice_t *convert_format = clags_choice_value(convert_choices, 0);
 
 clags_arg_t convert_args[] = {
     clags_required(&convert_input_file, "input_file", "the file to convert", .value_type=Clags_File),
@@ -78,8 +78,8 @@ clags_choice_t tag_formats[] = {
     {"XML", "Save tags in XML format"},
     {"YAML", "Save tags in YAML format"},
 };
-clags_choices_t tag_choices = clags_choice(tag_formats);
-clags_choice_t *tag_format = clags_choice_default(tag_formats, 0);
+clags_choices_t tag_choices = clags_choices(tag_formats);
+clags_choice_t *tag_format = clags_choice_value(tag_formats, 0);
 
 clags_arg_t tag_args[] = {
     clags_required(&tag_images, "images", "list of images to tag", .is_list=true, .value_type=Clags_File),
@@ -100,7 +100,7 @@ clags_subcmd_t subcommands[] = {
     {"tag", "tag multiple images", &tag_config}
 };
 
-clags_subcmds_t subcmds = clags_subcommand(subcommands);
+clags_subcmds_t subcmds = clags_subcmds(subcommands);
 clags_subcmd_t *selected_subcmd = NULL;
 
 clags_arg_t parent_args[] = {

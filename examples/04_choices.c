@@ -28,9 +28,9 @@ clags_choice_t choice_values[] = {
 };
 
 // create a wrapper for the choices
-clags_choices_t choices = clags_choice(choice_values);
+clags_choices_t choices = clags_choices(choice_values);
 // create variable to hold the pointer to the chosen `clags_choice_t`
-clags_choice_t *choice = clags_choice_default(choice_values, 0); // this sets the default value to the first `clags_choice_t` in `choices`
+clags_choice_t *choice = clags_choice_value(choice_values, 0); // this sets the default value to the first `clags_choice_t` in `choices`
 
 clags_arg_t args[] = {
     clags_required(&input, "input_file", "the input file"),

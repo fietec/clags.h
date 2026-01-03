@@ -23,7 +23,7 @@ clags_arg_t args[] = {
     
     // Optional arguments support both short and long flags
     // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
-    clags_optional('o', "output", &output_file, "FILE", "the output file"),
+    clags_optional('o', "output", &output_file, "FILE", "the output file", .value_type=Clags_Subcmd),
 
 
     // Use flags set boolean values on occurrence

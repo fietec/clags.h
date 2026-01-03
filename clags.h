@@ -1,9 +1,9 @@
 /*
-  clags.h - A simple command line arguments parser for C
+  clags.h - A simple declarative command line arguments parser for C
 
   MIT License
 
-  Copyright (c) 2025 Constantijn de Meer
+  Copyright (c) 2026 Constantijn de Meer
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -61,6 +61,7 @@
 #define CLAGS_ARG_COUNT_LIMIT 256
 #endif // CLAGS_ARG_COUNT_LIMIT
 
+// macro for enabling printf-like format checks in `clags_sb_appendf`
 #if defined(__GNUC__) || defined(__clang__)
 //   https://gcc.gnu.org/onlinedocs/gcc-4.7.2/gcc/Function-Attributes.html
 #    ifdef __MINGW_PRINTF_FORMAT
@@ -78,17 +79,18 @@ typedef enum{
     Clags_Error,
     Clags_ConfigWarning,
     Clags_ConfigError,
-    Clags_NoLogs,
+    Clags_NoLogs,        // disable all logs
 } clags_log_level_t;
 
 typedef struct clags_config_t clags_config_t;
-typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable);
-typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify);
+typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable);       // the function type for custom verifiers
+typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify); 
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
-typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);
+typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);                                  // the function type of custom log handlers
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
+// all available value verifiers
 clags_verify_func_t clags__verify_none;
 clags_verify_func_t clags__verify_custom;
 clags_verify_func_t clags__verify_bool;
@@ -107,7 +109,7 @@ clags_verify_func_t clags__verify_size;
 clags_verify_func_t clags__verify_time_s;
 clags_verify_func_t clags__verify_time_ns;
 
-// the defintions of all supported value types. Format: (EnumValue, verification_function, type_name)
+// the defintions of all supported value types. Format: (enum value, verification_function, type_name)
 #define clags__types\
    X(Clags_None,   clags__verify_none,    NULL      ) \
    X(Clags_Custom, clags__verify_custom,  "custom"  ) \
@@ -128,41 +130,55 @@ clags_verify_func_t clags__verify_time_ns;
    X(Clags_TimeNS, clags__verify_time_ns, "time_ns" ) \
    X(Clags_Subcmd, NULL,                  "subcmd"  ) \
 
+// an auto-generated enum of all supported value types
 #define X(type, func, name) type,
 typedef enum{
     clags__types
 } clags_value_type_t;
 #undef X
 
+// the definition of clags's string builder
+typedef struct {
+    char *items;
+    size_t count;
+    size_t capacity;
+} clags_sb_t;
+
+// the definition of a "generic" list
 typedef struct{
     void *items;
-    size_t item_size;
+    size_t item_size;  // set by the appropiate `clags_list_<type>` macro
     size_t count;
     size_t capacity;
 } clags_list_t;
 
+// the definition of a choice
 typedef struct{
     const char *value;
     const char *description;
 } clags_choice_t;
 
+// a wrapper for choice definitions, construct with `clags_choices`
 typedef struct{
     clags_choice_t *items;
     size_t count;
-    bool print_no_details;
+    bool print_no_details; // do not print the full choice descriptions in `clags_usage`, if possible
 } clags_choices_t;
 
+// the definition of a subcommand
 typedef struct{
     const char *name;
     const char *description;
-    clags_config_t *config;
+    clags_config_t *config;  // the config that should be used to parse the subcommand's arguments
 } clags_subcmd_t;
 
+// a wrapper for subcommand definitions, construct with `clags_subcmd`
 typedef struct{
     clags_subcmd_t *items;
     size_t count;
 } clags_subcmds_t;
 
+// the definition of a optional argument, construct with `clags_required`
 typedef struct{
     void *variable;
     const char *arg_name;
@@ -178,6 +194,7 @@ typedef struct{
     bool is_list;
 } clags_required_t;
 
+// the definition of a optional argument, construct with `clags_optional`
 typedef struct{
     char short_flag;
     const char *long_flag;
@@ -193,6 +210,7 @@ typedef struct{
     };
 } clags_optional_t;
 
+// the definition of a flag, construct with `clags_flag`
 typedef struct{
     char short_flag;
     const char *long_flag;
@@ -202,6 +220,7 @@ typedef struct{
     bool exit;
 } clags_flag_t;
 
+// entirely internal
 typedef struct{
     clags_required_t *required;
     size_t required_count;
@@ -217,6 +236,7 @@ typedef enum{
     Clags_Flag,
 } clags_arg_type_t;
 
+// a wrapper for all arg types
 // construct with `clags_requried`, `clags_optional` and `clags_flag` macros
 typedef struct{
     clags_arg_type_t type;
@@ -224,55 +244,45 @@ typedef struct{
         clags_required_t req;
         clags_optional_t opt;
         clags_flag_t flag;
-        clags_subcmd_t subcmd;
     };
 } clags_arg_t;
 
+// the available config options
 typedef struct{
-    const char *ignore_prefix;
-    const char *list_terminator;
-    bool print_no_notes;
-    bool allow_option_parsing_toggle;
-    clags_log_handler_t log_handler;
-    clags_log_level_t min_log_level;
+    const char *ignore_prefix;        // a custom prefix that instructs the parser to ignore the current argument
+    const char *list_terminator;      // a custom list terminator that tells the parser that following required arguments do no longer belong to the current list
+    bool print_no_notes;              // do not print the `Notes` section in the usage
+    bool allow_option_parsing_toggle; // allow "--" to be used to toggle option and flag parsing
+    clags_log_handler_t log_handler;  // a custom log handler
+    clags_log_level_t min_log_level;  // the minimal log level for which to print logs
 } clags_options_t;
 
-typedef struct {
-    char *items;
-    size_t count;
-    size_t capacity;
-} clags_sb_t;
-
+// a config for a single (sub-)command
 // construct with `clags_config` macro
 struct clags_config_t{
     clags_arg_t *args;
     size_t args_count;
     clags_options_t options;
 
-    // internal
+    // internal, set automatically
     const char *name;
     clags_config_t *parent;
     bool invalid;
 };
 
-// constructs a config from an array of clags_arg_t args
-#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .options=(clags_options_t){__VA_ARGS__}}
+// helper macros
+#define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
+#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); abort();}}while(0)
+#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); abort();}while(0)
 
-// a required, positional argument, can be typed
-#define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_required_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
+/* Custom Variable Types */
 
-// an optional argument, can be typed
-#define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_optional_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
-
-// a boolean flag argument
-#define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
-#define clags_flag_help(val) clags_flag('h', "help", val, "print this help dialog", .exit=true)
-
+// list definitions
 #define clags_list()            (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
 #define clags_path_list()       clags_list()
 #define clags_file_list()       clags_list()
 #define clags_dir_list()        clags_list()
-#define clags_custom_list(size) (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=(size)}
+#define clags_custom_list(size) (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=(size)}  // specify the size of each element so the parser can handle memory correctly when adding items
 #define clags_bool_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
 #define clags_int8_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
 #define clags_uint8_list()      (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
@@ -284,35 +294,72 @@ struct clags_config_t{
 #define clags_size_list()       (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_fsize_t)}
 #define clags_choice_list()     (clags_list_t) {.items = NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
+// macros for easy value extraction from lists
 #define clags_list_element(list, value_type, i) ((value_type*)(list).items)[i]
 #define clags_list_choice_element(list, i) clags_list_element((list), (clags_choice_t*), (i))->value
 
-#define clags_choice(arr, ...) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), __VA_ARGS__}
-#define clags_choice_default(choices, index) (&(choices)[index])
+// macro for choices definition
+#define clags_choices(arr, ...) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), __VA_ARGS__}
+// macro for getting the pointer to the index-th choice
+#define clags_choice_value(choices, index) (&(choices)[index])
 
-#define clags_subcommand(subcmds) (clags_subcmds_t){.items=(subcmds), .count=clags_arr_len(subcmds)}
+// macro for subcmds definition
+#define clags_subcmds(subcmds) (clags_subcmds_t){.items=(subcmds), .count=clags_arr_len(subcmds)}
 
-#define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
-#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); abort();}}while(0)
+/* Argument Constructors */
 
-#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); abort();}while(0)
+// a required, positional argument, can be typed
+#define clags_required(var, name, desc, ...) (clags_arg_t){.type=Clags_Required, .req=(clags_required_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
-// logging functions
+// an optional argument, can be typed
+#define clags_optional(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Optional, .opt=(clags_optional_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
+
+// a boolean flag argument
+#define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
+#define clags_flag_help(val) clags_flag('h', "help", val, "print this help dialog", .exit=true)
+
+/* Config Constructor */
+
+// constructs a config from an array of clags_arg_t args
+#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .options=(clags_options_t){__VA_ARGS__}}
+
+/* Core Functions */
+
+/*
+  Parse arguments based on the provided config.
+  
+  Argument:
+    - argc          : the number of arguments
+    - argv          : the array of arguments
+    - config        : a pointer to a config with argument definitions and other options
+  Returns:
+    clags_config_t* : a pointer to the failed config
+*/
+clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
+
+/*
+  Print a detailed usage based on the provided config.
+  
+  Arguments:
+    - program_name  : the name of the program
+    - config        : a pointer to a config with argument definitions and other options
+*/
+void clags_usage(const char *program_name, clags_config_t *config);
+
+/*
+  Free all memory associated with a `clags_list_t` instance
+  
+  Arguments:
+    - list          : a pointer to the list to free
+*/
+void clags_list_free(clags_list_t *list);
+
+/* Logging */
 static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
 static inline void clags_sb_append_null(clags_sb_t *sb);
 static inline void clags_sb_free(clags_sb_t *sb);
 void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
 void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
-
-// free all memory associated with a clags_list_t instance.
-void clags_list_free(clags_list_t *list);
-
-// parse arguments according to the given configuration.
-// returns true if parsing succeeded, false otherwise.
-clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
-
-// print usage information for the program, based on the given configuration.
-void clags_usage(const char *program_name, clags_config_t *config);
 
 #endif // CLAGS_H
 
@@ -758,8 +805,87 @@ bool clags__append_to_list(clags_config_t *config, clags_required_t req, const c
     return false;
 }
 
+bool clags__validate_required(clags_config_t *config, clags_required_t req)
+{
+    switch (req.value_type){
+        case Clags_Subcmd:{
+            if (req.subcmds == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", req.arg_name);
+                return false;
+            }
+        } break;
+        case Clags_Choice:{
+            if (req.choices == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", req.arg_name);
+                return false;
+            }
+        } break;
+        case Clags_Custom:{
+            if (req.verify == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.verify` for custom verification!", req.arg_name);
+                return false;
+            }
+        } break;
+        default: break;
+    }
+    return true;
+}
+
+bool clags__validate_optional(clags_config_t *config, clags_optional_t opt)
+{
+    char buf[3] = {'-', '\0', '\0'};
+    const char *name = opt.long_flag ? opt.long_flag
+                      : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
+    if (opt.short_flag == '\0' && opt.long_flag == NULL){
+        clags_log(config, Clags_ConfigWarning, "optional argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
+    }
+    if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
+        clags_log(config, Clags_ConfigWarning,
+                  "optional long flag '%s' should not start with '--'. "
+                  "The parser automatically handles leading '--' for long flags, "
+                  "so including it in the config may cause incorrect parsing.",
+                  opt.long_flag);
+    }
+    switch (opt.value_type){
+        case Clags_Subcmd:{
+            clags_log(config, Clags_ConfigError, "optional argument '%s' may not be a subcommand!", name);
+            return false;
+        } break;
+        case Clags_Choice:{
+            if (opt.choices == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", name);
+                return false;
+            }
+        } break;
+        case Clags_Custom:{
+            if (opt.verify == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.verify` for custom verification!", name);
+                return false;
+            }
+        } break;
+        default: break;
+    }
+    return true;
+}
+
+bool clags__validate_flag(clags_config_t *config, clags_flag_t flag)
+{
+    if (flag.short_flag == '\0' && flag.long_flag == NULL){
+        clags_log(config, Clags_ConfigWarning, "flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
+    }
+    if (flag.long_flag && strncmp(flag.long_flag, "--", 2) == 0){
+        clags_log(config, Clags_ConfigWarning,
+                  "long flag '%s' should not start with '--'. "
+                  "The parser automatically handles leading '--' for long flags, "
+                  "so including it in the config may cause incorrect parsing.",
+                  flag.long_flag);
+    }
+    return true;
+}
+
 bool clags__validate_config(clags_config_t *config)
 {
+    // validate options
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
         clags_log(config, Clags_ConfigError,"'.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!");
         return false;
@@ -769,10 +895,12 @@ bool clags__validate_config(clags_config_t *config)
         return false;
     }
 
+    // validate args
     if (config->args_count > CLAGS_ARG_COUNT_LIMIT){
         clags_log(config, Clags_ConfigError, "too many arguments in configuration (%zu/%u)! Define `CLAGS_ARG_COUNT_LIMIT` to change this limit.", config->args_count, CLAGS_ARG_COUNT_LIMIT);
         return false;
     }
+
     bool last_was_list = false;
     bool subcmd_found = false;
     const char *last_req_name = NULL;
@@ -780,11 +908,8 @@ bool clags__validate_config(clags_config_t *config)
         switch (config->args[i].type){
             case Clags_Required:{
                 clags_required_t req = config->args[i].req;
+                if (!clags__validate_required(config, req)) return false;
                 if (req.value_type == Clags_Subcmd){
-                    if (req.subcmds == NULL){
-                        clags_log(config, Clags_ConfigError, "unreachable subcommands '%s'! Provide `.subcmds` to set the subcommand definitions!", req.arg_name);
-                        return false;
-                    }
                     subcmd_found = true;
                     if (last_req_name != NULL){
                         clags_log(config, Clags_ConfigError, "subcommand '%s' must be the only required argument in its config!", req.arg_name);
@@ -810,35 +935,11 @@ bool clags__validate_config(clags_config_t *config)
             } break;
             case Clags_Optional:{
                 last_was_list = false;
-                clags_optional_t opt = config->args[i].opt;
-                if (opt.short_flag == '\0' && opt.long_flag == NULL){
-                    clags_log(config, Clags_ConfigWarning, "optional argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
-                }
-                if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
-                    clags_log(config, Clags_ConfigWarning,
-                            "optional long flag '%s' should not start with '--'. "
-                            "The parser automatically handles leading '--' for long flags, "
-                            "so including it in the config may cause incorrect parsing.",
-                            opt.long_flag);
-                }
-                if (opt.value_type == Clags_Subcmd){
-                    clags_log(config, Clags_ConfigError, "optional value may not be a subcommand!\n");
-                    return false;
-                }
+                if (!clags__validate_optional(config, config->args[i].opt)) return false;
             } break;
             case Clags_Flag:{
                 last_was_list = false;
-                clags_flag_t flag = config->args[i].flag;
-                if (flag.short_flag == '\0' && flag.long_flag == NULL){
-                    clags_log(config, Clags_ConfigWarning, "flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
-                }
-                if (flag.long_flag && strncmp(flag.long_flag, "--", 2) == 0){
-                    clags_log(config, Clags_ConfigWarning,
-                            "long flag '%s' should not start with '--'. "
-                            "The parser automatically handles leading '--' for long flags, "
-                            "so including it in the config may cause incorrect parsing.",
-                            flag.long_flag);
-                }
+                if (!clags__validate_flag(config, config->args[i].flag)) return false;
             } break;
         }
     }

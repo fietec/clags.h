@@ -44,7 +44,7 @@ clags_subcmd_t subcmds[] = {
     {"delete", "Delete a file", &delete_config}
 };
 
-clags_subcmds_t my_subcmds = clags_subcommand(subcmds);
+clags_subcmds_t my_subcmds = clags_subcmds(subcmds);
 
 // define a variable that will hold a pointer to the selected `clags_subcmd_t`
 clags_subcmd_t *selected_subcmd = NULL;
