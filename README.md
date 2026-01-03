@@ -1,6 +1,5 @@
 # clags.h
 A simple declarative command line argument parser, written in C.
-Compilable in C99+ and no dependencies besides libc.
 
 ## Features
 - Required, optional and flag arguments
