@@ -1,6 +1,8 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
+  Version: 0.9.0
+  
   MIT License
 
   Copyright (c) 2026 Constantijn de Meer
