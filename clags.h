@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.1.2
+  Version: 0.2.0
   
   MIT License
 
@@ -369,6 +369,19 @@ void clags_usage(const char *program_name, clags_config_t *config);
                       or -1 if the subcommand was not found or either argument is NULL
 */
 static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
+
+/*
+  Get the index of a selected choice in the provided choice array.
+
+  Arguments:
+    - choices       : pointer to clags_choices_t containing the choice array
+    - choice        : pointer to the selected clags_choice_t to find
+
+  Returns:
+    int             : the index of the selected choice in the array,
+                      or -1 if the choice was not found or either argument is NULL
+*/
+static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
   Free all memory associated with a `clags_list_t` instance
@@ -1307,7 +1320,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
                     snprintf(buf, buf_size, "-%c, --%s(=)%s>", opt.short_flag, opt.long_flag, opt.arg_name);
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
                 } else{
-                    printf("    -%*c : %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
+                    printf("    -%*c: %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
                 }
                 clags__type_usage(opt.value_type, opt._data, false);
             }else if (opt.long_flag){
@@ -1330,7 +1343,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
                     snprintf(buf, buf_size, "-%c, --%s", flag.short_flag, flag.long_flag);
                     printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, flag.description);
                 } else{
-                    printf("    -%*c : %s", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
+                    printf("    -%*c: %s", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
                 }
             } else if (flag.long_flag){
                 printf("    --%*s : %s", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
@@ -1366,6 +1379,15 @@ static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *s
     if (!subcmds || !subcmd) return -1;
     for (size_t i=0; i<subcmds->count; ++i){
         if (&subcmds->items[i] == subcmd) return (int) i;
+    }
+    return -1;
+}
+
+static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
+{
+    if (!choices || !choice) return -1;
+    for (size_t i=0; i<choices->count; ++i){
+        if (&choices->items[i] == choice) return (int) i;
     }
     return -1;
 }

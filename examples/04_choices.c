@@ -57,8 +57,9 @@ int main(int argc, char **argv)
         clags_usage(argv[0], &config);
         return 0;
     }
-    printf("input: %s, algorithm: %s\n", input, choice->value);
-    printf("output: %s\n", output);
+    printf("input: %s\n", input);
+    printf("algorithm: %s or choice no. %d\n", choice->value, clags_choice_index(&choices, choice));
     printf("quality: %"PRId8"\n", quality);
+    printf("output: %s\n", output);
     return 0;
 }
