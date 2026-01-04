@@ -11,9 +11,6 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-// this makes working with lists much more easy
-#define return_defer(res) do{result=(res); goto defer;}while(0)
-
 clags_list_t string_list = clags_list();
 
 // lists can also be typed
@@ -39,11 +36,12 @@ int main(int argc, char **argv)
 
     if (clags_parse(argc, argv, &config) != NULL){
         clags_usage(program_name, &config);
-        return_defer(1);
+        // this makes working with lists way more convenient
+        clags_return_defer(1);
     }
     if (help){
         clags_usage(program_name, &config);
-        return_defer(0);
+        clags_return_defer(0);
     }
 
     printf("Strings:\n");

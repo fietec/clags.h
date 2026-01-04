@@ -11,8 +11,6 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-#define return_defer(res) do{result=(res); goto defer;}while(0)
-
 /* Global arguments*/
 
 bool help = false;
@@ -127,7 +125,7 @@ int main(int argc, char **argv)
     if (failed_config){
         // print usage for failed subcommand
         clags_usage(program_name, failed_config);
-        return_defer(1);
+        clags_return_defer(1);
     }
     if (help){
         // print help for the subcommand for which `--help` was provided
@@ -136,12 +134,12 @@ int main(int argc, char **argv)
         } else{
             clags_usage(program_name, &parent_config);
         }
-        return_defer(0);
+        clags_return_defer(0);
     }
     if (version){
         // this could have been set from any subcommand
         printf("%s - v.1.0.0\n", program_name);
-        return_defer(0);
+        clags_return_defer(0);
     }
     
     // execute chosen subcommand
@@ -185,7 +183,7 @@ int main(int argc, char **argv)
         } break;
         default:{
             fprintf(stderr, "[ERROR] Invalid subcommand selected: %p!\n", selected_subcmd);
-            return_defer(1);
+            clags_return_defer(1);
         }
     }
     
