@@ -37,9 +37,19 @@
 #include <errno.h>
 #include <float.h>
 #include <ctype.h>
-#include <sys/stat.h>
 #include <inttypes.h>
 #include <stdarg.h>
+
+#include <sys/stat.h>
+#ifdef _WIN32
+#ifndef S_ISREG
+#define S_ISREG(m) (((m) & _S_IFREG) != 0)
+#endif // S_ISREG
+#ifndef S_ISDIR
+#define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
+#endif // S_ISDIR
+#define stat _stat
+#endif // _WIN32
 
 #ifndef CLAGS_FREE
 #define CLAGS_FREE free
