@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.9.0
+  Version: 0.1.0
   
   MIT License
 
@@ -34,7 +34,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <float.h>
 #include <ctype.h>
@@ -333,9 +332,9 @@ struct clags_config_t{
   Argument:
     - argc          : the number of arguments
     - argv          : the array of arguments
-    - config        : a pointer to a config with argument definitions and other options
+    - config        : pointer to a config with argument definitions and other options
   Returns:
-    clags_config_t* : a pointer to the failed config
+    clags_config_t* : pointer to the failed config
 */
 clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
 
@@ -344,9 +343,22 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
   
   Arguments:
     - program_name  : the name of the program
-    - config        : a pointer to a config with argument definitions and other options
+    - config        : pointer to a config with argument definitions and other options
 */
 void clags_usage(const char *program_name, clags_config_t *config);
+
+/*
+  Get the index of a selected subcommand in the provided subcommand array.
+
+  Arguments:
+    - subcmds       : pointer to a clags_subcmds_t containing the subcommand array
+    - subcmd        : pointer to the selected clags_subcmd_t to find
+
+  Returns:
+    int             : the index of the selected subcommand in the array,
+                      or -1 if the subcommand was not found or either argument is NULL
+*/
+static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
 
 /*
   Free all memory associated with a `clags_list_t` instance
@@ -962,7 +974,7 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
                 args->flags[args->flag_count++] = config->args[i].flag;
             } break;
             default: {
-                assert(0 && "Unreachable");
+                clags_assert(false, "Invalid clags_arg_type_t");
             }
         }
     }
@@ -1324,6 +1336,15 @@ void clags_usage(const char *program_name, clags_config_t *config)
             printf("    Options and flags of parent subcommands that are not listed above, are not supported. Place them before the beginning of this subcommand.\n");
         }
     }
+}
+
+static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
+{
+    if (!subcmds || !subcmd) return -1;
+    for (size_t i=0; i<subcmds->count; ++i){
+        if (&subcmds->items[i] == subcmd) return (int) i;
+    }
+    return -1;
 }
 
 void clags_list_free(clags_list_t *list)

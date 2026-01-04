@@ -94,10 +94,16 @@ clags_config_t tag_config = clags_config(tag_args, .ignore_prefix="!", .list_ter
 
 /* Parent config */
 
+typedef enum{
+    Convert = 0,
+    Resize,
+    Tag,
+} MySubcmds;
+
 clags_subcmd_t subcommands[] = {
-    {"convert", "convert an image to a different format", &convert_config},
-    {"resize", "resize an image ", &resize_config},
-    {"tag", "tag multiple images", &tag_config}
+    [Convert] = {"convert", "convert an image to a different format", &convert_config},
+    [Resize]  = {"resize", "resize an image ", &resize_config},
+    [Tag]     = {"tag", "tag multiple images", &tag_config},
 };
 
 clags_subcmds_t subcmds = clags_subcmds(subcommands);
@@ -137,44 +143,50 @@ int main(int argc, char **argv)
         printf("%s - v.1.0.0\n", program_name);
         return_defer(0);
     }
-
+    
     // execute chosen subcommand
-    if (selected_subcmd == &subcommands[0]){
-        printf("Convert subcommand selected:\n");
-        printf("  Input file : %s\n", convert_input_file);
-        printf("  Output file: %s\n", convert_output_file);
-        printf("  Format     : %s\n", convert_format->value);
-        printf("  Quality    : %" PRIu8 "\n", convert_quality);
-        printf("  Warnings   : %s\n", convert_warnings ? "true" : "false");
+    MySubcmds subcmd = clags_subcmd_index(&subcmds, selected_subcmd);
+    switch (subcmd){
+        case Convert:{
+            printf("Convert subcommand selected:\n");
+            printf("  Input file : %s\n", convert_input_file);
+            printf("  Output file: %s\n", convert_output_file);
+            printf("  Format     : %s\n", convert_format->value);
+            printf("  Quality    : %" PRIu8 "\n", convert_quality);
+            printf("  Warnings   : %s\n", convert_warnings ? "true" : "false");
 
-        // convertion implementation goes here
-        
-    } else if (selected_subcmd == &subcommands[1]){
-        printf("Resize subcommand selected:\n");
-        printf("  Input file : %s\n", resize_input_file);
-        printf("  Output file: %s\n", resize_output_file);
-        printf("  Width      : %" PRIu32 "\n", resize_width);
-        printf("  Height     : %" PRIu32 "\n", resize_height);
-        printf("  Keep Aspect: %s\n", resize_keep_aspect ? "true" : "false");
-        
-        // resizing implementation goes here
-    } else if (selected_subcmd == &subcommands[2]){
-        printf("Tagging %zu images:\n", tag_images.count);
-        for (size_t i=0; i<tag_images.count; ++i){
-            printf("  Image: %s\n", clags_list_element(tag_images, char*, i));
-        }
-        printf("Tags to apply (%zu):\n", tag_values.count);
-        for (size_t i=0; i<tag_values.count; ++i){
-            printf("  %s\n", clags_list_element(tag_values, char*, i));
-        }
-        printf("Overwrite: %s\n", tag_overwrite ? "yes" : "no");
-        printf("Format: %s\n", tag_format->value);
+            // convertion implementation goes here
 
-        // tagging implementation goes here
+        } break;
+        case Resize:{
+            printf("Resize subcommand selected:\n");
+            printf("  Input file : %s\n", resize_input_file);
+            printf("  Output file: %s\n", resize_output_file);
+            printf("  Width      : %" PRIu32 "\n", resize_width);
+            printf("  Height     : %" PRIu32 "\n", resize_height);
+            printf("  Keep Aspect: %s\n", resize_keep_aspect ? "true" : "false");
         
-    } else{
-        fprintf(stderr, "[ERROR] Invalid subcommand selected: %p!\n", selected_subcmd);
-        return_defer(1);
+            // resizing implementation goes here
+        } break;
+        case Tag:{
+            printf("Tagging %zu images:\n", tag_images.count);
+            for (size_t i=0; i<tag_images.count; ++i){
+                printf("  Image: %s\n", clags_list_element(tag_images, char*, i));
+            }
+            printf("Tags to apply (%zu):\n", tag_values.count);
+            for (size_t i=0; i<tag_values.count; ++i){
+                printf("  %s\n", clags_list_element(tag_values, char*, i));
+            }
+            printf("Overwrite: %s\n", tag_overwrite ? "yes" : "no");
+            printf("Format: %s\n", tag_format->value);
+
+            // tagging implementation goes here
+        
+        } break;
+        default:{
+            fprintf(stderr, "[ERROR] Invalid subcommand selected: %p!\n", selected_subcmd);
+            return_defer(1);
+        }
     }
     
 defer:

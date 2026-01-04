@@ -82,12 +82,23 @@ int main(int argc, char **argv) {
     }
     
     // Act based on which subcommand was selected
-    if (selected_subcmd == &subcmds[0]) {  // copy
-        printf("Copying file '%s' to '%s'\n", copy_source, copy_dest);
-        // actual copy logic goes here
-    } else if (selected_subcmd == &subcmds[1]) {  // delete
-        printf("Deleting file '%s'%s\n", delete_target, delete_force ? " (force)" : "");
-        // actual delete logic goes here
+    // This function returns the index of the subcommand within the definition above.
+    // Pointer comparision can of course also be used.
+    int subcmd_index = clags_subcmd_index(&my_subcmds, selected_subcmd);
+    switch (subcmd_index){
+        case 0:{
+            // copy subcommand
+            printf("Copying file '%s' to '%s'\n", copy_source, copy_dest);
+            // actual copy logic goes here
+        } break;
+        case 1:{
+            // delete subcommand
+            printf("Deleting file '%s'%s\n", delete_target, delete_force ? " (force)" : "");
+            // actual delete logic goes here
+        } break;
+        default:{
+            fprintf(stderr, "[ERROR] Invalid subcommand: %s\n", selected_subcmd->name);
+        } 
     }
 
     return 0;
