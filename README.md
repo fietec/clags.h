@@ -38,7 +38,6 @@ clags_arg_t args[] = {
     // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
     clags_optional('o', "output", &output_file, "FILE", "the output file"),
 
-
     // Use flags to set boolean values on occurrence
     // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
     clags_flag('w', "warnings", &warnings, "print warnings"),
