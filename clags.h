@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.3.0
+  Version: 0.3.1
   
   MIT License
 
@@ -263,7 +263,7 @@ typedef struct{
     const char *list_terminator;      // a custom list terminator that tells the parser that following required arguments do no longer belong to the current list
     bool print_no_notes;              // do not print the `Notes` section in the usage
     bool allow_option_parsing_toggle; // allow "--" to be used to toggle option and flag parsing
-    bool duplicate_strings;           // duplicate all strings instead of setting variables to the content of argv
+    bool duplicate_strings;           // duplicate all strings instead of setting variables to the content of argv, free the allocated memory via `clags_config_free_allocs`
     clags_log_handler_t log_handler;  // a custom log handler
     clags_log_level_t min_log_level;  // the minimal log level for which to print logs
 } clags_options_t;
@@ -386,7 +386,8 @@ static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *s
 static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
-  Free all memory allocated for strings duplicated during parsing
+  Free all memory allocated for strings duplicated during parsing.
+  This only applies if `.duplicate_strings` was enabled in the config.
   
   Arguments:
     - config        : pointer to the clags_config_t whose duplicated strings should be freed
@@ -394,7 +395,7 @@ static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *c
 void clags_config_free_allocs(clags_config_t *config);
 
 /*
-  Free all memory associated with a `clags_list_t` instance
+  Free all memory associated with a `clags_list_t` instance.
   
   Arguments:
     - list          : a pointer to the list to free
