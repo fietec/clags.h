@@ -26,8 +26,9 @@ clags_arg_t args[] = {
 
 // Having multiple lists or, in fact, any other required arguments directly after a list,
 // requires for a delimeter that terminates the list.
-// Since this is not really standard, a custom terminator must be defined manually here.
-clags_config_t config = clags_config(args, .list_terminator="::", .ignore_prefix="!", .allow_option_parsing_toggle=true);
+// When `.duplicate_strings` is true, clags duplicates all strings. 
+// This is necessary if the original argument strings may go out of scope before the parsed values are used.
+clags_config_t config = clags_config(args, .list_terminator="::", .ignore_prefix="!", .allow_option_parsing_toggle=true, .duplicate_strings=true);
 
 int main(int argc, char **argv)
 {
@@ -56,6 +57,10 @@ int main(int argc, char **argv)
 defer:
     clags_list_free(&string_list);
     clags_list_free(&int_list);
+
+    // the config stores all the duplicated strings. You can free them like this
+    clags_config_free_allocs(&config);
+
     return result;
 }
         

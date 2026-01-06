@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.2.0
+  Version: 0.3.0
   
   MIT License
 
@@ -101,7 +101,7 @@ typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
 // all available value verifiers
-clags_verify_func_t clags__verify_none;
+clags_verify_func_t clags__verify_string;
 clags_verify_func_t clags__verify_custom;
 clags_verify_func_t clags__verify_bool;
 clags_verify_func_t clags__verify_int8;
@@ -121,7 +121,7 @@ clags_verify_func_t clags__verify_time_ns;
 
 // the defintions of all supported value types. Format: (enum value, verification_function, type_name)
 #define clags__types\
-   X(Clags_None,   clags__verify_none,    NULL      ) \
+   X(Clags_String, clags__verify_string,  NULL      ) \
    X(Clags_Custom, clags__verify_custom,  "custom"  ) \
    X(Clags_Bool,   clags__verify_bool,    "bool"    ) \
    X(Clags_Int8,   clags__verify_int8,    "int8"    ) \
@@ -263,6 +263,7 @@ typedef struct{
     const char *list_terminator;      // a custom list terminator that tells the parser that following required arguments do no longer belong to the current list
     bool print_no_notes;              // do not print the `Notes` section in the usage
     bool allow_option_parsing_toggle; // allow "--" to be used to toggle option and flag parsing
+    bool duplicate_strings;           // duplicate all strings instead of setting variables to the content of argv
     clags_log_handler_t log_handler;  // a custom log handler
     clags_log_level_t min_log_level;  // the minimal log level for which to print logs
 } clags_options_t;
@@ -278,6 +279,7 @@ struct clags_config_t{
     const char *name;
     clags_config_t *parent;
     bool invalid;
+    clags_list_t allocs;
 };
 
 // helper macros
@@ -332,7 +334,7 @@ struct clags_config_t{
 /* Config Constructor */
 
 // constructs a config from an array of clags_arg_t args
-#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .options=(clags_options_t){__VA_ARGS__}}
+#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(clags_options_t){__VA_ARGS__}}
 
 /* Core Functions */
 
@@ -384,6 +386,14 @@ static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *s
 static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
+  Free all memory allocated for strings duplicated during parsing
+  
+  Arguments:
+    - config        : pointer to the clags_config_t whose duplicated strings should be freed
+*/
+void clags_config_free_allocs(clags_config_t *config);
+
+/*
   Free all memory associated with a `clags_list_t` instance
   
   Arguments:
@@ -413,6 +423,15 @@ static const char *clags__type_names[] = {
     clags__types
 };
 #undef X
+
+static inline char* clags__strdup(const char *string)
+{
+    if (!string) return NULL;
+    size_t length = strlen(string);
+    char *new_string = CLAGS_CALLOC(length+1, sizeof(char));
+    clags_assert(new_string != NULL, "Out of memory!");
+    return strcpy(new_string, string);
+}
 
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
 {
@@ -500,12 +519,31 @@ void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *s
     clags_log(config, level, "%s", sb->items);
 }
 
-bool clags__verify_none(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     (void) arg_name;
     (void) config;
-    if (pvalue) *(char**)pvalue = (char*)arg;
+    if (pvalue){
+        char *string;
+        if (config->options.duplicate_strings){
+            string = clags__strdup(arg);
+            clags_assert(string != NULL, "Out of memory!");
+
+            clags_list_t *allocs = &config->allocs;
+            if (allocs->count >= allocs->capacity){
+                size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
+                allocs->items = CLAGS_REALLOC(allocs->items, allocs->item_size*new_capacity);
+                clags_assert(allocs->items != NULL, "Out of memory!");
+                allocs->capacity = new_capacity;
+            }
+            ((char**)allocs->items)[allocs->count++] = string;
+        } else{
+            // caller must guarantee lifetime
+            string = (char*) arg;
+        }
+        *(char**)pvalue = string;
+    }
     return true;
 }
 
@@ -1034,7 +1072,7 @@ void clags__type_usage(clags_value_type_t type, void *data, bool is_list)
         case Clags_Subcmd:{
             clags__subcmd_usage((clags_subcmds_t*) data);
         }break;
-        case Clags_None:{
+        case Clags_String:{
             if (is_list) printf(" ([])");
         }break;
         default:{
@@ -1398,6 +1436,18 @@ void clags_list_free(clags_list_t *list)
     CLAGS_FREE(list->items);
     list->items = NULL;
     list->count = list->capacity = 0;
+}
+
+void clags_config_free_allocs(clags_config_t *config)
+{
+    if (config == NULL) return;
+    clags_list_t *allocs = &config->allocs;
+    for (size_t i=0; i<allocs->count; ++i){
+        CLAGS_FREE(((char**) allocs->items)[i]);
+    }
+    CLAGS_FREE(allocs->items);
+    allocs->items = NULL;
+    allocs->count = allocs->capacity = 0;
 }
 
 #endif // CLAGS_IMPLEMENTATION
