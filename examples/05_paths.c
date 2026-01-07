@@ -38,6 +38,6 @@ int main(int argc, char **argv)
         clags_usage(argv[0], &config);
         return 0;
     }
-    printf("input: %s, size: %lu, output: %s\n", input_file, size, output_file);
+    printf("input: %s, size: %"PRIu64", output: %s\n", input_file, size, output_file);
     return 0;
 }
