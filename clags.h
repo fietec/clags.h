@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.3.2
+  Version: 0.4.0
   
   MIT License
 
@@ -386,6 +386,21 @@ static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *s
 static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
+  Duplicate a string if string duplication is enabled in the config, 
+  otherwise return the original string.
+
+  Arguments:
+    - config  : pointer to the clags configuration
+    - string  : the string to duplicate
+
+  Returns:
+    char*    : pointer to the duplicated string if duplication is enabled,
+               otherwise the original string. Memory allocated for duplicates
+               is tracked internally within the config and will be freed when the config is cleaned up.
+*/
+char* clags_config_duplicate_string(clags_config_t *config, const char *string);
+
+/*
   Free all memory allocated for strings duplicated during parsing.
   This only applies if `.duplicate_strings` was enabled in the config.
   
@@ -432,6 +447,32 @@ static inline char* clags__strdup(const char *string)
     char *new_string = CLAGS_CALLOC(length+1, sizeof(char));
     clags_assert(new_string != NULL, "Out of memory!");
     return strcpy(new_string, string);
+}
+
+static inline bool clags__strimatch(const char *s1, const char *s2)
+{
+    if (!s1 || !s2) return s1 == s2;
+    unsigned char c1;
+    unsigned char c2;
+    do{
+        c1 = tolower(*s1++);
+        c2 = tolower(*s2++);
+        if (c1 != c2) return false;
+    }while (c1 && c1);
+    return true;
+}
+
+static inline int clags__stricmp(const char *s1, const char *s2)
+{
+    char *r1 = (char*) s1;
+    char *r2 = (char*) s2;
+    while (true){
+        char c1 = *r1++;
+        char c2 = *r2++;
+        if (c1 == '\0' && c2 == '\0') return 0;
+        if (c2 == '\0') return 1;
+        if (tolower(c1) != tolower(c2)) return -1;
+    }
 }
 
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
@@ -520,41 +561,44 @@ void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *s
     clags_log(config, level, "%s", sb->items);
 }
 
+char* clags_config_duplicate_string(clags_config_t *config, const char *string)
+{
+    if (config == NULL) return (char*) string;
+    char *duplicate;
+    if (config->options.duplicate_strings){
+        duplicate = clags__strdup(string);
+        clags_assert(duplicate != NULL, "Out of memory!");
+
+        clags_list_t *allocs = &config->allocs;
+        if (allocs->count >= allocs->capacity){
+            size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
+            allocs->items = CLAGS_REALLOC(allocs->items, allocs->item_size*new_capacity);
+            clags_assert(allocs->items != NULL, "Out of memory!");
+            allocs->capacity = new_capacity;
+        }
+        ((char**) allocs->items)[allocs->count++] = duplicate;
+    } else{
+        duplicate = (char*) string;
+    }
+    return duplicate;
+}
+
 bool clags__verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     (void) arg_name;
     (void) config;
-    if (pvalue){
-        char *string;
-        if (config->options.duplicate_strings){
-            string = clags__strdup(arg);
-            clags_assert(string != NULL, "Out of memory!");
-
-            clags_list_t *allocs = &config->allocs;
-            if (allocs->count >= allocs->capacity){
-                size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
-                allocs->items = CLAGS_REALLOC(allocs->items, allocs->item_size*new_capacity);
-                clags_assert(allocs->items != NULL, "Out of memory!");
-                allocs->capacity = new_capacity;
-            }
-            ((char**)allocs->items)[allocs->count++] = string;
-        } else{
-            // caller must guarantee lifetime
-            string = (char*) arg;
-        }
-        *(char**)pvalue = string;
-    }
+    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
     return true;
 }
 
 bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    if (strcmp(arg, "true") == 0 || strcmp(arg, "True") == 0) {
+    if (clags__strimatch(arg, "true") || clags__strimatch(arg, "yes")){
         if (pvalue) *(bool*)pvalue = true;
         return true;
-    } else if (strcmp(arg, "false") == 0 || strcmp(arg, "False") == 0) {
+    } else if (clags__strimatch(arg, "false") || clags__strimatch(arg, "no")){
         if (pvalue) *(bool*)pvalue = false;
         return true;
     }
@@ -726,7 +770,7 @@ bool clags__verify_path(clags_config_t *config, const char *arg_name, const char
         clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
-    if (pvalue) *(char**)pvalue = (char*) arg;
+    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
     return true;
 }
 
@@ -742,7 +786,7 @@ bool clags__verify_file(clags_config_t *config, const char *arg_name, const char
         clags_log(config, Clags_Error, "Path for arguments '%s' is not a file: '%s'!", arg_name, arg);
         return false;
     }
-    if (pvalue) *(char**)pvalue = (char*) arg;
+    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
     return true;
 }
 
@@ -758,7 +802,7 @@ bool clags__verify_dir(clags_config_t *config, const char *arg_name, const char 
         clags_log(config, Clags_Error, "Path for arguments '%s' is not a dir: '%s'!", arg_name, arg);
         return false;
     }
-    if (pvalue) *(char**)pvalue = (char*) arg;
+    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
     return true;
 }
 
@@ -1279,7 +1323,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
                 if (!clags__verify_funcs[req.value_type](config, req.arg_name, arg, req.variable, req.verify)) clags_return_defer(config);
             }
         }
-    next:
+    next: continue;
     }
     if (in_list) required_count += 1;
     if (arguments_ignored) clags_log(config, Clags_Warning, "Arguments were ignored because they were prefixed with '%s'", ignore_prefix);
