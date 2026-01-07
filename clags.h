@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.3.1
+  Version: 0.3.2
   
   MIT License
 
@@ -451,15 +451,15 @@ static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
     
     va_start(args, format);
     va_copy(args_copy, args);
-    int n = vsnprintf(NULL, 0, format, args);
-    va_end(args);
+
+    int n = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
 
     clags__sb_reserve(sb, sb->count + n + 1);
     char *start = sb->items + sb->count;
 
-    va_start(args, format);
-    vsnprintf(start, n+1, format, args_copy);
-    va_end(args_copy);
+    vsnprintf(start, n+1, format, args);
+    va_end(args);
 
     sb->count += n;
 }
