@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.4.0
+  Version: 0.4.1
   
   MIT License
 
@@ -460,19 +460,6 @@ static inline bool clags__strimatch(const char *s1, const char *s2)
         if (c1 != c2) return false;
     }while (c1 && c1);
     return true;
-}
-
-static inline int clags__stricmp(const char *s1, const char *s2)
-{
-    char *r1 = (char*) s1;
-    char *r2 = (char*) s2;
-    while (true){
-        char c1 = *r1++;
-        char c2 = *r2++;
-        if (c1 == '\0' && c2 == '\0') return 0;
-        if (c2 == '\0') return 1;
-        if (tolower(c1) != tolower(c2)) return -1;
-    }
 }
 
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
