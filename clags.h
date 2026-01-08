@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.4.1
+  Version: 0.4.2
   
   MIT License
 
@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <float.h>
 #include <ctype.h>
@@ -449,19 +450,6 @@ static inline char* clags__strdup(const char *string)
     return strcpy(new_string, string);
 }
 
-static inline bool clags__strimatch(const char *s1, const char *s2)
-{
-    if (!s1 || !s2) return s1 == s2;
-    unsigned char c1;
-    unsigned char c2;
-    do{
-        c1 = tolower(*s1++);
-        c2 = tolower(*s2++);
-        if (c1 != c2) return false;
-    }while (c1 && c1);
-    return true;
-}
-
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
 {
     if (sb->capacity >= capacity) return;
@@ -582,10 +570,10 @@ bool clags__verify_string(clags_config_t *config, const char *arg_name, const ch
 bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    if (clags__strimatch(arg, "true") || clags__strimatch(arg, "yes")){
+    if (strcasecmp(arg, "true") == 0 || strcasecmp(arg, "yes") == 0){
         if (pvalue) *(bool*)pvalue = true;
         return true;
-    } else if (clags__strimatch(arg, "false") || clags__strimatch(arg, "no")){
+    } else if (strcasecmp(arg, "false") == 0 || strcasecmp(arg, "no") == 0){
         if (pvalue) *(bool*)pvalue = false;
         return true;
     }
