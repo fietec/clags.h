@@ -50,6 +50,7 @@
 #define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
 #endif // S_ISDIR
 #define stat _stat
+#define strcasecmp _stricmp
 #endif // _WIN32
 
 #ifndef CLAGS_FREE
