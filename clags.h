@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.4.2
+  Version: 0.4.3
   
   MIT License
 
@@ -105,6 +105,7 @@ typedef uint64_t clags_time_t;
 // all available value verifiers
 clags_verify_func_t clags__verify_string;
 clags_verify_func_t clags__verify_custom;
+clags_verify_func_t clags__verify_subcmd;
 clags_verify_func_t clags__verify_bool;
 clags_verify_func_t clags__verify_int8;
 clags_verify_func_t clags__verify_uint8;
@@ -140,7 +141,7 @@ clags_verify_func_t clags__verify_time_ns;
    X(Clags_Size,   clags__verify_size,    "size"    ) \
    X(Clags_TimeS,  clags__verify_time_s,  "time_s"  ) \
    X(Clags_TimeNS, clags__verify_time_ns, "time_ns" ) \
-   X(Clags_Subcmd, NULL,                  "subcmd"  ) \
+   X(Clags_Subcmd, clags__verify_subcmd,  "subcmd"  ) \
 
 // an auto-generated enum of all supported value types
 #define X(type, func, name) type,
@@ -873,6 +874,25 @@ bool clags__verify_time_ns(clags_config_t *config, const char *arg_name, const c
     return true;
 }
 
+bool clags__verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
+    for (size_t i=0; i<subcmds->count; ++i){
+        clags_subcmd_t subcmd = subcmds->items[i];
+        if (strcmp(subcmd.name, arg) == 0){
+            if (pvalue) *(clags_subcmd_t**) pvalue = &subcmds->items[i];
+            clags_config_t *child_config = subcmd.config;
+            if (child_config){
+                child_config->parent = config;
+                child_config->name = clags_config_duplicate_string(config, arg);
+            }
+            return true;
+        }
+    }
+    clags_log(config, Clags_Error, "unknown subcommand '%s' for argument '%s'!", arg, arg_name);
+    return false;
+}
+
 bool clags__verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) data;
@@ -1052,7 +1072,7 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
                 args->flags[args->flag_count++] = config->args[i].flag;
             } break;
             default: {
-                clags_assert(false, "Invalid clags_arg_type_t");
+                clags_unreachable("Invalid clags_arg_type_t");
             }
         }
     }
@@ -1274,22 +1294,10 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
 
             // parse subcommands
             if (req.value_type == Clags_Subcmd){
-                clags_subcmds_t *subcmds = req.subcmds;
-                for (size_t i=0; i<subcmds->count; ++i){
-                    clags_subcmd_t subcmd = subcmds->items[i];
-                    if (strcmp(subcmd.name, arg) == 0){
-                        // found matching subcommand, descend into recursion
-                        clags_config_t *child_config = subcmd.config;
-                        if (req.variable) *(clags_subcmd_t**)req.variable = &subcmds->items[i];
-                        if (child_config == NULL) clags_return_defer(NULL);
-
-                        child_config->parent = config;
-                        child_config->name = arg;
-                        clags_return_defer(clags_parse((int) argc-index, argv+index, child_config));
-                    }
-                }
-                clags_log(config, Clags_Error, "unknown subcommand '%s' for argument '%s'!", arg, req.arg_name);
-                clags_return_defer(config);
+                clags_subcmd_t **subcmd = req.variable;
+                if (!clags__verify_funcs[req.value_type](config, req.arg_name, arg, subcmd, req.subcmds)) clags_return_defer(config);
+                if (subcmd == NULL) clags_return_defer(NULL);
+                clags_return_defer(clags_parse((int) argc-index, argv+index, (*subcmd)->config));
             }
             if (req.is_list){
                 in_list = true;
