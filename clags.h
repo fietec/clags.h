@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.4.3
+  Version: 0.5.0
   
   MIT License
 
@@ -338,6 +338,7 @@ struct clags_config_t{
 
 // constructs a config from an array of clags_arg_t args
 #define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(clags_options_t){__VA_ARGS__}}
+#define clags_config_with_options(arguments, opts) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(opts)}
 
 /* Core Functions */
 

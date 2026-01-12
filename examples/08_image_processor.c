@@ -16,6 +16,9 @@
 bool help = false;
 bool version = false;
 
+// the options used for all configs
+const clags_options_t options = {.ignore_prefix="!", .list_terminator="::"};
+
 /* Convert subcommand config */
 
 char *convert_input_file = NULL;
@@ -42,7 +45,8 @@ clags_arg_t convert_args[] = {
     clags_flag_help(&help),
 };
 
-clags_config_t convert_config = clags_config(convert_args, .ignore_prefix="!");
+// this macro is an alternative to `clags_config`. You can use it if multiple configs share the same options.
+clags_config_t convert_config = clags_config_with_options(convert_args, options);
 
 /* Resize subcommand config */
 
@@ -62,7 +66,7 @@ clags_arg_t resize_args[] = {
     clags_flag_help(&help),
 };
 
-clags_config_t resize_config = clags_config(resize_args, .ignore_prefix="!");
+clags_config_t resize_config = clags_config_with_options(resize_args, options);
 
 /* Tag subcommand config */
 
@@ -88,7 +92,7 @@ clags_arg_t tag_args[] = {
     clags_flag_help(&help),
 };
 
-clags_config_t tag_config = clags_config(tag_args, .ignore_prefix="!", .list_terminator="::");
+clags_config_t tag_config = clags_config_with_options(tag_args, options);
 
 /* Parent config */
 
@@ -113,7 +117,7 @@ clags_arg_t parent_args[] = {
     clags_flag_help(&help),
 };
 
-clags_config_t parent_config = clags_config(parent_args, .ignore_prefix="!");
+clags_config_t parent_config = clags_config_with_options(parent_args, options);
 
 int main(int argc, char **argv)
 {

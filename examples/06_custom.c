@@ -20,8 +20,9 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
     // only accept lower case strings
     if (arg && islower(*arg)){
         // set the variable to the current arg since we are operating on strings here
-        // Note: this does not duplicate the string and the lifetime of `variable` is linked to the argv provided to `clags_parse`
-        if (variable) *(char**)variable = (char*)arg;
+        // Note: `clags_config_duplicate_string` does not duplicate the string in this example, since the `duplicate_strings` option in the config is not set.
+        //       But using the function nethertheless makes it easy to change this behaviour without having to edit all your custom verifiers.
+        if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
         // `arg` matches criteria, return success
         return true;
     }
