@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.5.0
+  Version: 0.5.1
   
   MIT License
 
@@ -548,6 +548,7 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
         clags_assert(duplicate != NULL, "Out of memory!");
 
         clags_list_t *allocs = &config->allocs;
+        if (allocs->item_size == 0) allocs->item_size = sizeof(char*);
         if (allocs->count >= allocs->capacity){
             size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
             allocs->items = CLAGS_REALLOC(allocs->items, allocs->item_size*new_capacity);
