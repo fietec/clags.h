@@ -12,8 +12,7 @@
 #include "../clags.h"
 
 /* Global arguments*/
-
-bool help = false;
+clags_config_t *help = NULL;
 bool version = false;
 
 // the options used for all configs
@@ -42,7 +41,7 @@ clags_arg_t convert_args[] = {
     clags_optional('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_UInt8),
     clags_flag('w', "warnings", &convert_warnings, "print warnings"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
-    clags_flag_help(&help),
+    clags_flag_help_config(&help),
 };
 
 // this macro is an alternative to `clags_config`. You can use it if multiple configs share the same options.
@@ -63,7 +62,7 @@ clags_arg_t resize_args[] = {
     clags_optional('h', "height", &resize_height, "PIXELS", "the height of the output image", .value_type=Clags_UInt32),
     clags_flag('k', "keep-aspect", &resize_keep_aspect, "keep the aspect ratio of the input image"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
-    clags_flag_help(&help),
+    clags_flag_help_config(&help),
 };
 
 clags_config_t resize_config = clags_config_with_options(resize_args, options);
@@ -89,7 +88,7 @@ clags_arg_t tag_args[] = {
     clags_optional('f', "format", &tag_format, "FORMAT", "format to save tags", .value_type=Clags_Choice, .choices=&tag_choices),
     clags_flag('o', "overwrite", &tag_overwrite, "replace existing tags"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
-    clags_flag_help(&help),
+    clags_flag_help_config(&help),
 };
 
 clags_config_t tag_config = clags_config_with_options(tag_args, options);
@@ -114,7 +113,7 @@ clags_subcmd_t *selected_subcmd = NULL;
 clags_arg_t parent_args[] = {
     clags_required(&selected_subcmd, "action", "the subcommand to run", .value_type=Clags_Subcmd, .subcmds=&subcmds),
     clags_flag('v', "version", &version, "print the version", .exit=true),
-    clags_flag_help(&help),
+    clags_flag_help_config(&help),
 };
 
 clags_config_t parent_config = clags_config_with_options(parent_args, options);
@@ -133,11 +132,7 @@ int main(int argc, char **argv)
     }
     if (help){
         // print help for the subcommand for which `--help` was provided
-        if (selected_subcmd){
-            clags_usage(program_name, selected_subcmd->config);
-        } else{
-            clags_usage(program_name, &parent_config);
-        }
+        clags_usage(argv[0], help);
         clags_return_defer(0);
     }
     if (version){

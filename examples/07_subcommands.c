@@ -11,7 +11,11 @@
 #include "../clags.h"
 
 // Global help flag
-bool help = false;
+// since the help flag can be set from multiple subcommands, we can track the corresponding config here
+clags_config_t *help = NULL;
+
+// this flag tracks how many times it was encountered
+size_t verbosity = 0;
 
 // --- COPY subcommand ---
 char *copy_source = NULL;
@@ -20,7 +24,19 @@ char *copy_dest   = NULL;
 clags_arg_t copy_args[] = {
     clags_required(&copy_source, "source", "Source file path", .value_type=Clags_File),
     clags_required(&copy_dest, "dest", "Destination file path"),
-    clags_flag_help(&help)
+
+    // With the `.type` field, we specify how the flag stores its result.
+    // A full list of available storage types can be found in the `clags_flag_type_t` enum.
+    // The default is `Clags_BoolFlag`, a normal boolean flag.
+
+    // `.type = Clags_CountFlag` instructs the parser to track how many times
+    // this flag was encountered. The associated variable must be of type `size_t`.
+    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
+
+    // `.type = Clags_ConfigFlag` instructs the parser to store a pointer to
+    // the `clags_config_t` of the (sub)command in which the flag was encountered.
+    // The associated variable must be of type `clags_config_t *`.
+    clags_flag('h', "help", &help, "print this help dialog", .exit=true, .type=Clags_ConfigFlag),
 };
 
 clags_config_t copy_config = clags_config(copy_args);
@@ -32,7 +48,10 @@ bool delete_force   = false;
 clags_arg_t delete_args[] = {
     clags_required(&delete_target, "target", "Target file to delete", .value_type=Clags_File),
     clags_flag('f', "force", &delete_force, "Force deletion"),
-    clags_flag_help(&help)
+
+    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
+    // this is a built-in shorthand for the previously defined help flag
+    clags_flag_help_config(&help)
 };
 
 clags_config_t delete_config = clags_config(delete_args);
@@ -53,7 +72,8 @@ clags_subcmd_t *selected_subcmd = NULL;
 clags_arg_t main_args[] = {
     // with `.subcmds` you set the subcommand parsing verifier
     clags_required(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .subcmds=&my_subcmds),
-    clags_flag_help(&help)
+    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
+    clags_flag_help_config(&help)
 };
 
 clags_config_t main_config = clags_config(main_args);
@@ -71,15 +91,13 @@ int main(int argc, char **argv) {
     }
 
     if (help){
-        // in this example, the `help` flag is allowed to be set by all subcommands
-        // Therefore, we call `clags_usage` based on the selected subcommand, which stores its config
-        if (selected_subcmd){
-            clags_usage(argv[0], selected_subcmd->config);
-        } else{
-            clags_usage(argv[0], &main_config);
-        }
+        // In this example, the `help` flag is allowed to be set by all subcommands.
+        // Therefore, we call `clags_usage` based on the selected subcommand, whose config is stored in the `help` variable
+        clags_usage(argv[0], help);
         return 0;
     }
+
+    printf("Verbosity is %zu.\n", verbosity);
     
     // Act based on which subcommand was selected
     // This function returns the index of the subcommand within the definition above.

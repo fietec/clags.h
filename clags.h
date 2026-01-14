@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.5.1
+  Version: 0.6.0
   
   MIT License
 
@@ -150,6 +150,12 @@ typedef enum{
 } clags_value_type_t;
 #undef X
 
+typedef enum{
+    Clags_BoolFlag = 0,   // a normal boolean flag, set to `true` on occurence, variable type: bool
+    Clags_ConfigFlag,     // a flag that tracks from which configs's subcommand the flag was set, variable type: clags_config_t*
+    Clags_CountFlag,      // a flag that tracks how many times it was encountered, variable type: size_t
+} clags_flag_type_t;
+
 // the definition of clags's string builder
 typedef struct {
     char *items;
@@ -191,7 +197,7 @@ typedef struct{
     size_t count;
 } clags_subcmds_t;
 
-// the definition of a optional argument, construct with `clags_required`
+// the definition of an optional argument, construct with `clags_required`
 typedef struct{
     void *variable;
     const char *arg_name;
@@ -227,10 +233,11 @@ typedef struct{
 typedef struct{
     char short_flag;
     const char *long_flag;
-    bool *variable;
+    void *variable;
     const char *description;
     // options
-    bool exit;
+    bool exit;                // exit parsing on occurence
+    clags_flag_type_t type;   // the type and behaviour of the flag
 } clags_flag_t;
 
 // entirely internal
@@ -332,7 +339,8 @@ struct clags_config_t{
 
 // a boolean flag argument
 #define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
-#define clags_flag_help(val) clags_flag('h', "help", val, "print this help dialog", .exit=true)
+#define clags_flag_help(val)        clags_flag('h', "help", val, "print this help dialog", .exit=true)
+#define clags_flag_help_config(val) clags_flag('h', "help", val, "print this help dialog", .exit=true, .type=Clags_ConfigFlag)
 
 /* Config Constructor */
 
@@ -566,7 +574,6 @@ bool clags__verify_string(clags_config_t *config, const char *arg_name, const ch
 {
     (void) data;
     (void) arg_name;
-    (void) config;
     if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
     return true;
 }
@@ -905,6 +912,25 @@ bool clags__verify_custom(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
+void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
+{
+    if (!flag->variable) return;
+    switch (flag->type){
+        case Clags_BoolFlag:{
+            *(bool*) flag->variable = true;
+        }break;
+        case Clags_ConfigFlag:{
+            *(clags_config_t**) flag->variable = config;
+        }break;
+        case Clags_CountFlag:{
+            *(size_t*) flag->variable += 1;
+        }break;
+        default:{
+            clags_unreachable("Invalid clags_flag_type_t");
+        }
+    }
+}
+
 bool clags__append_to_list(clags_config_t *config, clags_required_t req, const char *arg)
 {
     clags_list_t *list = (clags_list_t*) req.variable;
@@ -997,6 +1023,15 @@ bool clags__validate_flag(clags_config_t *config, clags_flag_t flag)
                   "The parser automatically handles leading '--' for long flags, "
                   "so including it in the config may cause incorrect parsing.",
                   flag.long_flag);
+    }
+    switch (flag.type){
+        case Clags_BoolFlag:
+        case Clags_ConfigFlag:
+        case Clags_CountFlag:break;
+        default:{
+            clags_log(config, Clags_ConfigError, "invalid flag type: %d!", flag.type);
+            return false;
+        }
     }
     return true;
 }
@@ -1230,7 +1265,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
             for (size_t i=0; i<args.flag_count; ++i){
                 clags_flag_t flag = args.flags[i];
                 if (flag.long_flag && strcmp(arg, flag.long_flag) == 0){
-                    if (flag.variable != NULL) *flag.variable = true;
+                    clags__set_flag(config, &flag);
                     if (flag.exit) clags_return_defer(NULL);
                     goto next;
                 }
@@ -1270,7 +1305,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
                 for (size_t i=0; i<args.flag_count; ++i){
                     clags_flag_t flag = args.flags[i];
                     if (*c == flag.short_flag){
-                        if (flag.variable) *flag.variable = true;
+                        clags__set_flag(config, &flag);
                         if (flag.exit) clags_return_defer(NULL);
                         matched = true;
                     }
