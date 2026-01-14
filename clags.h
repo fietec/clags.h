@@ -123,26 +123,26 @@ clags_verify_func_t clags__verify_size;
 clags_verify_func_t clags__verify_time_s;
 clags_verify_func_t clags__verify_time_ns;
 
-// the defintions of all supported value types. Format: (enum value, verification_function, type_name)
-#define clags__types\
-   X(Clags_String, clags__verify_string,  NULL      ) \
-   X(Clags_Custom, clags__verify_custom,  "custom"  ) \
-   X(Clags_Bool,   clags__verify_bool,    "bool"    ) \
-   X(Clags_Int8,   clags__verify_int8,    "int8"    ) \
-   X(Clags_UInt8,  clags__verify_uint8,   "uint8"   ) \
-   X(Clags_Int32,  clags__verify_int32,   "int32"   ) \
-   X(Clags_UInt32, clags__verify_uint32,  "uint32"  ) \
-   X(Clags_Int64,  clags__verify_int64,   "int64"   ) \
-   X(Clags_UInt64, clags__verify_uint64,  "uint64"  ) \
-   X(Clags_Double, clags__verify_double,  "double"  ) \
-   X(Clags_Choice, clags__verify_choice,  "choice"  ) \
-   X(Clags_Path,   clags__verify_path,    "path"    ) \
-   X(Clags_File,   clags__verify_file,    "file"    ) \
-   X(Clags_Dir,    clags__verify_dir,     "dir"     ) \
-   X(Clags_Size,   clags__verify_size,    "size"    ) \
-   X(Clags_TimeS,  clags__verify_time_s,  "time_s"  ) \
-   X(Clags_TimeNS, clags__verify_time_ns, "time_ns" ) \
-   X(Clags_Subcmd, clags__verify_subcmd,  "subcmd"  ) \
+// the defintions of all supported value types. Format: (enum value, verification function, type name)
+#define clags__types                                                                                                                                       \
+   X(Clags_String, clags__verify_string,  NULL      ) /* string value; variable type: char*                                                             */ \
+   X(Clags_Custom, clags__verify_custom,  "custom"  ) /* custom verification function; variable type: depends on verify function                        */ \
+   X(Clags_Bool,   clags__verify_bool,    "bool"    ) /* boolean value; variable type: bool                                                             */ \
+   X(Clags_Int8,   clags__verify_int8,    "int8"    ) /* signed 8-bit integer; variable type: int8_t                                                    */ \
+   X(Clags_UInt8,  clags__verify_uint8,   "uint8"   ) /* unsigned 8-bit integer; variable type: uint8_t                                                 */ \
+   X(Clags_Int32,  clags__verify_int32,   "int32"   ) /* signed 32-bit integer; variable type: int32_t                                                  */ \
+   X(Clags_UInt32, clags__verify_uint32,  "uint32"  ) /* unsigned 32-bit integer; variable type: uint32_t                                               */ \
+   X(Clags_Int64,  clags__verify_int64,   "int64"   ) /* signed 64-bit integer; variable type: int64_t                                                  */ \
+   X(Clags_UInt64, clags__verify_uint64,  "uint64"  ) /* unsigned 64-bit integer; variable type: uint64_t                                               */ \
+   X(Clags_Double, clags__verify_double,  "double"  ) /* floating-point value; variable type: double                                                    */ \
+   X(Clags_Choice, clags__verify_choice,  "choice"  ) /* selects one value from a set of choices; variable type: clags_choice_t*                        */ \
+   X(Clags_Path,   clags__verify_path,    "path"    ) /* valid filesystem path; variable type: char*                                                    */ \
+   X(Clags_File,   clags__verify_file,    "file"    ) /* path to a regular file; variable type: char*                                                   */ \
+   X(Clags_Dir,    clags__verify_dir,     "dir"     ) /* path to a directory; variable type: char*                                                      */ \
+   X(Clags_Size,   clags__verify_size,    "size"    ) /* size in bytes (supports suffixes like KiB/MB); variable type: clags_fsize_t                    */ \
+   X(Clags_TimeS,  clags__verify_time_s,  "time_s"  ) /* time duration in seconds (supports suffixes s/m/h/d); variable type: clags_time_t              */ \
+   X(Clags_TimeNS, clags__verify_time_ns, "time_ns" ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d); variable type: clags_time_t */ \
+   X(Clags_Subcmd, clags__verify_subcmd,  "subcmd"  ) /* subcommand; variable type: clags_subcmd_t*                                                     */ \
 
 // an auto-generated enum of all supported value types
 #define X(type, func, name) type,
@@ -151,11 +151,11 @@ typedef enum{
 } clags_value_type_t;
 #undef X
 
-typedef enum{
-    Clags_BoolFlag = 0,   // a normal boolean flag, set to `true` on occurence, variable type: bool
-    Clags_ConfigFlag,     // a flag that tracks from which configs's subcommand the flag was set, variable type: clags_config_t*
-    Clags_CountFlag,      // a flag that tracks how many times it was encountered, variable type: size_t
-    Clags_CallbackFlag,   // a flag that envokes a function each time is is encountered, variable type: clags_flag_callback_func_t
+typedef enum {
+    Clags_BoolFlag = 0,   // standard boolean flag; set to `true` when the flag occurs; variable type: bool
+    Clags_ConfigFlag,     // stores a pointer to the config (sub)command in which the flag was set; variable type: clags_config_t*
+    Clags_CountFlag,      // tracks how many times the flag was encountered; variable type: size_t
+    Clags_CallbackFlag,   // invokes a user-provided callback function each time the flag occurs; variable type: clags_flag_callback_func_t
 } clags_flag_type_t;
 
 // the definition of clags's string builder
