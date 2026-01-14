@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.6.0
+  Version: 0.6.1
   
   MIT License
 
@@ -99,6 +99,7 @@ typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *a
 typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify); 
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
 typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);                                  // the function type of custom log handlers
+typedef void (*clags_callback_func_t)(clags_config_t *config);                                                                   // the function type of callback functions
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
@@ -154,6 +155,7 @@ typedef enum{
     Clags_BoolFlag = 0,   // a normal boolean flag, set to `true` on occurence, variable type: bool
     Clags_ConfigFlag,     // a flag that tracks from which configs's subcommand the flag was set, variable type: clags_config_t*
     Clags_CountFlag,      // a flag that tracks how many times it was encountered, variable type: size_t
+    Clags_CallbackFlag,   // a flag that envokes a function each time is is encountered, variable type: clags_flag_callback_func_t
 } clags_flag_type_t;
 
 // the definition of clags's string builder
@@ -893,7 +895,6 @@ bool clags__verify_subcmd(clags_config_t *config, const char *arg_name, const ch
             clags_config_t *child_config = subcmd.config;
             if (child_config){
                 child_config->parent = config;
-                child_config->name = clags_config_duplicate_string(config, arg);
             }
             return true;
         }
@@ -924,6 +925,9 @@ void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
         }break;
         case Clags_CountFlag:{
             *(size_t*) flag->variable += 1;
+        }break;
+        case Clags_CallbackFlag:{
+            ((clags_callback_func_t)flag->variable)(config);
         }break;
         default:{
             clags_unreachable("Invalid clags_flag_type_t");
@@ -1027,7 +1031,8 @@ bool clags__validate_flag(clags_config_t *config, clags_flag_t flag)
     switch (flag.type){
         case Clags_BoolFlag:
         case Clags_ConfigFlag:
-        case Clags_CountFlag:break;
+        case Clags_CountFlag:
+        case Clags_CallbackFlag:break;
         default:{
             clags_log(config, Clags_ConfigError, "invalid flag type: %d!", flag.type);
             return false;
@@ -1178,6 +1183,8 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
         config->invalid = true;
         return config;
     }
+
+    config->name = clags_config_duplicate_string(config, argv[0]);
 
     clags_config_t *result = NULL;
 
@@ -1378,7 +1385,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
 
     clags_required_t *required = CLAGS_CALLOC(config->args_count, sizeof(*required));
     clags_optional_t *optional = CLAGS_CALLOC(config->args_count, sizeof(*optional));
-    clags_flag_t *flags = CLAGS_CALLOC(config->args_count, sizeof(*flags));
+    clags_flag_t     *flags    = CLAGS_CALLOC(config->args_count, sizeof(*flags));
 
     clags_args_t args = {.required=required, .optional=optional, .flags=flags};
 
