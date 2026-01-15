@@ -15,7 +15,6 @@ You can compile the library with any `C99+` compiler. No further dependencies ar
 
 ### Example
 ```c
-
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -31,12 +30,12 @@ bool help = false;
 
 // Declare all expected arguments
 clags_arg_t args[] = {
-    // Required (positional) arguments are parsed in the order they are defined here
-    clags_required(&input_file, "input_file", "the input file"),
+    // Positional arguments are parsed in the order they are defined here
+    clags_positional(&input_file, "input_file", "the input file"),
     
-    // Optional arguments support both short and long flags
+    // Option arguments support both short and long flags
     // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
-    clags_optional('o', "output", &output_file, "FILE", "the output file"),
+    clags_option('o', "output", &output_file, "FILE", "the output file"),
 
     // Use flags to set boolean values on occurrence
     // Short flags can be standalone, or combined into multi-flags, e.g.: -abc

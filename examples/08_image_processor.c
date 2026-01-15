@@ -35,10 +35,10 @@ clags_choices_t choices = clags_choices(convert_choices, .print_no_details=true)
 clags_choice_t *convert_format = clags_choice_value(convert_choices, 0);
 
 clags_arg_t convert_args[] = {
-    clags_required(&convert_input_file, "input_file", "the file to convert", .value_type=Clags_File),
-    clags_optional('o', "output", &convert_output_file, "FILE", "the file to output"),
-    clags_optional('f', "format", &convert_format, "FORMAT", "the format which to convert to", .value_type=Clags_Choice, .choices=&choices),
-    clags_optional('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_UInt8),
+    clags_positional(&convert_input_file, "input_file", "the file to convert", .value_type=Clags_File),
+    clags_option('o', "output", &convert_output_file, "FILE", "the file to output"),
+    clags_option('f', "format", &convert_format, "FORMAT", "the format which to convert to", .value_type=Clags_Choice, .choices=&choices),
+    clags_option('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_UInt8),
     clags_flag('w', "warnings", &convert_warnings, "print warnings"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help_config(&help),
@@ -56,10 +56,10 @@ uint32_t resize_height = 0;
 bool resize_keep_aspect = false;
 
 clags_arg_t resize_args[] = {
-    clags_required(&resize_input_file, "input_file", "the file to resize", .value_type=Clags_File),
-    clags_optional('o', "output", &resize_output_file, "FILE", "the file to output"),
-    clags_optional('w', "width", &resize_width, "PIXELS", "the width of the output image", .value_type=Clags_UInt32),
-    clags_optional('h', "height", &resize_height, "PIXELS", "the height of the output image", .value_type=Clags_UInt32),
+    clags_positional(&resize_input_file, "input_file", "the file to resize", .value_type=Clags_File),
+    clags_option('o', "output", &resize_output_file, "FILE", "the file to output"),
+    clags_option('w', "width", &resize_width, "PIXELS", "the width of the output image", .value_type=Clags_UInt32),
+    clags_option('h', "height", &resize_height, "PIXELS", "the height of the output image", .value_type=Clags_UInt32),
     clags_flag('k', "keep-aspect", &resize_keep_aspect, "keep the aspect ratio of the input image"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help_config(&help),
@@ -83,9 +83,9 @@ clags_choices_t tag_choices = clags_choices(tag_formats);
 clags_choice_t *tag_format = clags_choice_value(tag_formats, 0);
 
 clags_arg_t tag_args[] = {
-    clags_required(&tag_images, "images", "list of images to tag", .is_list=true, .value_type=Clags_File),
-    clags_required(&tag_values, "tags", "tags to apply to all images", .is_list=true),
-    clags_optional('f', "format", &tag_format, "FORMAT", "format to save tags", .value_type=Clags_Choice, .choices=&tag_choices),
+    clags_positional(&tag_images, "images", "list of images to tag", .is_list=true, .value_type=Clags_File),
+    clags_positional(&tag_values, "tags", "tags to apply to all images", .is_list=true),
+    clags_option('f', "format", &tag_format, "FORMAT", "format to save tags", .value_type=Clags_Choice, .choices=&tag_choices),
     clags_flag('o', "overwrite", &tag_overwrite, "replace existing tags"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help_config(&help),
@@ -111,7 +111,7 @@ clags_subcmds_t subcmds = clags_subcmds(subcommands);
 clags_subcmd_t *selected_subcmd = NULL;
 
 clags_arg_t parent_args[] = {
-    clags_required(&selected_subcmd, "action", "the subcommand to run", .value_type=Clags_Subcmd, .subcmds=&subcmds),
+    clags_positional(&selected_subcmd, "action", "the subcommand to run", .value_type=Clags_Subcmd, .subcmds=&subcmds),
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help_config(&help),
 };

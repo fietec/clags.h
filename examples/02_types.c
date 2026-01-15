@@ -20,14 +20,14 @@ bool version = false;
 bool test = false;
 
 clags_arg_t args[] = {
-    clags_required(&input_file, "input_file", "the file to read"),
-    clags_optional('o', "output", &output_file, "FILE", "the file to write"),
+    clags_positional(&input_file, "input_file", "the file to read"),
+    clags_option('o', "output", &output_file, "FILE", "the file to write"),
 
     // to add type verification to an argument, simply set the `value_type` field
     // for a list of all available types, see `clags__types` in clags.h
     // Note: it is the user's responsibility to provide a variable pointer matching the type specified
     //       so here, &quality is expected to be uint8_t*
-    clags_optional('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
+    clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
     clags_flag('w', "warnings", &warnings, "print warnings"),
     clags_flag('t', "test", &test, "a test flag"),
 

@@ -22,8 +22,8 @@ char *copy_source = NULL;
 char *copy_dest   = NULL;
 
 clags_arg_t copy_args[] = {
-    clags_required(&copy_source, "source", "Source file path", .value_type=Clags_File),
-    clags_required(&copy_dest, "dest", "Destination file path"),
+    clags_positional(&copy_source, "source", "Source file path", .value_type=Clags_File),
+    clags_positional(&copy_dest, "dest", "Destination file path"),
 
     // With the `.type` field, we specify how the flag stores its result.
     // A full list of available storage types can be found in the `clags_flag_type_t` enum.
@@ -46,7 +46,7 @@ char *delete_target = NULL;
 bool delete_force   = false;
 
 clags_arg_t delete_args[] = {
-    clags_required(&delete_target, "target", "Target file to delete", .value_type=Clags_File),
+    clags_positional(&delete_target, "target", "Target file to delete", .value_type=Clags_File),
     clags_flag('f', "force", &delete_force, "Force deletion"),
 
     clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
@@ -71,7 +71,7 @@ clags_subcmd_t *selected_subcmd = NULL;
 // --- Main CLI config ---
 clags_arg_t main_args[] = {
     // with `.subcmds` you set the subcommand parsing verifier
-    clags_required(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .subcmds=&my_subcmds),
+    clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .subcmds=&my_subcmds),
     clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
     clags_flag_help_config(&help)
 };

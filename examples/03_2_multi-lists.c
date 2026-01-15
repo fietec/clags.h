@@ -15,12 +15,16 @@ clags_list_t string_list = clags_list();
 
 // lists can also be typed
 clags_list_t int_list = clags_int32_list();
+clags_list_t file_list = clags_file_list();
+clags_list_t test_list = clags_list();
 
 bool help = false;
 
 clags_arg_t args[] = {
-    clags_required(&string_list, "strings", "A list of strings", .is_list=true),
-    clags_required(&int_list, "ints", "A list of integers", .value_type=Clags_Int32, .is_list=true),
+    clags_positional(&string_list, "strings", "A list of strings", .is_list=true),
+    clags_positional(&int_list, "ints", "A list of integers", .value_type=Clags_Int32, .is_list=true),
+    clags_positional(&test_list, "test", "a test argument", .optional=true, .is_list=true),
+    clags_option('f', "file", &file_list, "FILE", "A list of files", .value_type=Clags_File, .is_list=true),
     clags_flag_help(&help),
 };
 
@@ -45,18 +49,28 @@ int main(int argc, char **argv)
         clags_return_defer(0);
     }
 
-    printf("Strings:\n");
+    printf("Strings (%zu):\n", string_list.count);
     for (size_t i=0; i<string_list.count; ++i){
         printf("  %zu: %s\n", i, clags_list_element(string_list, char*, i));
     }
-    printf("\nInts:\n");
+    printf("\nInts (%zu):\n", int_list.count);
     for (size_t i=0; i<int_list.count; ++i){
         printf("  %zu: %"PRId32"\n", i, clags_list_element(int_list, int32_t, i));
     }
+    printf("\nFiles (%zu):\n", file_list.count);
+    for (size_t i=0; i<file_list.count; ++i){
+        printf("  %zu: %s\n", i, clags_list_element(file_list, char*, i));
+    }
+    printf("\nTests (%zu):\n", test_list.count);
+    for (size_t i=0; i<test_list.count; ++i){
+        printf("  %zu: %s\n", i, clags_list_element(test_list, char*, i));
+    }
+
     
 defer:
     clags_list_free(&string_list);
     clags_list_free(&int_list);
+    clags_list_free(&file_list);
 
     // the config stores all the duplicated strings. You can free them like this
     clags_config_free_allocs(&config);

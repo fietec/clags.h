@@ -15,7 +15,7 @@ bool help = false;
 clags_list_t list = clags_list();
 
 clags_arg_t args[] = {
-    clags_required(&list, "strings", "the strings to print", .is_list=true),
+    clags_positional(&list, "strings", "the strings to print", .is_list=true),
     clags_flag_help(&help),
 };
 

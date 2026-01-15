@@ -37,7 +37,7 @@ bool help = false;
 
 clags_arg_t args[] = {
     // set `.verify` to the custom verfication function
-    clags_required(&list, "values", "lower case strings", .value_type=Clags_Custom, .verify=verify_lower_case, .is_list=true),
+    clags_positional(&list, "values", "lower case strings", .value_type=Clags_Custom, .verify=verify_lower_case, .is_list=true),
     clags_flag_help(&help),
 };
 

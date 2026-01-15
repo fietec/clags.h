@@ -17,12 +17,12 @@ bool help = false;
 
 clags_arg_t args[] = {
     // force the provided string to be a valid path to a file
-    clags_required(&input_file, "input_file", "the input file", .value_type=Clags_File),
+    clags_positional(&input_file, "input_file", "the input file", .value_type=Clags_File),
 
     // verify that the provided string is a valid path, either to a dir or file
-    clags_optional('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path),
+    clags_option('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path),
     // verify a size string (like '1.4MB', '10B', '10') and convert to the number of bytes in `clags_fsize_t`
-    clags_optional('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
+    clags_option('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
     clags_flag_help(&help),
 };
 
