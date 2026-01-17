@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.7.0
+  Version: 0.7.1
   
   MIT License
 
@@ -228,6 +228,7 @@ clags_verify_func_t clags__verify_time_s;
 clags_verify_func_t clags__verify_time_ns;
 
 // the defintions of all supported value types. Format: (enum value, verification function, type name)
+// If an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define clags__types                                                                                                                                        \
     X(Clags_String, clags__verify_string,  "string"  ) /* string value; variable type: char*                                                             */ \
     X(Clags_Custom, clags__verify_custom,  "custom"  ) /* custom verification function; variable type: depends on verify function                        */ \
@@ -255,6 +256,8 @@ typedef enum{
 } clags_value_type_t;
 #undef X
 
+// all available flag types
+// if a flags `type` is not explicitly set, `Clags_BoolFlag` is used by default
 typedef enum {
     Clags_BoolFlag = 0,   // standard boolean flag; set to `true` when the flag occurs; variable type: bool
     Clags_ConfigFlag,     // stores a pointer to the config (sub)command in which the flag was set; variable type: clags_config_t*
@@ -305,47 +308,47 @@ typedef struct{
 
 // the definition of a positional argument, construct with `clags_positional`
 typedef struct{
-    void *variable;
-    const char *arg_name;
-    const char *description;
+    void *variable;                        // pointer to store the parsed value at; type must match `value_type`, or `clags_list_t` of that type if `is_list` is set
+    const char *arg_name;                  // name shown in usage for the positional argument
+    const char *description;               // help text describing the positional argument
     // options
-    clags_value_type_t value_type;
-    bool is_list;
-    bool optional;
-    union{
-        clags_custom_verify_func_t verify;
-        clags_choices_t *choices;
-        clags_subcmds_t *subcmds;
-        void *_data;
+    clags_value_type_t value_type;         // type of the positional value. See `clags__types` for a list of all types
+    bool is_list;                          // true if this positional consumes multiple values into a `clags_list_t`
+    bool optional;                         // true if the positional argument is optional
+    union{                                 // only one of these should be set
+        clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
+        clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
+        clags_subcmds_t *subcmds;          // pointer to subcommand definitions, only if `value_type` == `Clags_Subcmd`
+        void *_data;                       // internal, do not touch
     };
 } clags_positional_t;
 
-// the definition of a option argument, construct with `clags_option`
+// the definition of an option argument, construct with `clags_option`
 typedef struct{
-    char short_flag;
-    const char *long_flag;
-    void *variable;
-    const char *arg_name;
-    const char *description;
+    char short_flag;                       // single-character flag (e.g. 'o' for -o), '\0' if none
+    const char *long_flag;                 // full-length flag (e.g. "output" for --output), NULL if none
+    void *variable;                        // pointer to store the parsed value at; type must match `value_type`, or `clags_list_t` of that type if `is_list` is set
+    const char *arg_name;                  // name shown in usage for the option's value (e.g. "FILE")
+    const char *description;               // help text describing the option
     // options
-    clags_value_type_t value_type;
-    bool is_list;
-    union{
-        clags_custom_verify_func_t verify;
-        clags_choices_t *choices;
-        void *_data;
+    clags_value_type_t value_type;         // type of the option's value. See `clags__types` for a list of all types
+    bool is_list;                          // true if the option can appear multiple times, storing values in a `clags_list_t` of the `value_type`
+    union{                                 // only one of these should be set
+        clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
+        clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
+        void *_data;                       // internal, do not touch
     };
 } clags_option_t;
 
-// the definition of a flag, construct with `clags_flag`
+// the definition of a flag argument, construct with `clags_flag`
 typedef struct{
-    char short_flag;
-    const char *long_flag;
-    void *variable;
-    const char *description;
+    char short_flag;                       // single-character flag (e.g. 'h' for -h), '\0' if none
+    const char *long_flag;                 // full-length flag (e.g. "help" for --help), NULL if none
+    void *variable;                        // pointer to store the flag value; type depends on `.type`
+    const char *description;               // help text describing the flag
     // options
-    bool exit;                // exit parsing on occurence
-    clags_flag_type_t type;   // the type and behaviour of the flag
+    bool exit;                             // true if parsing should exit immediately when the flag occurs
+    clags_flag_type_t type;                // behavior of the flag; see `clags_flag_type_t` (BoolFlag, CountFlag, ConfigFlag, CallbackFlag)
 } clags_flag_t;
 
 // entirely internal
@@ -409,12 +412,14 @@ struct clags_config_t{
 
 /* Custom Variable Types */
 
-// list definitions
+// predefined list constructors for different types
+// returns an empty `clags_list_t` with item_size set appropriately
+// use `clags_custom_list(size)` to define a list of custom element size
 #define clags_list()            (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
 #define clags_path_list()       clags_list()
 #define clags_file_list()       clags_list()
 #define clags_dir_list()        clags_list()
-#define clags_custom_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}  // specify the size of each element so the parser can handle memory correctly when adding items
+#define clags_custom_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}
 #define clags_bool_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
 #define clags_int8_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
 #define clags_uint8_list()      (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
@@ -424,11 +429,11 @@ struct clags_config_t{
 #define clags_uint64_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint64_t)}
 #define clags_double_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
 #define clags_size_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_fsize_t)}
+#define clags_time_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_time_t)}
 #define clags_choice_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
 // macros for easy value extraction from lists
 #define clags_list_element(list, value_type, i) ((value_type*)(list).items)[i]
-#define clags_list_choice_element(list, i) clags_list_element((list), (clags_choice_t*), (i))->value
 
 // macro for choices definition
 #define clags_choices(arr, ...) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), __VA_ARGS__}
@@ -440,13 +445,51 @@ struct clags_config_t{
 
 /* Argument Constructors */
 
-// a positional argument, can be typed
+/*
+  Define a positional argument.
+
+  Parameters:
+    var  : pointer to the variable that receives the parsed value, must be of a type matching the value type,
+           or `clags_list_t` of that type if `is_list` is set
+    name : argument name shown in usage
+    desc : description shown in help output
+
+  Additional behavior (value type, lists, optionality, choices, custom verification, subcommands, etc.)
+  is configured via designated initializers in the variadic arguments.
+  See `clags_positional_t` for all available fields.
+*/
 #define clags_positional(var, name, desc, ...) (clags_arg_t){.type=Clags_Positional, .pos=(clags_positional_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
-// an option argument, can be typed
+/*
+  Define an option argument (-o / --option).
+
+  Parameters:
+    sflag : short option character (e.g. 'o' for -o), or '\0' if unused
+    lflag : long option name (e.g. "output"), or NULL if unused
+    var   : pointer to the variable that receives the parsed value, must be of a type matching the value type,
+            or `clags_list_t` of that type if `is_list` is set
+    name  : value name shown in usage (e.g. "FILE")
+    desc  : description shown in help output
+
+  Additional behavior (value type, lists, choices, custom verification, etc.)
+  is configured via designated initializers in the variadic arguments.
+  See `clags_option_t` for all available fields.
+*/
 #define clags_option(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Option, .opt=(clags_option_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
-// a boolean flag argument
+/*
+  Define a flag argument for a config.
+
+  Parameters:
+    sflag : short flag character (e.g. 'h' for -h), or '\0' if unused
+    lflag : long flag name (e.g. "help"), or NULL if unused
+    var   : pointer to the variable that receives the flag value; type depends on `.type`
+    desc  : description shown in help output
+
+  Additional behavior (exit-on-set, count flags, config pointer storage, callbacks, etc.)
+  is configured via designated initializers in the variadic arguments.
+  See `clags_flag_t` for all available fields.
+*/
 #define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
 #define clags_flag_help(val)        clags_flag('h', "help", val, "print this help dialog", .exit=true)
 #define clags_flag_help_config(val) clags_flag('h', "help", val, "print this help dialog", .exit=true, .type=Clags_ConfigFlag)
@@ -462,7 +505,7 @@ struct clags_config_t{
 /*
   Parse arguments based on the provided config.
   
-  Argument:
+  Arguments:
     - argc          : the number of arguments
     - argv          : the array of arguments
     - config        : pointer to a config with argument definitions and other options
