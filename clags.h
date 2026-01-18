@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.7.1
+  Version: 0.7.2
   
   MIT License
 
@@ -118,7 +118,7 @@
   `--` disables option/flag parsing from this point onward.
 
   If the config enables toggling, `--` can re-enable parsing.
-  This is a add-on feature of clags, not POSIX.
+  This is an add-on feature of clags, not POSIX.
 
   Ignored Arguments (`ignore_prefix`):
 
@@ -144,8 +144,8 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
-
 #include <sys/stat.h>
+
 #ifdef _WIN32
 #ifndef S_ISREG
 #define S_ISREG(m) (((m) & _S_IFREG) != 0)
@@ -157,25 +157,31 @@
 #define strcasecmp _stricmp
 #endif // _WIN32
 
+// memory allocation functions; can be overridden
 #ifndef CLAGS_FREE
-#define CLAGS_FREE free
+#define CLAGS_FREE free       // default free function
 #endif // CLAGS_FREE
 
 #ifndef CLAGS_CALLOC
-#define CLAGS_CALLOC calloc
+#define CLAGS_CALLOC calloc   // default calloc function
 #endif // CLAGS_CALLOC
 
 #ifndef CLAGS_REALLOC
-#define CLAGS_REALLOC realloc
+#define CLAGS_REALLOC realloc // default realloc function
 #endif // CLAGS_REALLOC
 
+// the initial capacity of lists
 #ifndef CLAGS_LIST_INIT_CAPACITY
 #define CLAGS_LIST_INIT_CAPACITY 8
 #endif // CLAGS_LIST_INIT_CAPACITY
 
+// the character column at which ':' appears in `clags_usage` output
+// you can adjust this value to control the alignment of argument descriptions
 #ifndef CLAGS_USAGE_ALIGNMENT
-#define CLAGS_USAGE_ALIGNMENT -24
+#define CLAGS_USAGE_ALIGNMENT 28
 #endif // CLAGS_USAGE_ALIGNMENT
+
+#define CLAGS__USAGE_PRINTF_ALIGNMENT -(CLAGS_USAGE_ALIGNMENT-4)
 
 // macro for enabling printf-like format checks in `clags_sb_appendf`
 #if defined(__GNUC__) || defined(__clang__)
@@ -227,7 +233,7 @@ clags_verify_func_t clags__verify_size;
 clags_verify_func_t clags__verify_time_s;
 clags_verify_func_t clags__verify_time_ns;
 
-// the defintions of all supported value types. Format: (enum value, verification function, type name)
+// the defintion of all supported value types. Format: (enum value, verification function, type name)
 // If an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define clags__types                                                                                                                                        \
     X(Clags_String, clags__verify_string,  "string"  ) /* string value; variable type: char*                                                             */ \
@@ -408,7 +414,7 @@ struct clags_config_t{
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 #define clags_return_defer(value) do{result = (value); goto defer;}while(0)
 #define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); abort();}}while(0)
-#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); abort();}while(0)
+#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); fflush(stderr); abort();}while(0)
 
 /* Custom Variable Types */
 
@@ -433,14 +439,15 @@ struct clags_config_t{
 #define clags_choice_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
 
 // macros for easy value extraction from lists
-#define clags_list_element(list, value_type, i) ((value_type*)(list).items)[i]
+// `value_type` must match the type stored within the list
+#define clags_list_element(list, value_type, index) ((value_type*)(list).items)[index]
 
-// macro for choices definition
+// wrapper for a `clags_choice_t` array
 #define clags_choices(arr, ...) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), __VA_ARGS__}
 // macro for getting the pointer to the index-th choice
 #define clags_choice_value(choices, index) (&(choices)[index])
 
-// macro for subcmds definition
+// wrapper for a `clags_subcmd_t` array
 #define clags_subcmds(subcmds) (clags_subcmds_t){.items=(subcmds), .count=clags_arr_len(subcmds)}
 
 /* Argument Constructors */
@@ -461,7 +468,7 @@ struct clags_config_t{
 #define clags_positional(var, name, desc, ...) (clags_arg_t){.type=Clags_Positional, .pos=(clags_positional_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
 /*
-  Define an option argument (-o / --option).
+  Define an option argument.
 
   Parameters:
     sflag : short option character (e.g. 'o' for -o), or '\0' if unused
@@ -478,7 +485,7 @@ struct clags_config_t{
 #define clags_option(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Option, .opt=(clags_option_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
 /*
-  Define a flag argument for a config.
+  Define a flag argument.
 
   Parameters:
     sflag : short flag character (e.g. 'h' for -h), or '\0' if unused
@@ -496,8 +503,23 @@ struct clags_config_t{
 
 /* Config Constructor */
 
-// constructs a config from an array of clags_arg_t args
+/*
+  Construct a `clags_config_t` from an array of arguments.
+
+  Parameters:
+    arguments : array of `clags_arg_t` defining the positionals, options, and flags
+    ...       : optional designated initializers for `clags_options_t` fields
+                (e.g. .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true, etc.)
+*/
 #define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(clags_options_t){__VA_ARGS__}}
+
+/*
+  Construct a `clags_config_t` from an array of arguments and a pre-defined options struct.
+
+  Parameters:
+    arguments : array of `clags_arg_t` defining positionals, options, and flags
+    opts      : a fully initialized `clags_options_t` struct with custom config options
+*/
 #define clags_config_with_options(arguments, opts) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(opts)}
 
 /* Core Functions */
@@ -1294,7 +1316,7 @@ void clags__choice_usage(clags_choices_t *choices, bool is_list)
         printf(" (%s%s)\n        Choices:\n", clags__type_names[Clags_Choice], is_list?"[]":"");
         for (size_t j=0; j<choices->count; ++j){
             clags_choice_t choice = choices->items[j];
-            printf("          - %*s : %s\n", CLAGS_USAGE_ALIGNMENT+8, choice.value, choice.description);
+            printf("          - %*s : %s\n", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
         }
     } else{
         printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
@@ -1310,7 +1332,7 @@ void clags__subcmd_usage(clags_subcmds_t *subcmds)
     printf(" (%s)\n      Subcommands:\n", clags__type_names[Clags_Subcmd]);
     for (size_t i=0; i<subcmds->count; ++i){
         clags_subcmd_t subcmd = subcmds->items[i];
-        printf("        - %*s : %s\n", CLAGS_USAGE_ALIGNMENT+6, subcmd.name, subcmd.description);
+        printf("        - %*s : %s\n", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
     }
 }
 
@@ -1599,7 +1621,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
             size_t buf_size = strlen(pos.arg_name) + strlen(optional_hint) + 2;
             char buf[buf_size];
             snprintf(buf, buf_size, "%s %s", pos.arg_name, optional_hint);
-            printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, pos.description);
+            printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, pos.description);
             clags__type_usage(pos.value_type, pos._data, pos.is_list);
         }
     }
@@ -1612,16 +1634,16 @@ void clags_usage(const char *program_name, clags_config_t *config)
                     size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 10;
                     char buf[buf_size];
                     snprintf(buf, buf_size, "-%c, --%s(=)%s>", opt.short_flag, opt.long_flag, opt.arg_name);
-                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
+                    printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, opt.description);
                 } else{
-                    printf("    -%*c: %s", CLAGS_USAGE_ALIGNMENT, opt.short_flag, opt.description);
+                    printf("    -%*c: %s", CLAGS__USAGE_PRINTF_ALIGNMENT, opt.short_flag, opt.description);
                 }
                 clags__type_usage(opt.value_type, opt._data, false);
             }else if (opt.long_flag){
                 size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
                 char buf[buf_size];
                 snprintf(buf, buf_size, "--%s(=)%s", opt.long_flag, opt.arg_name);
-                printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, opt.description);
+                printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, opt.description);
                 clags__type_usage(opt.value_type, opt._data, false);
             }
         }
@@ -1635,12 +1657,12 @@ void clags_usage(const char *program_name, clags_config_t *config)
                     size_t buf_size = + strlen(flag.long_flag) + 16;
                     char buf[buf_size];
                     snprintf(buf, buf_size, "-%c, --%s", flag.short_flag, flag.long_flag);
-                    printf("    %*s : %s", CLAGS_USAGE_ALIGNMENT, buf, flag.description);
+                    printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, flag.description);
                 } else{
-                    printf("    -%*c: %s", CLAGS_USAGE_ALIGNMENT, flag.short_flag, flag.description);
+                    printf("    -%*c: %s", CLAGS__USAGE_PRINTF_ALIGNMENT, flag.short_flag, flag.description);
                 }
             } else if (flag.long_flag){
-                printf("    --%*s : %s", CLAGS_USAGE_ALIGNMENT, flag.long_flag, flag.description);
+                printf("    --%*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, flag.long_flag, flag.description);
             } else{
                 continue;
             }
