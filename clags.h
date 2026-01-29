@@ -394,6 +394,7 @@ typedef struct{
     bool duplicate_strings;           // duplicate all strings instead of setting variables to the content of argv, free the allocated memory via `clags_config_free_allocs`
     clags_log_handler_t log_handler;  // a custom log handler
     clags_log_level_t min_log_level;  // the minimal log level for which to print logs
+    const char *description;          // a description of the current (sub-)command
 } clags_options_t;
 
 // a config for a single (sub-)command
@@ -457,7 +458,7 @@ struct clags_config_t{
 
   Parameters:
     var  : pointer to the variable that receives the parsed value, must be of a type matching the value type,
-           or `clags_list_t` of that type if `is_list` is set
+           or `clags_list_t` of that type if `is_list` is set, default: char*
     name : argument name shown in usage
     desc : description shown in help output
 
@@ -474,7 +475,7 @@ struct clags_config_t{
     sflag : short option character (e.g. 'o' for -o), or '\0' if unused
     lflag : long option name (e.g. "output"), or NULL if unused
     var   : pointer to the variable that receives the parsed value, must be of a type matching the value type,
-            or `clags_list_t` of that type if `is_list` is set
+            or `clags_list_t` of that type if `is_list` is set, default: char*
     name  : value name shown in usage (e.g. "FILE")
     desc  : description shown in help output
 
@@ -490,7 +491,7 @@ struct clags_config_t{
   Parameters:
     sflag : short flag character (e.g. 'h' for -h), or '\0' if unused
     lflag : long flag name (e.g. "help"), or NULL if unused
-    var   : pointer to the variable that receives the flag value; type depends on `.type`
+    var   : pointer to the variable that receives the flag value; type depends on `.type`, default: bool
     desc  : description shown in help output
 
   Additional behavior (exit-on-set, count flags, config pointer storage, callbacks, etc.)
@@ -498,6 +499,8 @@ struct clags_config_t{
   See `clags_flag_t` for all available fields.
 */
 #define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
+
+// simple helpers for the common help flags
 #define clags_flag_help(val)        clags_flag('h', "help", val, "print this help dialog", .exit=true)
 #define clags_flag_help_config(val) clags_flag('h', "help", val, "print this help dialog", .exit=true, .type=Clags_ConfigFlag)
 
@@ -634,6 +637,17 @@ static inline char* clags__strdup(const char *string)
     char *new_string = CLAGS_CALLOC(length+1, sizeof(char));
     clags_assert(new_string != NULL, "Out of memory!");
     return strcpy(new_string, string);
+}
+
+static inline char* clags__strchrnull(const char *string, char c)
+{
+    if (!string) return NULL;
+    char *s = (char*) string;
+    while (*s != '\0'){
+        if (*s == c) return s;
+        s++;
+    }
+    return s;
 }
 
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
@@ -1612,6 +1626,19 @@ void clags_usage(const char *program_name, clags_config_t *config)
         printf("%c", pos.optional? ']':'>');
     }
     printf("\n");
+
+    if (options.description){
+        printf("\n");
+        const char *line = options.description;
+        while (true){
+            char *line_end = clags__strchrnull(line, '\n');
+            int line_len = (int) (line_end - line);
+            printf("%.*s\n", line_len, line);
+            if (*line_end == '\0') break;
+            line = line_end + 1;
+        }
+        printf("\n");
+    }
 
     if (args.positional_count){
         printf("  Arguments:\n");
