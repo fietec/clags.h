@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.7.3
+  Version: 0.7.4
   
   MIT License
 
@@ -994,14 +994,14 @@ bool clags__verify_size(clags_config_t *config, const char *arg_name, const char
     }
     clags_fsize_t factor;
     if (*endptr == '\0' || strcmp(endptr, "B") == 0) factor = 1;
-    else if (strcmp(endptr, "KiB") == 0)             factor = 1ULL << 10;
-    else if (strcmp(endptr, "KB")  == 0)             factor = 1000;
-    else if (strcmp(endptr, "MiB") == 0)             factor = 1ULL << 20;
-    else if (strcmp(endptr, "MB")  == 0)             factor = 1000000;
-    else if (strcmp(endptr, "GiB") == 0)             factor = 1ULL << 30;
-    else if (strcmp(endptr, "GB")  == 0)             factor = 1000000000;
-    else if (strcmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
-    else if (strcmp(endptr, "TB")  == 0)             factor = 1000000000000;
+    else if (strcasecmp(endptr, "KiB") == 0)             factor = 1ULL << 10;
+    else if (strcasecmp(endptr, "KB")  == 0)             factor = 1000;
+    else if (strcasecmp(endptr, "MiB") == 0)             factor = 1ULL << 20;
+    else if (strcasecmp(endptr, "MB")  == 0)             factor = 1000000;
+    else if (strcasecmp(endptr, "GiB") == 0)             factor = 1ULL << 30;
+    else if (strcasecmp(endptr, "GB")  == 0)             factor = 1000000000;
+    else if (strcasecmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
+    else if (strcasecmp(endptr, "TB")  == 0)             factor = 1000000000000;
     else {
         clags_log(config, Clags_Error, "Invalid size unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
