@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.8.1
+  Version: 0.8.2
   
   MIT License
 
@@ -281,12 +281,12 @@ clags_verify_func_t clags__verify_time_ns;
 
 // the definition of all error types and their respective descriptions
 #define clags__errors \
-    X(Clags_Error_Ok, "no error") \
-    X(Clags_Error_InvalidConfig, "configuration is invalid") \
-    X(Clags_Error_InvalidValue, "argument value does not match expected type or criteria") \
-    X(Clags_Error_InvalidOption, "unrecognized option or flag syntax") \
-    X(Clags_Error_TooManyArguments, "too many positional arguments provided") \
-    X(Clags_Error_TooFewArguments, "required positional argument is missing")
+    X(Clags_Error_Ok,               "no error"                                                ) \
+    X(Clags_Error_InvalidConfig,    "configuration is invalid"                                ) \
+    X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria" ) \
+    X(Clags_Error_InvalidOption,    "unrecognized option or flag syntax"                      ) \
+    X(Clags_Error_TooManyArguments, "too many positional arguments provided"                  ) \
+    X(Clags_Error_TooFewArguments,  "required positional arguments missing"                   ) \
 
 // an auto-generated enum of all supported value types
 #define X(type, func, name) type,
@@ -577,7 +577,8 @@ struct clags_config_t{
     - config        : pointer to a config with argument definitions and other options
     
   Returns:
-    clags_config_t* : pointer to the failed config
+    clags_config_t* : pointer to the failed config. If parsing fails, the `.error` field
+                      will be set to indicate the type of the encountered error.
 */
 clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
 
