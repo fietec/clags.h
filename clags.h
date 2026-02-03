@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.8.3
+  Version: 0.9.0
   
   MIT License
 
@@ -626,9 +626,9 @@ int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
     - string  : the string to duplicate
 
   Returns:
-    char*    : pointer to the duplicated string if duplication is enabled,
-               otherwise the original string. Memory allocated for duplicates
-               is tracked internally within the config and will be freed when the config is cleaned up.
+    char*     : pointer to the duplicated string if duplication is enabled,
+                otherwise the original string. Memory allocated for duplicates
+                is tracked internally within the config and will be freed when the config is cleaned up.
 */
 char* clags_config_duplicate_string(clags_config_t *config, const char *string);
 
@@ -640,6 +640,15 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string);
     - config        : pointer to the clags_config_t whose duplicated strings should be freed
 */
 void clags_config_free_allocs(clags_config_t *config);
+
+/*
+  Free all lists and allocated strings of a config.
+  The function does not propagate to child configs.
+
+  Arguments:
+    - config        : pointer to the config of which to free all strings and lists
+*/
+void clags_config_free(clags_config_t *config);
 
 /*
   Free all memory associated with a `clags_list_t` instance.
@@ -654,6 +663,9 @@ void clags_list_free(clags_list_t *list);
 
   Arguments:
     - error         : the error type
+
+  Returns:
+    char*           : a string description of the provided error type
 */
 const char* clags_error_description(clags_error_t error);
 
@@ -1734,13 +1746,13 @@ void clags_usage(const char *program_name, clags_config_t *config)
                 } else{
                     printf("    -%*c: %s", CLAGS__USAGE_PRINTF_ALIGNMENT, opt.short_flag, opt.description);
                 }
-                clags__type_usage(opt.value_type, opt._data, false);
+                clags__type_usage(opt.value_type, opt._data, opt.is_list);
             }else if (opt.long_flag){
                 size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
                 char buf[buf_size];
                 snprintf(buf, buf_size, "--%s(=)%s", opt.long_flag, opt.arg_name);
                 printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, opt.description);
-                clags__type_usage(opt.value_type, opt._data, false);
+                clags__type_usage(opt.value_type, opt._data, opt.is_list);
             }
         }
     }
@@ -1822,6 +1834,20 @@ void clags_config_free_allocs(clags_config_t *config)
     CLAGS_FREE(allocs->items);
     allocs->items = NULL;
     allocs->count = allocs->capacity = 0;
+}
+
+void clags_config_free(clags_config_t *config)
+{
+    if (config == NULL) return;
+    for (size_t i=0; i<config->args_count; ++i){
+        clags_arg_t arg = config->args[i];
+        if (arg.type == Clags_Positional && arg.pos.is_list){
+            clags_list_free(arg.pos.variable);
+        } else if (arg.type == Clags_Option && arg.opt.is_list){
+            clags_list_free(arg.opt.variable);
+        }
+    }
+    clags_config_free_allocs(config);
 }
 
 const char* clags_error_description(clags_error_t error)
