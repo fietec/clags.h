@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.8.2
+  Version: 0.8.3
   
   MIT License
 
@@ -748,7 +748,10 @@ void clags__default_log_handler(clags_log_level_t level, const char *format, va_
 {
     switch(level){
         case Clags_Info:{
-            fprintf(stderr, "[INFO] ");
+            fprintf(stdout, "[INFO] ");
+            vfprintf(stdout, format, args);
+            fprintf(stdout, "\n");
+            return;
         }break;
         case Clags_Warning:{
             fprintf(stderr, "[WARNING] ");
