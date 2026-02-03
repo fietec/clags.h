@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.7.4
+  Version: 0.7.5
   
   MIT License
 
@@ -770,10 +770,10 @@ bool clags__verify_string(clags_config_t *config, const char *arg_name, const ch
 bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    if (strcasecmp(arg, "true") == 0 || strcasecmp(arg, "yes") == 0){
+    if (strcasecmp(arg, "true") == 0 || strcasecmp(arg, "yes") == 0 || strcasecmp(arg, "y") == 0){
         if (pvalue) *(bool*)pvalue = true;
         return true;
-    } else if (strcasecmp(arg, "false") == 0 || strcasecmp(arg, "no") == 0){
+    } else if (strcasecmp(arg, "false") == 0 || strcasecmp(arg, "no") == 0 || strcasecmp(arg, "n") == 0){
         if (pvalue) *(bool*)pvalue = false;
         return true;
     }
