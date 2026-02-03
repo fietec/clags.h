@@ -128,6 +128,30 @@
   
   !ignored  // argument is ignored
 
+
+  Value Types
+  -----------
+
+  This table describes the supported value types and their expected syntax.
+
+  Value Type    | Syntax / Examples           | Notes
+  --------------------------------------------------------------------------
+  string        | "hello", world              | Any sequence of characters. Stored as `char*`.
+  bool          | true, false, yes, N         | Case-insensitive. Stored as `bool`.
+
+  int8/uint8/   | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
+  int32/uint32/                               | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
+  int64/uint64                                | Values must fit in the type’s bounds. Stored as the respective `int<size>_t`.
+
+  double        | 3.14, -0.001, 2e10          | Floating-point value. Stored as `double`.
+  choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive. Stored as `clags_choice_t*`.
+  path          | /home/user/docs, C:\Windows | Any filesystem path. Stored as `char*`.
+  file          | /etc/passwd, myfile.txt     | Must be a regular file. Stored as `char*`.
+  dir           | /tmp, C:\Users              | Must be a directory. Stored as `char*`.
+  size          | 1024, 10KiB, 2MB            | Supports decimal and binary suffixes. Case-insensitive. Stored as `clags_fsize_t`.
+  time_s        | 10s, 5m, 2h                 | Time in seconds; supports s/m/h/d suffixes. Case-insensitive. Stored as `clags_time_t`.
+  time_ns       | 100ns, 1us, 5ms, 2s         | Time in nanoseconds; supports ns/us/ms/s/m/h/d suffixes. Case-insensitive. Stored as `clags_time_t`.
+  custom        | depends on user function    | Validation done via a custom function pointer.
 */
 
 #ifndef CLAGS_H
