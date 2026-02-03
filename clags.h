@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.8.0
+  Version: 0.8.1
   
   MIT License
 
@@ -577,7 +577,7 @@ void clags_usage(const char *program_name, clags_config_t *config);
     int             : the index of the selected subcommand in the array,
                       or -1 if the subcommand was not found or either argument is NULL
 */
-static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
+int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
 
 /*
   Get the index of a selected choice in the provided choice array.
@@ -590,7 +590,7 @@ static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *s
     int             : the index of the selected choice in the array,
                       or -1 if the choice was not found or either argument is NULL
 */
-static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
+int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
   Duplicate a string if string duplication is enabled in the config, 
@@ -630,12 +630,12 @@ void clags_list_free(clags_list_t *list);
   Arguments:
     - error         : the error type
 */
-static inline const char* clags_error_description(clags_error_t error);
+const char* clags_error_description(clags_error_t error);
 
 /* Logging */
-static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
-static inline void clags_sb_append_null(clags_sb_t *sb);
-static inline void clags_sb_free(clags_sb_t *sb);
+void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
+void clags_sb_append_null(clags_sb_t *sb);
+void clags_sb_free(clags_sb_t *sb);
 void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
 void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
 
@@ -686,7 +686,7 @@ static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
     clags_assert(sb->items != NULL, "Out of memory!");
 }
 
-static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
+void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
 {
     va_list args, args_copy;
     
@@ -705,13 +705,13 @@ static inline void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
     sb->count += n;
 }
 
-static inline void clags_sb_append_null(clags_sb_t *sb)
+void clags_sb_append_null(clags_sb_t *sb)
 {
     clags__sb_reserve(sb, sb->count+1);
     sb->items[sb->count++] = '\0';
 }
 
-static inline void clags_sb_free(clags_sb_t *sb)
+void clags_sb_free(clags_sb_t *sb)
 {
     if (!sb) return;
     CLAGS_FREE(sb->items);
@@ -1758,7 +1758,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
     CLAGS_FREE(args.flags);
 }
 
-static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
+int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
 {
     if (!subcmds || !subcmd) return -1;
     for (size_t i=0; i<subcmds->count; ++i){
@@ -1767,7 +1767,7 @@ static inline int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *s
     return -1;
 }
 
-static inline int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
+int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 {
     if (!choices || !choice) return -1;
     for (size_t i=0; i<choices->count; ++i){
@@ -1796,7 +1796,7 @@ void clags_config_free_allocs(clags_config_t *config)
     allocs->count = allocs->capacity = 0;
 }
 
-static inline const char* clags_error_description(clags_error_t error)
+const char* clags_error_description(clags_error_t error)
 {
     switch(error){
 #define X(type, desc) case type: return desc;
