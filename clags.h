@@ -665,7 +665,7 @@ void clags_list_free(clags_list_t *list);
     - error         : the error type
 
   Returns:
-    char*           : a string description of the provided error type
+    const char*     : a string description of the provided error type
 */
 const char* clags_error_description(clags_error_t error);
 
