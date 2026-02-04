@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.9.2
+  Version: 0.9.3
   
   MIT License
 
@@ -1086,6 +1086,7 @@ bool clags__verify_time_s(clags_config_t *config, const char *arg_name, const ch
     (void) data;
     char *endptr;
     errno = 0;
+
     double value = strtod(arg, &endptr);
     if (endptr == arg){
         clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, arg);
@@ -1113,28 +1114,29 @@ bool clags__verify_time_ns(clags_config_t *config, const char *arg_name, const c
     (void) data;
     char *endptr;
     errno = 0;
+
     double value = strtod(arg, &endptr);
     if (endptr == arg){
         clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, arg);
         return false;
     }
     clags_time_t factor;
-    if (*endptr == '\0' || strcmp(endptr, "ns") == 0)     factor =           1;
-    else if (strcasecmp(endptr, "us") == 0)               factor =         1e3;
-    else if (strcasecmp(endptr, "ms") == 0)               factor =         1e6;
-    else if (strcasecmp(endptr, "s")  == 0)               factor =         1e9;
-    else if (strcasecmp(endptr, "m")  == 0)               factor =      60*1e9;
-    else if (strcasecmp(endptr, "h")  == 0)               factor =    3600*1e9;
-    else if (strcasecmp(endptr, "d")  == 0)               factor = 24*3600*1e9;
+    if (*endptr == '\0' || strcmp(endptr, "ns") == 0)          factor = 1;
+    else if (strcasecmp(endptr, "us") == 0)                    factor = 1000ULL;
+    else if (strcasecmp(endptr, "ms") == 0)                    factor = 1000000ULL;
+    else if (strcasecmp(endptr, "s") == 0)                     factor = 1000000000ULL;
+    else if (strcasecmp(endptr, "m") == 0)                     factor = 60ULL * 1000000000ULL;
+    else if (strcasecmp(endptr, "h") == 0)                     factor = 3600ULL * 1000000000ULL;
+    else if (strcasecmp(endptr, "d") == 0)                     factor = 24ULL * 3600ULL * 1000000000ULL;
     else {
         clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
     }
-    if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
+    if (errno == ERANGE || value > (double) UINT64_MAX/factor || value < 0){
         clags_log(config, Clags_Error, "clags_time_t value out of range (0ns to %"PRIu64"ns) for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
-    if (pvalue) *(clags_time_t*)pvalue = (clags_time_t)(value * factor);
+    if (pvalue) *(clags_time_t*)pvalue = (clags_time_t)(value * factor + 0.5);
     return true;
 }
 
