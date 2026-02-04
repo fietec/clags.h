@@ -43,6 +43,7 @@ void custom_log_handler(clags_log_level_t level, const char *format, va_list arg
             vfprintf(stderr, format, args);
             fprintf(stderr, "\n");
             break;
+        case Clags_NoLogs: break;
         default:
             clags_unreachable("Invalid log level!");
     }
@@ -79,7 +80,7 @@ int main(int argc, char **argv)
     if (failed_config){
         // re-enable logging
         failed_config->options.min_log_level = Clags_Info;
-        
+
         // act based on error type
         if (failed_config->error == Clags_Error_InvalidValue){
             clags_log(failed_config, Clags_Info, "Invalid number detected. Using defaults (lhs=0, rhs=0).");
