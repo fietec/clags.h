@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.9.1
+  Version: 0.9.2
   
   MIT License
 
@@ -1453,7 +1453,7 @@ void clags__subcommand_path_usage(const char *program_name, clags_config_t *conf
 
 clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
 {
-    if (config == NULL || config->args == NULL) return NULL;
+    if (config == NULL || config->args == NULL || config->invalid) return NULL;
     // validate the configuration, exit and mark config as invalid on fatal error
     if (!clags__validate_config(config)){
         config->invalid = true;
@@ -1469,6 +1469,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
     clags_positional_t *positional = CLAGS_CALLOC(config->args_count, sizeof(*positional));
     clags_option_t     *option     = CLAGS_CALLOC(config->args_count, sizeof(*option));
     clags_flag_t       *flags      = CLAGS_CALLOC(config->args_count, sizeof(*flags));
+    clags_assert(positional && option && flags, "Out of memory!");
 
     clags_args_t args = {.positional=positional, .option=option, .flags=flags};
     clags__sort_args(&args, config);
