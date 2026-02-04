@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.9.0
+  Version: 0.9.1
   
   MIT License
 
@@ -202,10 +202,11 @@
 // the character column at which ':' appears in `clags_usage` output
 // you can adjust this value to control the alignment of argument descriptions
 #ifndef CLAGS_USAGE_ALIGNMENT
-#define CLAGS_USAGE_ALIGNMENT 28
+#define CLAGS_USAGE_ALIGNMENT 36
 #endif // CLAGS_USAGE_ALIGNMENT
 
 #define CLAGS__USAGE_PRINTF_ALIGNMENT -(CLAGS_USAGE_ALIGNMENT-4)
+#define CLAGS__USAGE_TEMP_BUFFER_SIZE (CLAGS_USAGE_ALIGNMENT-3)
 
 // macro for enabling printf-like format checks in `clags_sb_appendf`
 #if defined(__GNUC__) || defined(__clang__)
@@ -1672,130 +1673,179 @@ defer:
     return result;
 }
 
+static void clags__format_lhs(char *buffer, size_t buf_size, char short_flag, const char *long_flag, const char *arg_name, bool *lines_cut_off)
+{
+    if (!buffer || buf_size == 0) return;
+    buffer[0] = '\0';
+
+    char temp[512] = {0};
+    size_t needed = 0;
+
+    if (short_flag && long_flag) {
+        if (arg_name) snprintf(temp, sizeof(temp), "-%c, --%s(=)%s", short_flag, long_flag, arg_name);
+        else          snprintf(temp, sizeof(temp), "-%c, --%s", short_flag, long_flag);
+    } else if (short_flag) {
+        if (arg_name) snprintf(temp, sizeof(temp), "-%c %s", short_flag, arg_name);
+        else          snprintf(temp, sizeof(temp), "-%c", short_flag);
+    } else if (long_flag) {
+        if (arg_name) snprintf(temp, sizeof(temp), "--%s(=)%s", long_flag, arg_name);
+        else          snprintf(temp, sizeof(temp), "--%s", long_flag);
+    }
+
+    needed = strlen(temp);
+
+    if (needed < buf_size) {
+        strncpy(buffer, temp, buf_size);
+        buffer[buf_size-1] = '\0';
+        return;
+    }
+
+    if (!long_flag) {
+        strncpy(buffer, temp, buf_size-1);
+        buffer[buf_size-1] = '\0';
+        if (lines_cut_off) *lines_cut_off = true;
+        return;
+    }
+
+    const char *suffix = arg_name ? arg_name : "";
+    size_t suffix_len = strlen(suffix) + 3;
+    size_t remaining = buf_size > 1 ? buf_size - 1 : 0;
+
+    char prefix[32] = {0};
+    if (short_flag && long_flag) strcpy(prefix, "-o, --");
+    else strcpy(prefix, "--");
+
+    size_t prefix_len = strlen(prefix);
+    size_t max_long = 0;
+    if (remaining > prefix_len + suffix_len) max_long = remaining - prefix_len - suffix_len;
+    else max_long = 0;
+
+    if (max_long > 0) {
+        char trimmed_long[128] = {0};
+        strncpy(trimmed_long, long_flag, max_long);
+        if (max_long >= 2) {
+            trimmed_long[max_long-2] = '.';
+            trimmed_long[max_long-1] = '.';
+        } else if (max_long == 1) {
+            trimmed_long[0] = '.';
+        }
+
+        snprintf(buffer, buf_size, "%s%s%s%s", prefix, trimmed_long, arg_name ? "(=)" : "", suffix);
+    } else {
+        snprintf(buffer, buf_size, "%s%s", prefix, arg_name ? arg_name : "");
+    }
+
+    if (lines_cut_off) *lines_cut_off = true;
+}
+
 void clags_usage(const char *program_name, clags_config_t *config)
 {
-    if (config->args == NULL || config->invalid) return;
+    if (!config || !config->args || config->invalid) return;
 
     clags_positional_t *positional = CLAGS_CALLOC(config->args_count, sizeof(*positional));
     clags_option_t     *option     = CLAGS_CALLOC(config->args_count, sizeof(*option));
     clags_flag_t       *flags      = CLAGS_CALLOC(config->args_count, sizeof(*flags));
+    clags_assert(positional && option && flags, "Out of memory!");
 
     clags_args_t args = {.positional=positional, .option=option, .flags=flags};
-
     clags__sort_args(&args, config);
 
-    clags_options_t options = config->options;
-        
+    char *temp_buffer = CLAGS_CALLOC(CLAGS__USAGE_TEMP_BUFFER_SIZE, sizeof(*temp_buffer));
+    clags_assert(temp_buffer, "Out of memory!");
+
+    bool lines_cut_off = false;
+
     clags__subcommand_path_usage(program_name, config);
 
     if (args.option_count) printf(" [OPTIONS]");
     if (args.flag_count) printf(" [FLAGS]");
+
     bool last_was_list = false;
-    for (size_t i=0; i<args.positional_count; ++i){
+    for (size_t i = 0; i < args.positional_count; ++i) {
         if (last_was_list) {
-            printf(" %s", options.list_terminator);
+            printf(" %s", config->options.list_terminator);
             last_was_list = false;
         }
         clags_positional_t pos = args.positional[i];
-        printf(" %c", pos.optional? '[':'<');
-        if (args.positional[i].is_list){
-            printf("%s..", args.positional[i].arg_name);
+        printf(" ");
+        printf("%c", pos.optional? '[':'<');
+        if (pos.is_list) {
+            printf("%s..", pos.arg_name);
             last_was_list = true;
-        } else{
-            printf("%s", args.positional[i].arg_name);
+        } else {
+            printf("%s", pos.arg_name);
         }
         printf("%c", pos.optional? ']':'>');
     }
     printf("\n");
 
-    if (options.description){
-        printf("\n");
-        const char *line = options.description;
-        while (true){
+    if (config->options.description) {
+        const char *line = config->options.description;
+        while (line && *line) {
             char *line_end = clags__strchrnull(line, '\n');
-            int line_len = (int) (line_end - line);
-            printf("%.*s\n", line_len, line);
+            int len = (int)(line_end - line);
+            printf("%.*s\n", len, line);
             if (*line_end == '\0') break;
             line = line_end + 1;
         }
         printf("\n");
     }
 
-    if (args.positional_count){
+    if (args.positional_count) {
         printf("  Arguments:\n");
-        for (size_t i=0; i<args.positional_count; ++i){
+        for (size_t i = 0; i < args.positional_count; ++i) {
             clags_positional_t pos = args.positional[i];
-            char *optional_hint = pos.optional? "(optional)" : "";
-            size_t buf_size = strlen(pos.arg_name) + strlen(optional_hint) + 2;
-            char buf[buf_size];
-            snprintf(buf, buf_size, "%s %s", pos.arg_name, optional_hint);
-            printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, pos.description);
+            char optional_hint[32] = {0};
+            if (pos.optional) snprintf(optional_hint, sizeof(optional_hint), "(optional)");
+            snprintf(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE, "%s %s", pos.arg_name, optional_hint);
+            printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, pos.description);
             clags__type_usage(pos.value_type, pos._data, pos.is_list);
         }
     }
-    if (args.option_count){
+
+    if (args.option_count) {
         printf("  Options:\n");
-        for (size_t i=0; i<args.option_count; ++i){
+        for (size_t i = 0; i < args.option_count; ++i) {
             clags_option_t opt = args.option[i];
-            if (opt.short_flag){
-                if (opt.long_flag){
-                    size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 10;
-                    char buf[buf_size];
-                    snprintf(buf, buf_size, "-%c, --%s(=)%s>", opt.short_flag, opt.long_flag, opt.arg_name);
-                    printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, opt.description);
-                } else{
-                    printf("    -%*c: %s", CLAGS__USAGE_PRINTF_ALIGNMENT, opt.short_flag, opt.description);
-                }
-                clags__type_usage(opt.value_type, opt._data, opt.is_list);
-            }else if (opt.long_flag){
-                size_t buf_size = strlen(opt.long_flag) + (opt.arg_name? strlen(opt.arg_name):0) + 6;
-                char buf[buf_size];
-                snprintf(buf, buf_size, "--%s(=)%s", opt.long_flag, opt.arg_name);
-                printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, opt.description);
-                clags__type_usage(opt.value_type, opt._data, opt.is_list);
-            }
-        }
-    }
-    if (args.flag_count){
-        printf("  Flags:\n");
-        for (size_t i=0; i<args.flag_count; ++i){
-            clags_flag_t flag = args.flags[i];
-            if (flag.short_flag){
-                if (flag.long_flag){
-                    size_t buf_size = + strlen(flag.long_flag) + 16;
-                    char buf[buf_size];
-                    snprintf(buf, buf_size, "-%c, --%s", flag.short_flag, flag.long_flag);
-                    printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buf, flag.description);
-                } else{
-                    printf("    -%*c: %s", CLAGS__USAGE_PRINTF_ALIGNMENT, flag.short_flag, flag.description);
-                }
-            } else if (flag.long_flag){
-                printf("    --%*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, flag.long_flag, flag.description);
-            } else{
-                continue;
-            }
-            printf("%s\n", flag.exit?" and exit":"");
-        }
-    }
-    if (!options.print_no_notes && (options.list_terminator || options.ignore_prefix || options.allow_option_parsing_toggle)){
-        printf("\n  Notes:\n");
-        if (options.allow_option_parsing_toggle){
-            printf("    '--' toggles option and flag parsing and can re-enable parsing when provided again.\n");
-        }
-        if (options.list_terminator){
-            printf("    '%s' terminates a list argument when followed by another argument.\n", options.list_terminator);
-        }
-        if (options.ignore_prefix){
-            printf("    Arguments prefixed with '%s' are ignored.\n", options.ignore_prefix);
-        }
-        if (config->parent != NULL){
-            printf("    Options and flags of parent subcommands that are not listed above, are not supported. Place them before the beginning of this subcommand.\n");
+            clags__format_lhs(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE,
+                              opt.short_flag, opt.long_flag, opt.arg_name,  &lines_cut_off);
+            printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, opt.description);
+            clags__type_usage(opt.value_type, opt._data, opt.is_list);
         }
     }
 
-    CLAGS_FREE(args.positional);
-    CLAGS_FREE(args.option);
-    CLAGS_FREE(args.flags);
+    if (args.flag_count) {
+        printf("  Flags:\n");
+        for (size_t i = 0; i < args.flag_count; ++i) {
+            clags_flag_t flag = args.flags[i];
+            clags__format_lhs(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE,
+                              flag.short_flag, flag.long_flag, NULL, &lines_cut_off);
+            printf("    %*s : %s%s\n", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, flag.description, flag.exit?" and exit":"");
+        }
+    }
+
+    if (!config->options.print_no_notes &&
+        (config->options.list_terminator || config->options.ignore_prefix || config->options.allow_option_parsing_toggle)) {
+        printf("\n  Notes:\n");
+        if (config->options.allow_option_parsing_toggle){
+            printf("    '--' toggles option and flag parsing and can re-enable parsing when provided again.\n");
+        }
+        if (config->options.list_terminator){
+            printf("    '%s' terminates a list argument.\n", config->options.list_terminator);
+        }
+        if (config->options.ignore_prefix){
+            printf("    Arguments prefixed with '%s' are ignored.\n", config->options.ignore_prefix);
+        }
+    }
+
+    if (lines_cut_off){
+        clags_log(config, Clags_ConfigWarning, "Some flag names were too long and were cut off! Increase `CLAGS_USAGE_ALIGNMENT` to give them more space.");
+    }
+
+    CLAGS_FREE(positional);
+    CLAGS_FREE(option);
+    CLAGS_FREE(flags);
+    CLAGS_FREE(temp_buffer);
 }
 
 int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
