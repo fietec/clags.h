@@ -1,7 +1,7 @@
 /*
   Example 3.1: Lists
      This example shows how to work with lists.
-     Lists are only supported as required arguments and can also be typed, similarily to normal arguments
+     Lists can also be typed, similarily to normal arguments
 */
 
 #include <stdio.h>

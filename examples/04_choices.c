@@ -28,13 +28,14 @@ clags_choice_t choice_values[] = {
 };
 
 // create a wrapper for the choices
-clags_choices_t choices = clags_choices(choice_values);
+// choices are case-sensitive by default, with `.case_insensitive=true` you can disable that behaviour
+clags_choices_t choices = clags_choices(choice_values, .case_insensitive=true);
 // create variable to hold the pointer to the chosen `clags_choice_t`
 clags_choice_t *choice = clags_choice_value(choice_values, 0); // this sets the default value to the first `clags_choice_t` in `choices`
 
 clags_arg_t args[] = {
     clags_positional(&input, "input_file", "the input file"),
-    
+
     clags_option('o', "output", &output, "FILE", "the output file"),
 
     // with `.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing

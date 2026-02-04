@@ -1,8 +1,8 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.9.3
-  
+  Version: 0.10.0
+
   MIT License
 
   Copyright (c) 2026 Constantijn de Meer
@@ -32,7 +32,7 @@
 
   Positional arguments
   ------------------------------------
-  
+
   <arg>        required positional argument
   [arg]        optional positional argument
 
@@ -93,7 +93,7 @@
   Combined short flags:
 
   -abc    ==  -a -b -c
-  
+
   Note: If a short option that takes a value appears in a combined group,
         the rest of the string is treated as its argument:
 
@@ -125,7 +125,7 @@
   Arguments prefixed with the configured ignore prefix are ignored.
 
   For example with the ignore prefix defined as "!":
-  
+
   !ignored  // argument is ignored
 
 
@@ -144,7 +144,7 @@
   int64/uint64                                | Values must fit in the type’s bounds. Stored as the respective `int<size>_t`.
 
   double        | 3.14, -0.001, 2e10          | Floating-point value. Stored as `double`.
-  choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive. Stored as `clags_choice_t*`.
+  choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive by default, can be disabled. Stored as `clags_choice_t*`.
   path          | /home/user/docs, C:\Windows | Any filesystem path. Stored as `char*`.
   file          | /etc/passwd, myfile.txt     | Must be a regular file. Stored as `char*`.
   dir           | /tmp, C:\Users              | Must be a directory. Stored as `char*`.
@@ -231,7 +231,7 @@ typedef enum{
 
 typedef struct clags_config_t clags_config_t;
 typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable);       // the function type for custom verifiers
-typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify); 
+typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify);
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
 typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);                                  // the function type of custom log handlers
 typedef void (*clags_callback_func_t)(clags_config_t *config);                                                                   // the function type of callback functions
@@ -338,6 +338,7 @@ typedef struct{
     clags_choice_t *items;
     size_t count;
     bool print_no_details; // do not print the full choice descriptions in `clags_usage`, if possible
+    bool case_insensitive; // match choices if their case does not match
 } clags_choices_t;
 
 // the definition of a subcommand
@@ -571,12 +572,12 @@ struct clags_config_t{
 
 /*
   Parse arguments based on the provided config.
-  
+
   Arguments:
     - argc          : the number of arguments
     - argv          : the array of arguments
     - config        : pointer to a config with argument definitions and other options
-    
+
   Returns:
     clags_config_t* : pointer to the failed config. If parsing fails, the `.error` field
                       will be set to indicate the type of the encountered error.
@@ -585,7 +586,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
 
 /*
   Print a detailed usage based on the provided config.
-  
+
   Arguments:
     - program_name  : the name of the program
     - config        : pointer to a config with argument definitions and other options
@@ -619,7 +620,7 @@ int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
 int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
-  Duplicate a string if string duplication is enabled in the config, 
+  Duplicate a string if string duplication is enabled in the config,
   otherwise return the original string.
 
   Arguments:
@@ -636,7 +637,7 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string);
 /*
   Free all memory allocated for strings duplicated during parsing.
   This only applies if `.duplicate_strings` was enabled in the config.
-  
+
   Arguments:
     - config        : pointer to the clags_config_t whose duplicated strings should be freed
 */
@@ -653,7 +654,7 @@ void clags_config_free(clags_config_t *config);
 
 /*
   Free all memory associated with a `clags_list_t` instance.
-  
+
   Arguments:
     - list          : a pointer to the list to free
 */
@@ -727,7 +728,7 @@ static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
 void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
 {
     va_list args, args_copy;
-    
+
     va_start(args, format);
     va_copy(args_copy, args);
 
@@ -994,7 +995,7 @@ bool clags__verify_choice(clags_config_t *config, const char *arg_name, const ch
     clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
-        if (strcmp(choice->value, arg) == 0){
+        if ((choices->case_insensitive && strcasecmp(choice->value, arg) == 0) || (!choices->case_insensitive && strcmp(choice->value, arg) == 0)){
             if (pchoice) *pchoice = choice;
             return true;
         }
@@ -1072,7 +1073,7 @@ bool clags__verify_size(clags_config_t *config, const char *arg_name, const char
         clags_log(config, Clags_Error, "Invalid size unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
     }
-    
+
     if (errno == ERANGE || value > UINT64_MAX/factor || *arg == '-') {
         clags_log(config, Clags_Error, "clags_fsize_t value out of range (0 to %"PRIu64") for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
@@ -1401,7 +1402,7 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
 void clags__choice_usage(clags_choices_t *choices, bool is_list)
 {
     if (!choices->print_no_details || choices->count >= 6){
-        printf(" (%s%s)\n        Choices:\n", clags__type_names[Clags_Choice], is_list?"[]":"");
+        printf(" (%s%s)\n        Choices%s:\n", clags__type_names[Clags_Choice], is_list?"[]":"", choices->case_insensitive? " (case-insensitive)" : "");
         for (size_t j=0; j<choices->count; ++j){
             clags_choice_t choice = choices->items[j];
             printf("          - %*s : %s\n", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
@@ -1497,7 +1498,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
                 continue;
             }
         }
-        
+
         // ignore arguments prefixed with `ignore_prefix`
         if (ignore_prefix && strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
             arguments_ignored = true;
