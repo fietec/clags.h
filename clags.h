@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.10.0
+  Version: 0.10.1
 
   MIT License
 
@@ -31,7 +31,7 @@
   ======================
 
   Positional arguments
-  ------------------------------------
+  --------------------
 
   <arg>        required positional argument
   [arg]        optional positional argument
@@ -97,7 +97,7 @@
   Note: If a short option that takes a value appears in a combined group,
         the rest of the string is treated as its argument:
 
-        -ovalue    // -o takes 'value', -v is ignored here
+        -wovalue    // -w is a flag, -o consumes 'value'
 
 
   Subcommands
@@ -210,7 +210,6 @@
 
 // macro for enabling printf-like format checks in `clags_sb_appendf`
 #if defined(__GNUC__) || defined(__clang__)
-//   https://gcc.gnu.org/onlinedocs/gcc-4.7.2/gcc/Function-Attributes.html
 #    ifdef __MINGW_PRINTF_FORMAT
 #        define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK) __attribute__ ((format (__MINGW_PRINTF_FORMAT, STRING_INDEX, FIRST_TO_CHECK)))
 #    else
@@ -259,7 +258,7 @@ clags_verify_func_t clags__verify_time_s;
 clags_verify_func_t clags__verify_time_ns;
 
 // the defintion of all supported value types. Format: (enum value, verification function, type name)
-// If an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
+// if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define clags__types                                                                                                                                        \
     X(Clags_String, clags__verify_string,  "string"  ) /* string value; variable type: char*                                                             */ \
     X(Clags_Custom, clags__verify_custom,  "custom"  ) /* custom verification function; variable type: depends on verify function                        */ \
@@ -281,7 +280,7 @@ clags_verify_func_t clags__verify_time_ns;
     X(Clags_Subcmd, clags__verify_subcmd,  "subcmd"  ) /* subcommand; variable type: clags_subcmd_t*                                                     */ \
 
 // the definition of all error types and their respective descriptions
-#define clags__errors \
+#define clags__errors                                                                           \
     X(Clags_Error_Ok,               "no error"                                                ) \
     X(Clags_Error_InvalidConfig,    "configuration is invalid"                                ) \
     X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria" ) \
@@ -304,10 +303,10 @@ typedef enum{
 #undef X
 
 // all available flag types
-// if a flags `type` is not explicitly set, `Clags_BoolFlag` is used by default
+// if a flag's `type` is not explicitly set, `Clags_BoolFlag` is used by default
 typedef enum {
     Clags_BoolFlag = 0,   // standard boolean flag; set to `true` when the flag occurs; variable type: bool
-    Clags_ConfigFlag,     // stores a pointer to the config (sub)command in which the flag was set; variable type: clags_config_t*
+    Clags_ConfigFlag,     // stores a pointer to the config in which the flag was set; variable type: clags_config_t*
     Clags_CountFlag,      // tracks how many times the flag was encountered; variable type: size_t
     Clags_CallbackFlag,   // invokes a user-provided callback function each time the flag occurs; variable type: clags_flag_callback_func_t
 } clags_flag_type_t;
@@ -338,13 +337,13 @@ typedef struct{
     clags_choice_t *items;
     size_t count;
     bool print_no_details; // do not print the full choice descriptions in `clags_usage`, if possible
-    bool case_insensitive; // match choices if their case does not match
+    bool case_insensitive; // match choices regardless of case
 } clags_choices_t;
 
 // the definition of a subcommand
 typedef struct{
-    const char *name;
-    const char *description;
+    const char *name;        // the name and identifier of a subcommand
+    const char *description; // help text describing the subcommand
     clags_config_t *config;  // the config that should be used to parse the subcommand's arguments
 } clags_subcmd_t;
 
@@ -361,8 +360,8 @@ typedef struct{
     const char *description;               // help text describing the positional argument
     // options
     clags_value_type_t value_type;         // type of the positional value. See `clags__types` for a list of all types
-    bool is_list;                          // true if this positional consumes multiple values into a `clags_list_t`
-    bool optional;                         // true if the positional argument is optional
+    bool is_list;                          // if true, this positional consumes multiple values into a `clags_list_t` of the `value_type`
+    bool optional;                         // if true, the positional argument is optional, meaning it must not be provided
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
@@ -380,7 +379,7 @@ typedef struct{
     const char *description;               // help text describing the option
     // options
     clags_value_type_t value_type;         // type of the option's value. See `clags__types` for a list of all types
-    bool is_list;                          // true if the option can appear multiple times, storing values in a `clags_list_t` of the `value_type`
+    bool is_list;                          // if true, the option can appear multiple times, storing values in a `clags_list_t` of the `value_type`
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
@@ -417,7 +416,8 @@ typedef enum{
 } clags_arg_type_t;
 
 // a wrapper for all arg types
-// construct with `clags_positional`, `clags_option` and `clags_flag` macros
+// automatically construct with `clags_positional`, `clags_option` and `clags_flag` macros
+// a `clags_arg_t` array can then be passed to `clags_config` to define a (sub)command's arguments
 typedef struct{
     clags_arg_type_t type;
     union{
@@ -432,26 +432,26 @@ typedef struct{
     const char *ignore_prefix;        // a custom prefix that instructs the parser to ignore the current argument
     const char *list_terminator;      // a custom list terminator that tells the parser that following positional arguments do no longer belong to the current list
     bool print_no_notes;              // do not print the `Notes` section in the usage
-    bool allow_option_parsing_toggle; // allow "--" to be used to toggle option and flag parsing
+    bool allow_option_parsing_toggle; // allow "--" to be used to toggle option and flag parsing, one-time disabling is always enabled
     bool duplicate_strings;           // duplicate all strings instead of setting variables to the content of argv, free the allocated memory via `clags_config_free_allocs`
     clags_log_handler_t log_handler;  // a custom log handler
     clags_log_level_t min_log_level;  // the minimal log level for which to print logs
-    const char *description;          // a description of the current (sub-)command
+    const char *description;          // a description of the current (sub)command
 } clags_options_t;
 
-// a config for a single (sub-)command
-// construct with `clags_config` macro
+// a config for a single (sub)command
+// construct with the `clags_config` macro
 struct clags_config_t{
-    clags_arg_t *args;
-    size_t args_count;
-    clags_options_t options;
+    clags_arg_t *args;                // the array of argument definitions
+    size_t args_count;                // the amount of argument definitions
+    clags_options_t options;          // additional settings
 
     // internal, set automatically
-    const char *name;
-    clags_config_t *parent;
-    bool invalid;
-    clags_list_t allocs;
-    clags_error_t error;
+    const char *name;                 // the program name or the name of the current subcommand
+    clags_config_t *parent;           // pointer to the parent (sub)command's config
+    bool invalid;                     // argument definitions are invalid
+    clags_list_t allocs;              // all duplicated strings allocated in this config's context, only if `options.duplicate_strings` is enabled
+    clags_error_t error;              // the last error detected while parsing this config
 };
 
 // helper macros
@@ -465,28 +465,32 @@ struct clags_config_t{
 // predefined list constructors for different types
 // returns an empty `clags_list_t` with item_size set appropriately
 // use `clags_custom_list(size)` to define a list of custom element size
-#define clags_list()            (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(char*)}
-#define clags_path_list()       clags_list()
-#define clags_file_list()       clags_list()
-#define clags_dir_list()        clags_list()
-#define clags_custom_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}
-#define clags_bool_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(bool)}
-#define clags_int8_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int8_t)}
-#define clags_uint8_list()      (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint8_t)}
-#define clags_int32_list()      (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int32_t)}
-#define clags_uint32_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint32_t)}
-#define clags_int64_list()      (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(int64_t)}
-#define clags_uint64_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(uint64_t)}
-#define clags_double_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(double)}
-#define clags_size_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_fsize_t)}
-#define clags_time_list()       (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_time_t)}
-#define clags_choice_list()     (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=sizeof(clags_choice_t*)}
+#define clags__sized_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}
+#define clags_list()            clags__sized_list(sizeof(char*))
+#define clags_string_list()     clags__sized_list(sizeof(char*))
+#define clags_path_list()       clags__sized_list(sizeof(char*))
+#define clags_file_list()       clags__sized_list(sizeof(char*))
+#define clags_dir_list()        clags__sized_list(sizeof(char*))
+#define clags_custom_list(size) clags__sized_list(size)
+#define clags_bool_list()       clags__sized_list(sizeof(bool))
+#define clags_int8_list()       clags__sized_list(sizeof(int8_t))
+#define clags_uint8_list()      clags__sized_list(sizeof(uint8_t))
+#define clags_int32_list()      clags__sized_list(sizeof(int32_t))
+#define clags_uint32_list()     clags__sized_list(sizeof(uint32_t))
+#define clags_int64_list()      clags__sized_list(sizeof(int64_t))
+#define clags_uint64_list()     clags__sized_list(sizeof(uint64_t))
+#define clags_double_list()     clags__sized_list(sizeof(double))
+#define clags_size_list()       clags__sized_list(sizeof(clags_fsize_t))
+#define clags_time_list()       clags__sized_list(sizeof(clags_time_t))
+#define clags_choice_list()     clags__sized_list(sizeof(clags_choice_t*))
 
 // macros for easy value extraction from lists
 // `value_type` must match the type stored within the list
 #define clags_list_element(list, value_type, index) ((value_type*)(list).items)[index]
 
 // wrapper for a `clags_choice_t` array
+// use designated initializers in the variadic arguments to set additional options.
+// see `clags_choices_t` for all available fields
 #define clags_choices(arr, ...) (clags_choices_t){.items=(arr), .count=clags_arr_len(arr), __VA_ARGS__}
 // macro for getting the pointer to the index-th choice
 #define clags_choice_value(choices, index) (&(choices)[index])
@@ -547,7 +551,7 @@ struct clags_config_t{
 #define clags_flag_help(val)        clags_flag('h', "help", val, "print this help dialog", .exit=true)
 #define clags_flag_help_config(val) clags_flag('h', "help", val, "print this help dialog", .exit=true, .type=Clags_ConfigFlag)
 
-/* Config Constructor */
+/* Config Constructors */
 
 /*
   Construct a `clags_config_t` from an array of arguments.
@@ -555,12 +559,14 @@ struct clags_config_t{
   Parameters:
     arguments : array of `clags_arg_t` defining the positionals, options, and flags
     ...       : optional designated initializers for `clags_options_t` fields
-                (e.g. .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true, etc.)
+                (e.g. .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true, etc.),
+                see `clags_options_t` for all available fields.
 */
 #define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(clags_options_t){__VA_ARGS__}}
 
 /*
   Construct a `clags_config_t` from an array of arguments and a pre-defined options struct.
+  Useful when sharing options over mutiple configs.
 
   Parameters:
     arguments : array of `clags_arg_t` defining positionals, options, and flags
@@ -672,14 +678,31 @@ void clags_list_free(clags_list_t *list);
 const char* clags_error_description(clags_error_t error);
 
 /* Logging */
+
+/*
+  Use a config's log handler to log a formatted message.
+
+  Arguments:
+    - config        : the config for which to log using its options
+    - level         : the log level of the message, if less than the configs minimal log level, nothing will be logged
+    - format        : the printf-style format of the message
+    - ...           : the variadic format arguments
+*/
+void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
+// log the content of a string builder instead of a formatted message
+void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
+
+/* String Builder Functionality */
 void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
 void clags_sb_append_null(clags_sb_t *sb);
 void clags_sb_free(clags_sb_t *sb);
-void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
-void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
 
 #endif // CLAGS_H
 
+/*
+  The start of the implementation section.
+  Define `CLAGS_IMPLEMENTATION` to access, otherwise this file will act as a regular header.
+*/
 #ifdef CLAGS_IMPLEMENTATION
 
 #define X(type, func, name) [type] = func,
@@ -1094,7 +1117,7 @@ bool clags__verify_time_s(clags_config_t *config, const char *arg_name, const ch
         return false;
     }
     clags_time_t factor;
-    if (*endptr == '\0' || strcmp(endptr, "s") == 0)  factor =       1;
+    if (*endptr == '\0' || strcasecmp(endptr, "s") == 0)  factor =       1;
     else if (strcasecmp(endptr, "m")  == 0)               factor =      60;
     else if (strcasecmp(endptr, "h")  == 0)               factor =    3600;
     else if (strcasecmp(endptr, "d")  == 0)               factor = 24*3600;
@@ -1122,7 +1145,7 @@ bool clags__verify_time_ns(clags_config_t *config, const char *arg_name, const c
         return false;
     }
     clags_time_t factor;
-    if (*endptr == '\0' || strcmp(endptr, "ns") == 0)          factor = 1;
+    if (*endptr == '\0' || strcasecmp(endptr, "ns") == 0)      factor = 1;
     else if (strcasecmp(endptr, "us") == 0)                    factor = 1000ULL;
     else if (strcasecmp(endptr, "ms") == 0)                    factor = 1000000ULL;
     else if (strcasecmp(endptr, "s") == 0)                     factor = 1000000000ULL;
