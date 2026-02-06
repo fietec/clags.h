@@ -1,7 +1,6 @@
 /*
   Example 2: Types
       This example demonstrates how to add type verification to arguments
-      A full list of the available types can be found in `clags.h` in the `clags__types` macro 
 */
 
 #include <stdio.h>
@@ -29,9 +28,8 @@ clags_arg_t args[] = {
     //       so here, &quality is expected to be uint8_t*
     clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
     clags_flag('w', "warnings", &warnings, "print warnings"),
-    clags_flag('t', "test", &test, "a test flag"),
-
-    // this is how you create a flag that exits the parsing on occurrence
+    
+    // this is how you create a flag that exits the parsing on occurrence, just like with `clags_flag_help`
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help(&help),
 };

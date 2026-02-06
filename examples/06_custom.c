@@ -17,9 +17,9 @@
 //   - `variable` : the pointer of the variable to set
 bool verify_lower_case(clags_config_t *config, const char *arg_name, const char *arg, void *variable)
 {
-    // only accept lower case strings
+    // Only accept lower case strings
     if (arg && islower(*arg)){
-        // set the variable to the current arg since we are operating on strings here
+        // Set the variable to the current arg since we are operating on strings here
         // Note: `clags_config_duplicate_string` does not duplicate the string in this example, since the `duplicate_strings` option in the config is not set.
         //       But using the function nethertheless makes it easy to change this behaviour without having to edit all your custom verifiers.
         if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
@@ -31,12 +31,12 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
     return false;
 }
 
-// for custom list it is mandatory to provide the size of the stored values
+// For custom list it is mandatory to provide the size of the stored values
 clags_list_t list = clags_custom_list(sizeof(char*));
 bool help = false;
 
 clags_arg_t args[] = {
-    // set `.verify` to the custom verfication function
+    // Set `.verify` to the custom verfication function
     clags_positional(&list, "values", "lower case strings", .value_type=Clags_Custom, .verify=verify_lower_case, .is_list=true),
     clags_flag_help(&help),
 };

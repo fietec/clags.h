@@ -1,9 +1,8 @@
 /*
   Example 3.2: Multiple Lists
      This example shows how to work with multiple lists.
-     To terminate a list, use the custom `list_terminator` feature
+     To terminate a list, use the custom `.list_terminator` feature
 */
-
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -13,17 +12,22 @@
 
 clags_list_t string_list = clags_list();
 
-// lists can also be typed
+// Lists can also be typed
 clags_list_t int_list = clags_int32_list();
 clags_list_t file_list = clags_file_list();
-clags_list_t extra_list = clags_list();
+clags_list_t extra_list = clags_string_list();
 
 bool help = false;
 
 clags_arg_t args[] = {
+    // You can simply combine the known `.value_type` and `.is_list` fields to achieve typed lists
     clags_positional(&string_list, "strings", "a list of strings", .is_list=true),
     clags_positional(&int_list, "ints", "a list of integers", .value_type=Clags_Int32, .is_list=true),
+    // Positional arguments may also be optional, so the parser does not throw an error if no argument is provided
     clags_positional(&extra_list, "extras", "extra arguments", .optional=true, .is_list=true),
+
+    // Options can also be lists
+    // Every time the user provides the flag together with an argumnet that argument is added to the list
     clags_option('f', "file", &file_list, "FILE", "a list of files", .value_type=Clags_File, .is_list=true),
     clags_flag_help(&help),
 };

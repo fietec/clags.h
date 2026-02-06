@@ -20,25 +20,27 @@ bool help = false;
 
 uint8_t quality = 0;
 
-// define an array of possible choices
+// Define an array of possible choices
 clags_choice_t choice_values[] = {
     {"LIFO", "last-in first-out"},
     {"FIFO", "first-in first_out"},
     {"RANDOM", "random order"}
 };
 
-// create a wrapper for the choices
-// choices are case-sensitive by default, with `.case_insensitive=true` you can disable that behaviour
+// Create a wrapper for the choices
+// Choices are case-sensitive by default, with `.case_insensitive=true` you can disable that behaviour
 clags_choices_t choices = clags_choices(choice_values, .case_insensitive=true);
-// create variable to hold the pointer to the chosen `clags_choice_t`
-clags_choice_t *choice = clags_choice_value(choice_values, 0); // this sets the default value to the first `clags_choice_t` in `choices`
+// Create variable to hold the pointer to the chosen `clags_choice_t`
+// This sets the default value to the first `clags_choice_t` in `choices`
+// This expands to `clags_choice_t *choice = &choice_values[0];`
+clags_choice_t *choice = clags_choice_value(choice_values, 0);
 
 clags_arg_t args[] = {
     clags_positional(&input, "input_file", "the input file"),
 
     clags_option('o', "output", &output, "FILE", "the output file"),
 
-    // with `.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing
+    // With `.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing
     clags_option('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .choices=&choices),
     clags_option('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8),
 

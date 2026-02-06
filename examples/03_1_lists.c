@@ -1,7 +1,7 @@
 /*
   Example 3.1: Lists
      This example shows how to work with lists.
-     Lists can also be typed, similarily to normal arguments
+     Lists can also be typed, similarily to normal arguments, as can be seen in example 3.2
 */
 
 #include <stdio.h>
@@ -11,10 +11,13 @@
 #include "../clags.h"
 
 bool help = false;
-// use a typed initializer here if required
+// Use a typed initializer here if required
+// `clags_list` expects string values
+// Use `clags_string_list` for a more explicit alternative
 clags_list_t list = clags_list();
 
 clags_arg_t args[] = {
+    // Set `.is_list` to tell the parser that the variable is a list storing values of type `.value_type`
     clags_positional(&list, "strings", "the strings to print", .is_list=true),
     clags_flag_help(&help),
 };
@@ -41,10 +44,22 @@ int main(int argc, char **argv)
         return 0;
     }
     for (size_t i=0; i<list.count; ++i){
-        printf("String %zu: '%s'\n", i+1, clags_list_element(list, char*, i));
+        // Since lists are "generic" it is not possible to directly access the list.items
+#if 1
+        // This is the manual way
+        char *item = ((char**)list.items)[i];
+#else
+        // Or you can directly use this convenient macro
+        // Arguments:
+        //   - the list to index (not a pointer)
+        //   - the type of the stored value
+        //   - the index to read
+        char *item = clags_list_element(list, char*, i);
+#endif
+        printf("String %zu: '%s'\n", item);
     }
 
-    // this is mandatory if you don't want to leak all the list's precious memory
+    // This is mandatory if you don't want to leak all the list's precious memory
     clags_list_free(&list);
     return 0;
 }

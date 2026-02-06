@@ -13,7 +13,14 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-// custom log handler: adds prefixes and formats logs
+/*
+  A custom log handler, called by `clags_log` internally
+
+  Arguments:
+    - level  : the level of error (clags_log_level_t)
+    - format : a printf-style format string
+    - args   : the variadic arguments for the format printing
+*/
 void custom_log_handler(clags_log_level_t level, const char *format, va_list args)
 {
     switch(level){
@@ -49,23 +56,20 @@ void custom_log_handler(clags_log_level_t level, const char *format, va_list arg
     }
 }
 
-// program variables
 int32_t lhs = 0;
 int32_t rhs = 0;
 bool help = false;
 
-// define arguments
 clags_arg_t args[] = {
     clags_positional(&lhs, "lhs", "left-hand side (integer)", .value_type=Clags_Int32),
     clags_positional(&rhs, "rhs", "right-hand side (integer)", .value_type=Clags_Int32),
     clags_flag_help(&help),
 };
 
-// create config with custom log handler and disable logging
 clags_config_t config = clags_config(
     args,
-    .log_handler = custom_log_handler,
-    .min_log_level = Clags_NoLogs,
+    .log_handler = custom_log_handler,   // instruct clags to use the custom log handler for logging
+    .min_log_level = Clags_NoLogs,       // do not print any logs of a lower level, here: disable all logging
     .description = "Add two numbers with enhanced logging"
 );
 
@@ -73,10 +77,7 @@ int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
 
-    // parse arguments
     clags_config_t *failed_config = clags_parse(argc, argv, &config);
-
-    // demonstrate handling of config errors
     if (failed_config){
         // re-enable logging
         failed_config->options.min_log_level = Clags_Info;

@@ -71,12 +71,12 @@ When run with this input:
 ```console
 Usage: ./example [OPTIONS] [FLAGS] <input_file>
   Arguments:
-    input_file               : the input file
+    input_file                       : the input file
   Options:
-    -o, --output(=)FILE      : the output file
+    -o, --output(=)FILE              : the output file
   Flags:
-    -w, --warnings           : print warnings
-    -h, --help               : print this help dialog and exit
+    -w, --warnings                   : print warnings
+    -h, --help                       : print this help dialog and exit
 ```
 For more advanced examples see the [examples](/examples) directory.
 

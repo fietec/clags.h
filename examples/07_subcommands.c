@@ -14,7 +14,7 @@
 // since the help flag can be set from multiple subcommands, we can track the corresponding config here
 clags_config_t *help = NULL;
 
-// this flag tracks how many times it was encountered
+// This flag tracks how many times it was encountered
 size_t verbosity = 0;
 
 // --- COPY subcommand ---
@@ -50,14 +50,14 @@ clags_arg_t delete_args[] = {
     clags_flag('f', "force", &delete_force, "Force deletion"),
 
     clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
-    // this is a built-in shorthand for the previously defined help flag
+    // This is a built-in shorthand for the previously defined help flag
     clags_flag_help_config(&help)
 };
 
 clags_config_t delete_config = clags_config(delete_args);
 
 // --- Subcommands ---
-// this links the previously created subcommand configs to their respective arguments
+// This links the previously created subcommand configs to their respective arguments
 clags_subcmd_t subcmds[] = {
     {"copy",   "Copy a file from source to destination", &copy_config},
     {"delete", "Delete a file", &delete_config}
@@ -65,12 +65,12 @@ clags_subcmd_t subcmds[] = {
 
 clags_subcmds_t my_subcmds = clags_subcmds(subcmds);
 
-// define a variable that will hold a pointer to the selected `clags_subcmd_t`
+// Define a variable that will hold a pointer to the selected `clags_subcmd_t`
 clags_subcmd_t *selected_subcmd = NULL;
 
 // --- Main CLI config ---
 clags_arg_t main_args[] = {
-    // with `.subcmds` you set the subcommand parsing verifier
+    // With `.subcmds` you set the subcommand parsing verifier
     clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .subcmds=&my_subcmds),
     clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
     clags_flag_help_config(&help)
