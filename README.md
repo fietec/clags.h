@@ -2,7 +2,7 @@
 A simple declarative command line argument parser, written in C.
 
 ## Features
-- Required, optional and flag arguments
+- Positional, option and flag arguments
 - Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `int64`, `uint64`, `double`, `path`, `size`, `time_s`, `time_ns`
 - Choice arguments: restrict values to a fixed set (like an enum)
 - Custom parsing functions for user-defined types

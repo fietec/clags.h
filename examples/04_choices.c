@@ -23,7 +23,7 @@ uint8_t quality = 0;
 // Define an array of possible choices
 clags_choice_t choice_values[] = {
     {"LIFO", "last-in first-out"},
-    {"FIFO", "first-in first_out"},
+    {"FIFO", "first-in first-out"},
     {"RANDOM", "random order"}
 };
 

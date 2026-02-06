@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 0.10.1
+  Version: 1.0.0
 
   MIT License
 
@@ -361,7 +361,7 @@ typedef struct{
     // options
     clags_value_type_t value_type;         // type of the positional value. See `clags__types` for a list of all types
     bool is_list;                          // if true, this positional consumes multiple values into a `clags_list_t` of the `value_type`
-    bool optional;                         // if true, the positional argument is optional, meaning it must not be provided
+    bool optional;                         // if true, the positional argument is optional, meaning it may be omitted
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
@@ -379,7 +379,7 @@ typedef struct{
     const char *description;               // help text describing the option
     // options
     clags_value_type_t value_type;         // type of the option's value. See `clags__types` for a list of all types
-    bool is_list;                          // if true, the option can appear multiple times, storing values in a `clags_list_t` of the `value_type`
+    bool is_list;                          // if true, each occurrence appends one value to a clags_list_t
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
@@ -1938,3 +1938,4 @@ const char* clags_error_description(clags_error_t error)
 }
 
 #endif // CLAGS_IMPLEMENTATION
+

@@ -16,7 +16,6 @@ uint8_t quality = 100;
 bool help = false;
 bool warnings = false;
 bool version = false;
-bool test = false;
 
 clags_arg_t args[] = {
     clags_positional(&input_file, "input_file", "the file to read"),
@@ -51,6 +50,6 @@ int main(int argc, char **argv)
         printf("02_types: v1.0.0\n");
         return 0;
     }
-    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Warnings: %d, Test: %d\n", input_file, output_file, quality, warnings, test);
+    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Warnings: %d\n", input_file, output_file, quality, warnings);
     return 0;
 }

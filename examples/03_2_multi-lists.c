@@ -27,7 +27,7 @@ clags_arg_t args[] = {
     clags_positional(&extra_list, "extras", "extra arguments", .optional=true, .is_list=true),
 
     // Options can also be lists
-    // Every time the user provides the flag together with an argumnet that argument is added to the list
+    // Every time the user provides the flag together with an argument that argument is added to the list
     clags_option('f', "file", &file_list, "FILE", "a list of files", .value_type=Clags_File, .is_list=true),
     clags_flag_help(&help),
 };

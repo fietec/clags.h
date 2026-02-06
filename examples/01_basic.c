@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-// This includes the function implemenetations and only has to be done once per translation unit
+// This includes the function implementations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
