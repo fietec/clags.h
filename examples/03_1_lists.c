@@ -56,7 +56,7 @@ int main(int argc, char **argv)
         //   - the index to read
         char *item = clags_list_element(list, char*, i);
 #endif
-        printf("String %zu: '%s'\n", item);
+        printf("String %zu: '%s'\n", i+1, item);
     }
 
     // This is mandatory if you don't want to leak all the list's precious memory
