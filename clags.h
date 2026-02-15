@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 1.0.0
+  Version: 1.1.0
 
   MIT License
 
@@ -429,7 +429,8 @@ typedef struct{
 
 // the available config options
 typedef struct{
-    const char *ignore_prefix;        // a custom prefix that instructs the parser to ignore the current argument
+    const char *ignore_prefix;        // a custom prefix that instructs the parser to ignore rguments starting with this prefix
+    clags_list_t *ignored_args;       // append all ignored arguments to this list without the `ignore_prefix`
     const char *list_terminator;      // a custom list terminator that tells the parser that following positional arguments do no longer belong to the current list
     bool print_no_notes;              // do not print the `Notes` section in the usage
     bool allow_option_parsing_toggle; // allow "--" to be used to toggle option and flag parsing, one-time disabling is always enabled
@@ -1525,6 +1526,9 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
         // ignore arguments prefixed with `ignore_prefix`
         if (ignore_prefix && strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
             arguments_ignored = true;
+            if (config->options.ignored_args){
+                (void) clags__append_to_list(config, Clags_String, NULL, arg+ignore_prefix_len, config->options.ignored_args, NULL);
+            }
             continue;
         }
 

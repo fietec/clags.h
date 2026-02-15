@@ -16,6 +16,7 @@ clags_list_t string_list = clags_list();
 clags_list_t int_list = clags_int32_list();
 clags_list_t file_list = clags_file_list();
 clags_list_t extra_list = clags_string_list();
+clags_list_t ignored_list = clags_string_list();
 
 bool help = false;
 
@@ -36,7 +37,17 @@ clags_arg_t args[] = {
 // requires for a delimeter that terminates the list.
 // When `.duplicate_strings` is true, clags duplicates all strings. 
 // This is necessary if the original argument strings may go out of scope before the parsed values are used.
-clags_config_t config = clags_config(args, .list_terminator="::", .ignore_prefix="!", .allow_option_parsing_toggle=true, .duplicate_strings=true);
+//
+// Set `.ignored_args` to a list pointer to instruct clags to collect all ignored arguments
+// in the provided list. The `ignore_prefix` is removed from all arguments.
+clags_config_t config = clags_config(
+    args,
+    .list_terminator="::",
+    .ignore_prefix="!",
+    .ignored_args=&ignored_list,
+    .allow_option_parsing_toggle=true,
+    .duplicate_strings=true,
+);
 
 int main(int argc, char **argv)
 {
@@ -69,6 +80,17 @@ int main(int argc, char **argv)
     for (size_t i=0; i<extra_list.count; ++i){
         printf("  %zu: %s\n", i, clags_list_element(extra_list, char*, i));
     }
+    printf("\n");
+
+    // Use the previously defined `.ignored_args` list to access all ignored arguments
+    if (ignored_list.count){
+        printf("These arguments were ignored:\n");
+        for (size_t i=0; i<ignored_list.count; ++i){
+            printf("%s\n", clags_list_element(ignored_list, char*, i));
+        }
+    } else{
+        printf("No arguments were ignored.\n");
+    }
 
 defer:
 #if 1
@@ -77,6 +99,7 @@ defer:
     clags_list_free(&int_list);
     clags_list_free(&extra_list);
     clags_list_free(&file_list);
+    clags_list_free(&ignored_list);
 
     // the config stores all the duplicated strings. You can free them like this
     clags_config_free_allocs(&config);
