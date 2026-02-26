@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 1.1.0
+  Version: 2.0.0
 
   MIT License
 
@@ -229,6 +229,8 @@ typedef enum{
 } clags_log_level_t;
 
 typedef struct clags_config_t clags_config_t;
+typedef struct clags_choice_t clags_choice_t;
+typedef struct clags_subcmd_t clags_subcmd_t;
 typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable);       // the function type for custom verifiers
 typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify);
 typedef clags_verify_func_t *clags_verify_func_ptr_t;
@@ -257,27 +259,27 @@ clags_verify_func_t clags__verify_size;
 clags_verify_func_t clags__verify_time_s;
 clags_verify_func_t clags__verify_time_ns;
 
-// the defintion of all supported value types. Format: (enum value, verification function, type name)
+// the definition of all supported value types. Format: (enum value, verification function, type name, variable type)
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
-#define clags__types                                                                                                                                        \
-    X(Clags_String, clags__verify_string,  "string"  ) /* string value; variable type: char*                                                             */ \
-    X(Clags_Custom, clags__verify_custom,  "custom"  ) /* custom verification function; variable type: depends on verify function                        */ \
-    X(Clags_Bool,   clags__verify_bool,    "bool"    ) /* boolean value; variable type: bool                                                             */ \
-    X(Clags_Int8,   clags__verify_int8,    "int8"    ) /* signed 8-bit integer; variable type: int8_t                                                    */ \
-    X(Clags_UInt8,  clags__verify_uint8,   "uint8"   ) /* unsigned 8-bit integer; variable type: uint8_t                                                 */ \
-    X(Clags_Int32,  clags__verify_int32,   "int32"   ) /* signed 32-bit integer; variable type: int32_t                                                  */ \
-    X(Clags_UInt32, clags__verify_uint32,  "uint32"  ) /* unsigned 32-bit integer; variable type: uint32_t                                               */ \
-    X(Clags_Int64,  clags__verify_int64,   "int64"   ) /* signed 64-bit integer; variable type: int64_t                                                  */ \
-    X(Clags_UInt64, clags__verify_uint64,  "uint64"  ) /* unsigned 64-bit integer; variable type: uint64_t                                               */ \
-    X(Clags_Double, clags__verify_double,  "double"  ) /* floating-point value; variable type: double                                                    */ \
-    X(Clags_Choice, clags__verify_choice,  "choice"  ) /* selects one value from a set of choices; variable type: clags_choice_t*                        */ \
-    X(Clags_Path,   clags__verify_path,    "path"    ) /* valid filesystem path; variable type: char*                                                    */ \
-    X(Clags_File,   clags__verify_file,    "file"    ) /* path to a regular file; variable type: char*                                                   */ \
-    X(Clags_Dir,    clags__verify_dir,     "dir"     ) /* path to a directory; variable type: char*                                                      */ \
-    X(Clags_Size,   clags__verify_size,    "size"    ) /* size in bytes (supports suffixes like KiB/MB); variable type: clags_fsize_t                    */ \
-    X(Clags_TimeS,  clags__verify_time_s,  "time_s"  ) /* time duration in seconds (supports suffixes s/m/h/d); variable type: clags_time_t              */ \
-    X(Clags_TimeNS, clags__verify_time_ns, "time_ns" ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d); variable type: clags_time_t */ \
-    X(Clags_Subcmd, clags__verify_subcmd,  "subcmd"  ) /* subcommand; variable type: clags_subcmd_t*                                                     */ \
+#define clags__types                                                                                                                            \
+    X(Clags_String, clags__verify_string,  "string",  char*           ) /* string value                                                      */ \
+    X(Clags_Custom, clags__verify_custom,  "custom",  void*           ) /* custom type, defined via custom verification function             */ \
+    X(Clags_Bool,   clags__verify_bool,    "bool",    bool            ) /* boolean value                                                     */ \
+    X(Clags_Int8,   clags__verify_int8,    "int8",    int8_t          ) /* signed 8-bit integer                                              */ \
+    X(Clags_UInt8,  clags__verify_uint8,   "uint8",   uint8_t         ) /* unsigned 8-bit integer                                            */ \
+    X(Clags_Int32,  clags__verify_int32,   "int32",   int32_t         ) /* signed 32-bit integer                                             */ \
+    X(Clags_UInt32, clags__verify_uint32,  "uint32",  uint32_t        ) /* unsigned 32-bit integer                                           */ \
+    X(Clags_Int64,  clags__verify_int64,   "int64",   int64_t         ) /* signed 64-bit integer                                             */ \
+    X(Clags_UInt64, clags__verify_uint64,  "uint64",  uint64_t        ) /* unsigned 64-bit integer                                           */ \
+    X(Clags_Double, clags__verify_double,  "double",  double          ) /* floating-point value                                              */ \
+    X(Clags_Choice, clags__verify_choice,  "choice",  clags_choice_t* ) /* selects one value from a set of choices                           */ \
+    X(Clags_Path,   clags__verify_path,    "path",    char*           ) /* valid filesystem path                                             */ \
+    X(Clags_File,   clags__verify_file,    "file",    char*           ) /* path to a regular file                                            */ \
+    X(Clags_Dir,    clags__verify_dir,     "dir",     char*           ) /* path to a directory                                               */ \
+    X(Clags_Size,   clags__verify_size,    "size",    clags_fsize_t   ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
+    X(Clags_TimeS,  clags__verify_time_s,  "time_s",  clags_time_t    ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
+    X(Clags_TimeNS, clags__verify_time_ns, "time_ns", clags_time_t    ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
+    X(Clags_Subcmd, clags__verify_subcmd,  "subcmd",  clags_subcmd_t* ) /* subcommand                                                        */ \
 
 // the definition of all error types and their respective descriptions
 #define clags__errors                                                                           \
@@ -289,7 +291,7 @@ clags_verify_func_t clags__verify_time_ns;
     X(Clags_Error_TooFewArguments,  "required positional arguments missing"                   ) \
 
 // an auto-generated enum of all supported value types
-#define X(type, func, name) type,
+#define X(type, func, name, vtype) type,
 typedef enum{
     clags__types
 } clags_value_type_t;
@@ -324,13 +326,15 @@ typedef struct{
     size_t item_size;  // set by the appropiate `clags_list_<type>` macro
     size_t count;
     size_t capacity;
+    clags_value_type_t value_type;
+    bool custom_size_set;
 } clags_list_t;
 
 // the definition of a choice
-typedef struct{
+struct clags_choice_t{
     const char *value;
     const char *description;
-} clags_choice_t;
+};
 
 // a wrapper for choice definitions, construct with `clags_choices`
 typedef struct{
@@ -341,11 +345,11 @@ typedef struct{
 } clags_choices_t;
 
 // the definition of a subcommand
-typedef struct{
+struct clags_subcmd_t{
     const char *name;        // the name and identifier of a subcommand
     const char *description; // help text describing the subcommand
     clags_config_t *config;  // the config that should be used to parse the subcommand's arguments
-} clags_subcmd_t;
+};
 
 // a wrapper for subcommand definitions, construct with `clags_subcmd`
 typedef struct{
@@ -466,24 +470,27 @@ struct clags_config_t{
 // predefined list constructors for different types
 // returns an empty `clags_list_t` with item_size set appropriately
 // use `clags_custom_list(size)` to define a list of custom element size
-#define clags__sized_list(size) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .item_size=(size)}
-#define clags_list()            clags__sized_list(sizeof(char*))
-#define clags_string_list()     clags__sized_list(sizeof(char*))
-#define clags_path_list()       clags__sized_list(sizeof(char*))
-#define clags_file_list()       clags__sized_list(sizeof(char*))
-#define clags_dir_list()        clags__sized_list(sizeof(char*))
-#define clags_custom_list(size) clags__sized_list(size)
-#define clags_bool_list()       clags__sized_list(sizeof(bool))
-#define clags_int8_list()       clags__sized_list(sizeof(int8_t))
-#define clags_uint8_list()      clags__sized_list(sizeof(uint8_t))
-#define clags_int32_list()      clags__sized_list(sizeof(int32_t))
-#define clags_uint32_list()     clags__sized_list(sizeof(uint32_t))
-#define clags_int64_list()      clags__sized_list(sizeof(int64_t))
-#define clags_uint64_list()     clags__sized_list(sizeof(uint64_t))
-#define clags_double_list()     clags__sized_list(sizeof(double))
-#define clags_size_list()       clags__sized_list(sizeof(clags_fsize_t))
-#define clags_time_list()       clags__sized_list(sizeof(clags_time_t))
-#define clags_choice_list()     clags__sized_list(sizeof(clags_choice_t*))
+#define clags__typed_list(vtype, vsize, cset) (clags_list_t) {.items=NULL, .count=0, .capacity=0, .value_type=(vtype), .item_size=(vsize), .custom_size_set=(cset)}
+#define clags_list(type)        clags__typed_list((type), 0, false) // cannot be used with `Clags_Custom`
+#define clags_custom_list(size) clags__typed_list(Clags_Custom, (size), true)
+
+// other explicit list initializers
+#define clags_string_list()     clags_list(Clags_String)
+#define clags_path_list()       clags_list(Clags_Path)
+#define clags_file_list()       clags_list(Clags_File)
+#define clags_dir_list()        clags_list(Clags_Dir)
+#define clags_bool_list()       clags_list(Clags_Bool)
+#define clags_int8_list()       clags_list(Clags_Int8)
+#define clags_uint8_list()      clags_list(Clags_UInt8)
+#define clags_int32_list()      clags_list(Clags_Int32)
+#define clags_uint32_list()     clags_list(Clags_UInt32)
+#define clags_int64_list()      clags_list(Clags_Int64)
+#define clags_uint64_list()     clags_list(Clags_UInt64)
+#define clags_double_list()     clags_list(Clags_Double)
+#define clags_size_list()       clags_list(Clags_Size)
+#define clags_timeS_list()      clags_list(Clags_TimeS)
+#define clags_timeNS_list()     clags_list(Clags_TimeNS)
+#define clags_choice_list()     clags_list(Clags_Choice)
 
 // macros for easy value extraction from lists
 // `value_type` must match the type stored within the list
@@ -706,14 +713,20 @@ void clags_sb_free(clags_sb_t *sb);
 */
 #ifdef CLAGS_IMPLEMENTATION
 
-#define X(type, func, name) [type] = func,
+#define X(type, func, name, vtype) [type] = func,
 static clags_verify_func_ptr_t clags__verify_funcs[] = {
     clags__types
 };
 #undef X
 
-#define X(type, func, name) [type] = name,
+#define X(type, func, name, vtype) [type] = name,
 static const char *clags__type_names[] = {
+    clags__types
+};
+#undef X
+
+#define X(type, func, name, vtype) [type] = sizeof(vtype),
+static size_t clags__type_sizes[] = {
     clags__types
 };
 #undef X
@@ -829,9 +842,8 @@ void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *s
 
 char* clags_config_duplicate_string(clags_config_t *config, const char *string)
 {
-    if (config == NULL) return (char*) string;
     char *duplicate;
-    if (config->options.duplicate_strings){
+    if (config && config->options.duplicate_strings){
         duplicate = clags__strdup(string);
         clags_assert(duplicate != NULL, "Out of memory!");
 
@@ -1245,6 +1257,27 @@ static inline void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
     }
 }
 
+bool clags__validate_list(clags_config_t *config, void *variable, clags_value_type_t value_type, const char *arg_name)
+{
+    clags_list_t *list = (clags_list_t*) variable;
+    if (list != NULL){
+
+        if (list->value_type != value_type){
+            clags_log(config, Clags_ConfigError, "list argument '%s' expects type '%s', but list was created as '%s'!", arg_name, clags__type_names[value_type], clags__type_names[list->value_type]);
+            return false;
+        }
+        if (list->value_type == Clags_Custom && !list->custom_size_set){
+            clags_log(config, Clags_ConfigError, "`clags_list` must not be used with type `Clags_Custom` for argument '%s'! Instead, use `clags_custom_list` and provide the size of the stored value!", arg_name);
+            return false;
+        }
+        if (list->item_size == 0){
+            // set item size of not initialized yet
+            list->item_size = clags__type_sizes[list->value_type];
+        }
+    }
+    return true;
+}
+
 bool clags__validate_positional(clags_config_t *config, clags_positional_t pos)
 {
     switch (pos.value_type){
@@ -1268,6 +1301,8 @@ bool clags__validate_positional(clags_config_t *config, clags_positional_t pos)
         } break;
         default: break;
     }
+    if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return false;
+
     return true;
 }
 
@@ -1305,6 +1340,7 @@ bool clags__validate_option(clags_config_t *config, clags_option_t opt)
         } break;
         default: break;
     }
+    if (opt.is_list && !clags__validate_list(config, opt.variable, opt.value_type, name)) return false;
     return true;
 }
 
@@ -1344,6 +1380,13 @@ bool clags__validate_config(clags_config_t *config)
     if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
         clags_log(config, Clags_ConfigError, "'.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!");
         clags_return_defer(false);
+    }
+    if (config->options.ignored_args){
+        clags_list_t *ignored_args = config->options.ignored_args;
+        if (ignored_args->value_type != Clags_String || ignored_args->item_size != sizeof(char*) || ignored_args->item_size != 0){
+            clags_log(config, Clags_ConfigError, "'.ignored_args' list is not correctly initialized as a string list!");
+            clags_return_defer(false);
+        }
     }
 
     // validate args
@@ -1527,6 +1570,7 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
         if (ignore_prefix && strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
             arguments_ignored = true;
             if (config->options.ignored_args){
+                if (config->options.ignored_args->item_size == 0) config->options.ignored_args->item_size = sizeof(char*);
                 (void) clags__append_to_list(config, Clags_String, NULL, arg+ignore_prefix_len, config->options.ignored_args, NULL);
             }
             continue;

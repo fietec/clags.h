@@ -11,13 +11,14 @@
 #include "../clags.h"
 
 bool help = false;
-// Use a typed initializer here if required
-// `clags_list` expects string values
-// Use `clags_string_list` for a more explicit alternative
-clags_list_t list = clags_list();
+
+// Create a list to store multiple values of a specific type
+// Use the generic `clags_list(TYPE)` macro for any supported type
+// or one of the explicit initializers, e.g. `clags_string_list()`
+clags_list_t list = clags_list(Clags_String);
 
 clags_arg_t args[] = {
-    // Set `.is_list` to tell the parser that the variable is a list storing values of type `.value_type`
+    // Set `.is_list` to tell the parser that the variable is a list storing values of type `.value_type`, `Clags_String` is default
     clags_positional(&list, "strings", "the strings to print", .is_list=true),
     clags_flag_help(&help),
 };

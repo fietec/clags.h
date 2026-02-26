@@ -10,13 +10,11 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-clags_list_t string_list = clags_list();
-
-// Lists can also be typed
-clags_list_t int_list = clags_int32_list();
-clags_list_t file_list = clags_file_list();
-clags_list_t extra_list = clags_string_list();
-clags_list_t ignored_list = clags_string_list();
+clags_list_t string_list = clags_list(Clags_String);
+clags_list_t int_list = clags_list(Clags_Int32);
+clags_list_t file_list = clags_list(Clags_File);
+clags_list_t extra_list = clags_list(Clags_String);
+clags_list_t ignored_list = clags_list(Clags_String);
 
 bool help = false;
 

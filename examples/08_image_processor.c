@@ -69,8 +69,8 @@ clags_config_t resize_config = clags_config_with_options(resize_args, options);
 
 /* Tag subcommand config */
 
-clags_list_t tag_images = clags_list();
-clags_list_t tag_values = clags_list();
+clags_list_t tag_images = clags_list(Clags_File);
+clags_list_t tag_values = clags_list(Clags_String);
 
 bool tag_overwrite = false;
 

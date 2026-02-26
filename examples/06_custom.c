@@ -31,7 +31,7 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
     return false;
 }
 
-// For custom list it is mandatory to provide the size of the stored values
+// For custom types, use `clags_custom_list(SIZE)` instead of `clags_list(Clags_Custom)` and provide the size of the stored values
 clags_list_t list = clags_custom_list(sizeof(char*));
 bool help = false;
 
