@@ -313,6 +313,12 @@ typedef enum {
     Clags_CallbackFlag,   // invokes a user-provided callback function each time the flag occurs; variable type: clags_flag_callback_func_t
 } clags_flag_type_t;
 
+typedef enum {
+    Clags_Path_Missing,
+    Clags_Path_File,
+    Clags_Path_Dir,
+} clags_path_type_t;
+
 // the definition of clags's string builder
 typedef struct {
     char *items;
@@ -685,6 +691,17 @@ void clags_list_free(clags_list_t *list);
 */
 const char* clags_error_description(clags_error_t error);
 
+/*
+  Return the type of a path.
+
+  Arguments:
+    - path            : the path to check
+
+  Returns:
+    clags_path_type_t : the type of the provided path
+*/
+clags_path_type_t clags_path_type(const char *path);
+
 /* Logging */
 
 /*
@@ -860,6 +877,14 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
         duplicate = (char*) string;
     }
     return duplicate;
+}
+
+clags_path_type_t clags_path_type(const char *path)
+{
+    struct stat attrs;
+    if (stat(path, &attrs) == -1) return Clags_Path_Missing;
+    if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
+    return Clags_Path_File;
 }
 
 bool clags__verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
@@ -1043,8 +1068,8 @@ bool clags__verify_choice(clags_config_t *config, const char *arg_name, const ch
 bool clags__verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    struct stat attr;
-    if (stat(arg, &attr) == -1){
+    clags_path_type_t type = clags_path_type(arg);
+    if (type == Clags_Path_Missing){
         clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
@@ -1055,33 +1080,41 @@ bool clags__verify_path(clags_config_t *config, const char *arg_name, const char
 bool clags__verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    struct stat attr;
-    if (stat(arg, &attr) == -1){
-        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
-        return false;
+    clags_path_type_t type = clags_path_type(arg);
+    switch (type){
+        case Clags_Path_Missing:{
+            clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
+            return false;
+        } break;
+        case Clags_Path_File:{
+            if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
+            return true;
+        }
+        default:{
+            clags_log(config, Clags_Error, "Path for arguments '%s' is not a file: '%s'!", arg_name, arg);
+            return false;
+        }
     }
-    if (!S_ISREG(attr.st_mode)){
-        clags_log(config, Clags_Error, "Path for arguments '%s' is not a file: '%s'!", arg_name, arg);
-        return false;
-    }
-    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
-    return true;
 }
 
 bool clags__verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    struct stat attr;
-    if (stat(arg, &attr) == -1){
-        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
-        return false;
+    clags_path_type_t type = clags_path_type(arg);
+    switch (type){
+        case Clags_Path_Missing:{
+            clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
+            return false;
+        } break;
+        case Clags_Path_Dir:{
+            if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
+            return true;
+        }
+        default:{
+            clags_log(config, Clags_Error, "Path for arguments '%s' is not a dir: '%s'!", arg_name, arg);
+            return false;
+        }
     }
-    if (!S_ISDIR(attr.st_mode)){
-        clags_log(config, Clags_Error, "Path for arguments '%s' is not a dir: '%s'!", arg_name, arg);
-        return false;
-    }
-    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
-    return true;
 }
 
 bool clags__verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
@@ -1383,7 +1416,7 @@ bool clags__validate_config(clags_config_t *config)
     }
     if (config->options.ignored_args){
         clags_list_t *ignored_args = config->options.ignored_args;
-        if (ignored_args->value_type != Clags_String || ignored_args->item_size != sizeof(char*) || ignored_args->item_size != 0){
+        if (ignored_args->value_type != Clags_String || !(ignored_args->item_size == sizeof(char*) || ignored_args->item_size == 0)){
             clags_log(config, Clags_ConfigError, "'.ignored_args' list is not correctly initialized as a string list!");
             clags_return_defer(false);
         }
