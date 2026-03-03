@@ -149,7 +149,7 @@ void test_positional() {
 
 // 6. Positional list
 void test_positional_list() {
-    clags_list_t files = clags_list();
+    clags_list_t files = clags_list(Clags_String);
 
     clags_config_t config = {
         .args = (clags_arg_t[]){
