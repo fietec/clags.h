@@ -313,10 +313,12 @@ typedef enum {
     Clags_CallbackFlag,   // invokes a user-provided callback function each time the flag occurs; variable type: clags_flag_callback_func_t
 } clags_flag_type_t;
 
+// all available path types
+// Note: these are NOT value types but only used internally and together with the `clags_path_type` function
 typedef enum {
-    Clags_Path_Missing,
-    Clags_Path_File,
-    Clags_Path_Dir,
+    Clags_Path_Missing,   // path does not exist
+    Clags_Path_Dir,       // existing directory
+    Clags_Path_File,      // existing file
 } clags_path_type_t;
 
 // the definition of clags's string builder
