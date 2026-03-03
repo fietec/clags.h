@@ -1502,10 +1502,10 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
 void clags__choice_usage(clags_choices_t *choices, bool is_list)
 {
     if (!choices->print_no_details || choices->count >= 6){
-        printf(" (%s%s)\n        Choices%s:\n", clags__type_names[Clags_Choice], is_list?"[]":"", choices->case_insensitive? " (case-insensitive)" : "");
+        printf(" (%s%s)\n        Choices%s:", clags__type_names[Clags_Choice], is_list?"[]":"", choices->case_insensitive? " (case-insensitive)" : "");
         for (size_t j=0; j<choices->count; ++j){
             clags_choice_t choice = choices->items[j];
-            printf("          - %*s : %s\n", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
+            printf("\n          - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
         }
     } else{
         printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
