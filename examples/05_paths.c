@@ -20,7 +20,7 @@ clags_arg_t args[] = {
     // Force the provided string to be a valid path to a file
     clags_positional(&input_file, "input_file", "the input file", .value_type=Clags_File),
 
-    // Verify that the provided string is a valid path, either to a dir or file
+    // Verify that the provided string is a valid path, no matter whether regular file, dir or other
     clags_option('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path),
     // Verify a size string (like '1.4MB', '10B', '10') and convert to the number of bytes in `clags_fsize_t`
     clags_option('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
@@ -39,6 +39,10 @@ int main(int argc, char **argv)
         clags_usage(argv[0], &config);
         return 0;
     }
-    printf("input: %s, size: %"PRIu64", output: %s\n", input_file, size, output_file);
+    // Since `output_file` was only checked for existance, you don't know of what type the path is
+    clags_path_type_t type = clags_path_type(output_file);
+    const char *type_name = clags_path_type_name(type);
+
+    printf("input: %s, size: %"PRIu64", output: %s (%s)\n", input_file, size, output_file, type_name);
     return 0;
 }

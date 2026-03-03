@@ -290,6 +290,14 @@ clags_verify_func_t clags__verify_time_ns;
     X(Clags_Error_TooManyArguments, "too many positional arguments provided"                  ) \
     X(Clags_Error_TooFewArguments,  "required positional arguments missing"                   ) \
 
+// the definition of all path types
+// Note: these are NOT value types but only used internally and together with the `clags_path_type` function
+#define clags__path_types                                                 \
+    X(Clags_Path_Missing, "missing" ) /* path does not exist           */ \
+    X(Clags_Path_Dir,     "dir"     ) /* existing directory            */ \
+    X(Clags_Path_Reg,     "file"    ) /* existing regular file         */ \
+    X(Clags_Path_Other,   "other"   ) /* existing file of unknown type */ \
+
 // an auto-generated enum of all supported value types
 #define X(type, func, name, vtype) type,
 typedef enum{
@@ -304,6 +312,12 @@ typedef enum{
 } clags_error_t;
 #undef X
 
+#define X(type, desc) type,
+typedef enum{
+    clags__path_types
+} clags_path_type_t;
+#undef X
+
 // all available flag types
 // if a flag's `type` is not explicitly set, `Clags_BoolFlag` is used by default
 typedef enum {
@@ -312,14 +326,6 @@ typedef enum {
     Clags_CountFlag,      // tracks how many times the flag was encountered; variable type: size_t
     Clags_CallbackFlag,   // invokes a user-provided callback function each time the flag occurs; variable type: clags_flag_callback_func_t
 } clags_flag_type_t;
-
-// all available path types
-// Note: these are NOT value types but only used internally and together with the `clags_path_type` function
-typedef enum {
-    Clags_Path_Missing,   // path does not exist
-    Clags_Path_Dir,       // existing directory
-    Clags_Path_File,      // existing file
-} clags_path_type_t;
 
 // the definition of clags's string builder
 typedef struct {
@@ -703,9 +709,21 @@ const char* clags_error_description(clags_error_t error);
     - path            : the path to check
 
   Returns:
-    clags_path_type_t : the type of the provided path
+    clags_path_type_t : the type of the provided path. See `clags__path_types` for a list of all available types.
 */
 clags_path_type_t clags_path_type(const char *path);
+
+/*
+  Return the name of the provided path type.
+
+  Arguments:
+    - error         : the path type
+
+  Returns:
+    const char*     : the name of the provided type
+*/
+const char* clags_path_type_name(clags_path_type_t type);
+
 
 /* Logging */
 
@@ -889,7 +907,8 @@ clags_path_type_t clags_path_type(const char *path)
     struct stat attrs;
     if (stat(path, &attrs) == -1) return Clags_Path_Missing;
     if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
-    return Clags_Path_File;
+    if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
+    return Clags_Path_Other;
 }
 
 bool clags__verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
@@ -1091,7 +1110,7 @@ bool clags__verify_file(clags_config_t *config, const char *arg_name, const char
             clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
             return false;
         } break;
-        case Clags_Path_File:{
+        case Clags_Path_Reg:{
             if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
             return true;
         }
@@ -2016,10 +2035,20 @@ void clags_config_free(clags_config_t *config)
 const char* clags_error_description(clags_error_t error)
 {
     switch(error){
-#define X(type, desc) case type: return desc;
+#define X(type, desc) case (type): return (desc);
         clags__errors
 #undef X
         default: return "unknown error";
+    }
+}
+
+const char* clags_path_type_name(clags_path_type_t type)
+{
+    switch (type){
+#define X(type, name) case (type): return (name);
+        clags__path_types
+#undef X
+        default: return "unknown file type";
     }
 }
 
