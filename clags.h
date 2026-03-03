@@ -328,10 +328,13 @@ typedef struct {
 
 // the definition of a "generic" list
 typedef struct{
+    // the fields of a common dynamic array
     void *items;
-    size_t item_size;  // set by the appropiate `clags_list_<type>` macro
     size_t count;
     size_t capacity;
+
+    // the fields set by the `clags_list` macros
+    size_t item_size;
     clags_value_type_t value_type;
     bool custom_size_set;
 } clags_list_t;
