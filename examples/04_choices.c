@@ -14,7 +14,7 @@
 
 char *input = NULL;
 char *algorithm = NULL;
-char *output = "output.pdf";
+char *output = NULL;
 bool warnings = false;
 bool help = false;
 
@@ -36,11 +36,11 @@ clags_choice_t *choice = NULL;
 clags_arg_t args[] = {
     clags_positional(&input, "input_file", "the input file"),
 
-    clags_option('o', "output", &output, "FILE", "the output file"),
+    clags_option('o', "output", &output, "FILE", "the output file", .default_input="output.pdf"),
 
     // With `.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing
     clags_option('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .choices=&choices, .default_input="LIFO"),
-    clags_option('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8),
+    clags_option('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8, .default_input="100"),
 
     clags_flag('w', NULL, &warnings, "print warnings"),
     clags_flag_help(&help),

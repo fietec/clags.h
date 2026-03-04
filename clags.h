@@ -400,7 +400,7 @@ typedef struct{
     const char *description;               // help text describing the option
     // options
     clags_value_type_t value_type;         // type of the option's value. See `clags__types` for a list of all types
-    const char* default_input;             // the default fallback value if the option is not provided
+    const char* default_input;             // fallback string parsed according to the argument's value_type if the user does not provide a value
     bool is_list;                          // if true, each occurrence appends one value to a clags_list_t
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`

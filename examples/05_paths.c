@@ -11,8 +11,8 @@
 
 const char *input_file = NULL;
 // `clags_fsize_t` is just a typedef of uint64_t
-clags_fsize_t size = 1000;
-const char *output_file = "a.out";
+clags_fsize_t size = 0;
+const char *output_file = NULL;
 bool warnings = false;
 bool help = false;
 
@@ -21,9 +21,9 @@ clags_arg_t args[] = {
     clags_positional(&input_file, "input_file", "the input file", .value_type=Clags_File),
 
     // Verify that the provided string is a valid path, no matter whether regular file, dir or other
-    clags_option('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path),
+    clags_option('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path, .default_input="a.out"),
     // Verify a size string (like '1.4MB', '10B', '10') and convert to the number of bytes in `clags_fsize_t`
-    clags_option('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size),
+    clags_option('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size, .default_input="1KB"),
     clags_flag_help(&help),
 };
 
