@@ -7,6 +7,7 @@ A simple declarative command line argument parser, written in C.
 - Choice arguments: restrict values to a fixed set (like an enum)
 - Custom parsing functions for user-defined types
 - Native recursive subcommands
+- Option arguments with default values
 
 ## How to use
 `clags.h` is an stb-style library, which means a single header file
@@ -24,7 +25,7 @@ You can compile the library with any `C99+` compiler. No further dependencies ar
 
 // Declare argument variables with optional default values
 const char *input_file = NULL;
-const char *output_file = "a.out";
+const char *output_file = NULL;
 bool warnings = false;
 bool help = false;
 
@@ -35,7 +36,7 @@ clags_arg_t args[] = {
     
     // Option arguments support both short and long flags
     // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
-    clags_option('o', "output", &output_file, "FILE", "the output file"),
+    clags_option('o', "output", &output_file, "FILE", "the output file", .default_input="a.out"),
 
     // Use flags to set boolean values on occurrence
     // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
@@ -73,7 +74,7 @@ Usage: ./example [OPTIONS] [FLAGS] <input_file>
   Arguments:
     input_file                       : the input file
   Options:
-    -o, --output(=)FILE              : the output file
+    -o, --output(=)FILE              : the output file (default: a.out)
   Flags:
     -w, --warnings                   : print warnings
     -h, --help                       : print this help dialog and exit
