@@ -1,5 +1,20 @@
 # Changelog
 
+## [v2.1.0] - 04.03.2026
+
+### Added
+- support for specifying default input values for arguments via the `.default_input` field
+  - default inputs are parsed according to the argument’s `value_type`
+  - it is the caller’s responsibility to ensure the default string represents a valid value
+  - default inputs are **not supported** for option lists
+- added documentation and example usage for `.default_input`
+
+### Changes
+- improved error messages related to default input parsing
+- removed generic error message for custom verifiers
+
+---
+
 ## [v2.0.0] - 03.03.2026
 
 ### Breaking Changes

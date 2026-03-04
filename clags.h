@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 2.0.0
+  Version: 2.1.0
 
   MIT License
 
@@ -400,6 +400,7 @@ typedef struct{
     const char *description;               // help text describing the option
     // options
     clags_value_type_t value_type;         // type of the option's value. See `clags__types` for a list of all types
+    const char* default_input;             // the default fallback value if the option is not provided
     bool is_list;                          // if true, each occurrence appends one value to a clags_list_t
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
@@ -1255,11 +1256,7 @@ bool clags__verify_subcmd(clags_config_t *config, const char *arg_name, const ch
 bool clags__verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) data;
-    if (!value_func(config, arg_name, (char*)arg, pvalue)) {
-        clags_log(config, Clags_Error, "Value for argument '%s' does not match custom criteria: '%s'!", arg_name, arg);
-        return false;
-    }
-    return true;
+    return value_func(config, arg_name, (char*) arg, pvalue);
 }
 
 static inline bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
@@ -1398,6 +1395,19 @@ bool clags__validate_option(clags_config_t *config, clags_option_t opt)
         default: break;
     }
     if (opt.is_list && !clags__validate_list(config, opt.variable, opt.value_type, name)) return false;
+
+    if (opt.default_input){
+        // verify and write default value
+        if (opt.is_list){
+            clags_log(config, Clags_ConfigError, "default values are not supported for option lists. Argument '%s' must be initialized via user input only.", name);
+            return false;
+        }
+        if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt._data, opt.is_list)){
+            clags_log(config, Clags_ConfigError, "invalid default value for argument '%s'!", name);
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1523,10 +1533,12 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
     }
 }
 
-void clags__choice_usage(clags_choices_t *choices, bool is_list)
+void clags__choice_usage(clags_choices_t *choices, bool is_list, const char *default_value)
 {
     if (!choices->print_no_details || choices->count >= 6){
-        printf(" (%s%s)\n        Choices%s:", clags__type_names[Clags_Choice], is_list?"[]":"", choices->case_insensitive? " (case-insensitive)" : "");
+        printf(" (%s%s)", clags__type_names[Clags_Choice], is_list?"[]":"");
+        if (default_value) printf(" (default: %s)", default_value);
+        printf("\n        Choices%s:", choices->case_insensitive? " (case-insensitive)" : "");
         for (size_t j=0; j<choices->count; ++j){
             clags_choice_t choice = choices->items[j];
             printf("\n          - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
@@ -1537,6 +1549,7 @@ void clags__choice_usage(clags_choices_t *choices, bool is_list)
             printf("%s%s", j>0?" | ":" ", choices->items[j].value);
         }
         printf(")");
+        if (default_value) printf(" (default: %s)", default_value);
     }
 }
 
@@ -1549,15 +1562,16 @@ void clags__subcmd_usage(clags_subcmds_t *subcmds)
     }
 }
 
-void clags__type_usage(clags_value_type_t type, void *data, bool is_list)
+void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const char *default_value)
 {
     switch (type){
         case Clags_Choice:{
-            clags__choice_usage((clags_choices_t *)data, is_list);
-        }break;
+            clags__choice_usage((clags_choices_t *)data, is_list, default_value);
+        }return;
         case Clags_Subcmd:{
             clags__subcmd_usage((clags_subcmds_t*) data);
-        }break;
+        }return;
+        case Clags_Custom:
         case Clags_String:{
             if (is_list) printf(" ([])");
         }break;
@@ -1565,7 +1579,7 @@ void clags__type_usage(clags_value_type_t type, void *data, bool is_list)
             printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
         }
     }
-    printf("\n");
+    if (default_value) printf(" (default: %s)", default_value);
 }
 
 void clags__subcommand_path_usage(const char *program_name, clags_config_t *config)
@@ -1931,7 +1945,8 @@ void clags_usage(const char *program_name, clags_config_t *config)
             if (pos.optional) snprintf(optional_hint, sizeof(optional_hint), "(optional)");
             snprintf(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE, "%s %s", pos.arg_name, optional_hint);
             printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, pos.description);
-            clags__type_usage(pos.value_type, pos._data, pos.is_list);
+            clags__type_usage(pos.value_type, pos._data, pos.is_list, NULL);
+            printf("\n");
         }
     }
 
@@ -1942,7 +1957,8 @@ void clags_usage(const char *program_name, clags_config_t *config)
             clags__format_lhs(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE,
                               opt.short_flag, opt.long_flag, opt.arg_name,  &lines_cut_off);
             printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, opt.description);
-            clags__type_usage(opt.value_type, opt._data, opt.is_list);
+            clags__type_usage(opt.value_type, opt._data, opt.is_list, opt.default_input);
+            printf("\n");
         }
     }
 

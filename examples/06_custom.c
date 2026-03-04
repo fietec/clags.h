@@ -27,7 +27,7 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
         return true;
     }
     // `arg` does not match criteria, return failure which will also fail the parser
-    clags_log(config, Clags_Error, "String is not lower case for argument '%s': '%s'!\n", arg_name, arg);
+    clags_log(config, Clags_Error, "String is not lower case for argument '%s': '%s'!", arg_name, arg);
     return false;
 }
 

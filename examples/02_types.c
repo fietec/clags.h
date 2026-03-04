@@ -19,16 +19,26 @@ bool version = false;
 
 clags_arg_t args[] = {
     clags_positional(&input_file, "input_file", "the file to read"),
-    clags_option('o', "output", &output_file, "FILE", "the file to write"),
+    // You can provide a string that will be used as the argument's value if the user
+    // does not supply it on the command line. This is specified via the `.default_input` field.
+    clags_option('o', "output", &output_file, "FILE", "the file to write", .default_input="a.out"),
 
-    // to add type verification to an argument, simply set the `value_type` field
-    // for a list of all available types, see `clags__types` in clags.h
-    // Note: it is the user's responsibility to provide a variable pointer matching the type specified
+    // To add type verification to an argument, simply set the `value_type` field
+    // For a list of all available types, see `clags__types` in clags.h
+    // Notes:
+    //  - It is the user's responsibility to provide a variable pointer matching the type specified
     //       so here, &quality is expected to be uint8_t*
-    clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8),
+    //  - The default input is always a string and will be parsed according to the argument's
+    //    `value_type` (e.g., converted to uint8_t, double, etc.).
+    //  - For lists, default inputs are **not supported**, because each list element is
+    //    appended individually from user input.
+    //  - It is the caller's responsibility to ensure the string represents a valid value
+    //    for the argument's type, as it will be processed through the same verification as
+    //    user-provided values.
+    clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8, .default_input="50"),
     clags_flag('w', "warnings", &warnings, "print warnings"),
     
-    // this is how you create a flag that exits the parsing on occurrence, just like with `clags_flag_help`
+    // This is how you create a flag that exits the parsing on occurrence, just like with `clags_flag_help`
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help(&help),
 };
