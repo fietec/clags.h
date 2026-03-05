@@ -136,21 +136,20 @@
 
   Value Type    | Syntax / Examples           | Notes
   --------------------------------------------------------------------------
-  string        | "hello", world              | Any sequence of characters. Stored as `char*`.
-  bool          | true, false, yes, N         | Case-insensitive. Stored as `bool`.
+  string        | "hello", world              | Any sequence of characters.
+  bool          | true, false, yes, N         | Case-insensitive.
 
-  int8/uint8/   | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
-  int32/uint32/                               | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
-  int64/uint64                                | Values must fit in the type’s bounds. Stored as the respective `int<size>_t`.
-
-  double        | 3.14, -0.001, 2e10          | Floating-point value. Stored as `double`.
-  choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive by default, can be disabled. Stored as `clags_choice_t*`.
-  path          | /home/user/docs, C:\Windows | Any filesystem path. Stored as `char*`.
-  file          | /etc/passwd, myfile.txt     | Must be a regular file. Stored as `char*`.
-  dir           | /tmp, C:\Users              | Must be a directory. Stored as `char*`.
-  size          | 1024, 10KiB, 2MB            | Supports decimal and binary suffixes. Case-insensitive. Stored as `clags_fsize_t`.
-  time_s        | 10s, 5m, 2h                 | Time in seconds; supports s/m/h/d suffixes. Case-insensitive. Stored as `clags_time_t`.
-  time_ns       | 100ns, 1us, 5ms, 2s         | Time in nanoseconds; supports ns/us/ms/s/m/h/d suffixes. Case-insensitive. Stored as `clags_time_t`.
+  number        | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
+                                              | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
+                                              | Values must fit in the type’s bounds or the defined range.
+  double        | 3.14, -0.001, 2e10          | Floating-point value.
+  choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive by default, can be disabled.
+  path          | /home/user/docs, C:\Windows | Any filesystem path.
+  file          | /etc/passwd, myfile.txt     | Must be a regular file.
+  dir           | /tmp, C:\Users              | Must be a directory.
+  size          | 1024, 10KiB, 2MB            | Supports decimal and binary suffixes. Case-insensitive.
+  time_s        | 10s, 5m, 2h                 | Time in seconds; supports s/m/h/d suffixes. Case-insensitive.
+  time_ns       | 100ns, 1us, 5ms, 2s         | Time in nanoseconds; supports ns/us/ms/s/m/h/d suffixes. Case-insensitive.
   custom        | depends on user function    | Validation done via a custom function pointer.
 */
 
@@ -219,6 +218,7 @@
 #    define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK)
 #endif
 
+// log levels used by clags. Levels are ordered by priority: higher enum values indicate higher severity.
 typedef enum{
     Clags_Info,
     Clags_Warning,
@@ -376,6 +376,7 @@ typedef struct{
     size_t count;
 } clags_subcmds_t;
 
+// the definition of a range, both limits are inclusive
 typedef struct{
     int64_t min;
     int64_t max;
