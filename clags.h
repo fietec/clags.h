@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 2.1.0
+  Version: 2.1.1
 
   MIT License
 
@@ -1332,31 +1332,42 @@ bool clags__validate_list(clags_config_t *config, void *variable, clags_value_ty
     return true;
 }
 
-bool clags__validate_positional(clags_config_t *config, clags_positional_t pos)
+bool clags__validate_data_type(clags_config_t *config, clags_value_type_t type, void *data, const char *arg_name)
 {
-    switch (pos.value_type){
+    switch (type){
         case Clags_Subcmd:{
-            if (pos.subcmds == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", pos.arg_name);
+            if (data == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", arg_name);
                 return false;
+            }
+            if (((clags_subcmds_t*) data)->count == 0){
+                clags_log(config, Clags_ConfigWarning, "subcommand definition must contain at least one subcommand for argument '%s'!", arg_name);
             }
         } break;
         case Clags_Choice:{
-            if (pos.choices == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", pos.arg_name);
+            if (data == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", arg_name);
                 return false;
+            }
+            if (((clags_choices_t*) data)->count == 0){
+                clags_log(config, Clags_ConfigWarning, "choice definition must contain at least one choice for arguments '%s'!", arg_name);
             }
         } break;
         case Clags_Custom:{
-            if (pos.verify == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.verify` for custom verification!", pos.arg_name);
+            if (data == NULL){
+                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.verify` for custom verification!", arg_name);
                 return false;
             }
         } break;
         default: break;
     }
-    if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return false;
+    return true;
+}
 
+bool clags__validate_positional(clags_config_t *config, clags_positional_t pos)
+{
+    if (!clags__validate_data_type(config, pos.value_type, pos._data, pos.arg_name)) return false;
+    if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return false;
     return true;
 }
 
@@ -1375,25 +1386,11 @@ bool clags__validate_option(clags_config_t *config, clags_option_t opt)
                   "so including it in the config may cause incorrect parsing.",
                   opt.long_flag);
     }
-    switch (opt.value_type){
-        case Clags_Subcmd:{
-            clags_log(config, Clags_ConfigError, "option argument '%s' may not be a subcommand!", name);
-            return false;
-        } break;
-        case Clags_Choice:{
-            if (opt.choices == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", name);
-                return false;
-            }
-        } break;
-        case Clags_Custom:{
-            if (opt.verify == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.verify` for custom verification!", name);
-                return false;
-            }
-        } break;
-        default: break;
+    if (opt.value_type == Clags_Subcmd){
+        clags_log(config, Clags_ConfigError, "option argument '%s' may not be a subcommand!", name);
+        return false;
     }
+    if (!clags__validate_data_type(config, opt.value_type, opt._data, name)) return false;
     if (opt.is_list && !clags__validate_list(config, opt.variable, opt.value_type, name)) return false;
 
     if (opt.default_input){
@@ -1555,10 +1552,10 @@ void clags__choice_usage(clags_choices_t *choices, bool is_list, const char *def
 
 void clags__subcmd_usage(clags_subcmds_t *subcmds)
 {
-    printf(" (%s)\n      Subcommands:\n", clags__type_names[Clags_Subcmd]);
+    printf(" (%s)\n      Subcommands:", clags__type_names[Clags_Subcmd]);
     for (size_t i=0; i<subcmds->count; ++i){
         clags_subcmd_t subcmd = subcmds->items[i];
-        printf("        - %*s : %s\n", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
+        printf("\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
     }
 }
 
