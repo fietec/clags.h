@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.2.0] - 05.03.2026
+
+### Added
+- `Clags_Number` value type: allows specifying numbers with arbitrary ranges.
+  - Use `clags_range_t` and `.range` to define `min` and `max` values.
+
+---
+
 ## [v2.1.0] - 04.03.2026
 
 ### Added

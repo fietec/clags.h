@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 2.1.1
+  Version: 2.2.0
 
   MIT License
 
@@ -244,6 +244,7 @@ clags_verify_func_t clags__verify_string;
 clags_verify_func_t clags__verify_custom;
 clags_verify_func_t clags__verify_subcmd;
 clags_verify_func_t clags__verify_bool;
+clags_verify_func_t clags__verify_number;
 clags_verify_func_t clags__verify_int8;
 clags_verify_func_t clags__verify_uint8;
 clags_verify_func_t clags__verify_int32;
@@ -265,6 +266,7 @@ clags_verify_func_t clags__verify_time_ns;
     X(Clags_String, clags__verify_string,  "string",  char*           ) /* string value                                                      */ \
     X(Clags_Custom, clags__verify_custom,  "custom",  void*           ) /* custom type, defined via custom verification function             */ \
     X(Clags_Bool,   clags__verify_bool,    "bool",    bool            ) /* boolean value                                                     */ \
+    X(Clags_Number, clags__verify_number,  "number",  int64_t         ) /* a signed integer within user-defined limits                       */ \
     X(Clags_Int8,   clags__verify_int8,    "int8",    int8_t          ) /* signed 8-bit integer                                              */ \
     X(Clags_UInt8,  clags__verify_uint8,   "uint8",   uint8_t         ) /* unsigned 8-bit integer                                            */ \
     X(Clags_Int32,  clags__verify_int32,   "int32",   int32_t         ) /* signed 32-bit integer                                             */ \
@@ -374,6 +376,11 @@ typedef struct{
     size_t count;
 } clags_subcmds_t;
 
+typedef struct{
+    int64_t min;
+    int64_t max;
+} clags_range_t;
+
 // the definition of a positional argument, construct with `clags_positional`
 typedef struct{
     void *variable;                        // pointer to store the parsed value at; type must match `value_type`, or `clags_list_t` of that type if `is_list` is set
@@ -387,6 +394,7 @@ typedef struct{
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
         clags_subcmds_t *subcmds;          // pointer to subcommand definitions, only if `value_type` == `Clags_Subcmd`
+        clags_range_t *range;              // pointer to range definition, only if `value_type` == `Clags_Number`
         void *_data;                       // internal, do not touch
     };
 } clags_positional_t;
@@ -405,6 +413,7 @@ typedef struct{
     union{                                 // only one of these should be set
         clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
+        clags_range_t *range;              // pointer to range definition, only if `value_type` == `Clags_Number`
         void *_data;                       // internal, do not touch
     };
 } clags_option_t;
@@ -934,6 +943,32 @@ bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char
     return false;
 }
 
+bool clags__verify_number(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    clags_range_t range;
+    if (data != NULL){
+        range = *(clags_range_t*)data;
+    } else{
+        range = (clags_range_t){INT64_MIN, INT64_MAX};
+    }
+
+    char *endptr;
+    errno = 0;
+    long long value = strtoll(arg, &endptr, 0);
+
+    if (*endptr != '\0') {
+        clags_log(config, Clags_Error, "Invalid number value for argument '%s': '%s'!", arg_name, arg);
+        return false;
+    }
+    if (errno == ERANGE || value < range.min || value > range.max) {
+        clags_log(config, Clags_Error, "number out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", range.min, range.max, arg_name, arg);
+        return false;
+    }
+
+    if (pvalue) *(int64_t*)pvalue = (int64_t)value;
+    return true;
+}
+
 bool clags__verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
@@ -946,7 +981,7 @@ bool clags__verify_int8(clags_config_t *config, const char *arg_name, const char
         return false;
     }
     if (errno == ERANGE || value < INT8_MIN || value > INT8_MAX) {
-        clags_log(config, Clags_Error, "int8 value out of range (%"PRId8" to %"PRId8") for argument '%s': '%s'!", INT8_MIN, INT8_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "int8 out of range [%"PRId8"-%"PRId8"] for argument '%s': '%s'!", INT8_MIN, INT8_MAX, arg_name, arg);
         return false;
     }
 
@@ -966,7 +1001,7 @@ bool clags__verify_uint8(clags_config_t *config, const char *arg_name, const cha
         return false;
     }
     if (errno == ERANGE || value > UINT8_MAX || *arg == '-') {
-        clags_log(config, Clags_Error, "uint8 value out of range (0 to %"PRIu8") for argument '%s': '%s'!", UINT8_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "uint8 out of range [0-%"PRIu8"] for argument '%s': '%s'!", UINT8_MAX, arg_name, arg);
         return false;
     }
 
@@ -986,7 +1021,7 @@ bool clags__verify_int32(clags_config_t *config, const char *arg_name, const cha
         return false;
     }
     if (errno == ERANGE || value < INT32_MIN || value > INT32_MAX) {
-        clags_log(config, Clags_Error, "int32 value out of range (%"PRId32" to %"PRId32") for argument '%s': '%s'!", INT32_MIN, INT32_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "int32 out of range [%"PRId32"-%"PRId32"] for argument '%s': '%s'!", INT32_MIN, INT32_MAX, arg_name, arg);
         return false;
     }
 
@@ -1006,7 +1041,7 @@ bool clags__verify_uint32(clags_config_t *config, const char *arg_name, const ch
         return false;
     }
     if (errno == ERANGE || value > UINT32_MAX || *arg == '-') {
-        clags_log(config, Clags_Error, "uint32 value out of range (0 to %"PRIu32") for argument '%s': '%s'!", UINT32_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "uint32 out of range [0-%"PRIu32"] for argument '%s': '%s'!", UINT32_MAX, arg_name, arg);
         return false;
     }
 
@@ -1026,7 +1061,7 @@ bool clags__verify_int64(clags_config_t *config, const char *arg_name, const cha
         return false;
     }
     if (errno == ERANGE || value < INT64_MIN || value > INT64_MAX) {
-        clags_log(config, Clags_Error, "int64 value out of range (%"PRId64" to %"PRId64") for argument '%s': '%s'!", INT64_MIN, INT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "int64 out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", INT64_MIN, INT64_MAX, arg_name, arg);
         return false;
     }
 
@@ -1046,7 +1081,7 @@ bool clags__verify_uint64(clags_config_t *config, const char *arg_name, const ch
         return false;
     }
     if (errno == ERANGE || value > UINT64_MAX || *arg == '-') {
-        clags_log(config, Clags_Error, "uint64 value out of range (0 to %"PRIu64") for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
+        clags_log(config, Clags_Error, "uint64 out of range [0-%"PRIu64"] for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
 
@@ -1568,6 +1603,12 @@ void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const 
         case Clags_Subcmd:{
             clags__subcmd_usage((clags_subcmds_t*) data);
         }return;
+        case Clags_Number:{
+            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            clags_range_t *range = (clags_range_t*) data;
+            if (range) printf(", %"PRId64"-%"PRId64, range->min, range->max);
+            printf(")");
+        }break;
         case Clags_Custom:
         case Clags_String:{
             if (is_list) printf(" ([])");

@@ -11,11 +11,14 @@
 #include "../clags.h"
 
 char *input_file = NULL;
+int64_t compression = 0;
 char *output_file = "a.out";
 uint8_t quality = 100;
 bool help = false;
 bool warnings = false;
 bool version = false;
+
+clags_range_t compression_range = {0, 100};
 
 clags_arg_t args[] = {
     clags_positional(&input_file, "input_file", "the file to read"),
@@ -36,6 +39,10 @@ clags_arg_t args[] = {
     //    for the argument's type, as it will be processed through the same verification as
     //    user-provided values.
     clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8, .default_input="50"),
+
+    // Use `Clags_Number` together with the `range` field for custom number ranges
+    clags_option('c', "compression", &compression, "NUM", "compression value of the output file", .value_type=Clags_Number, .range=&compression_range, .default_input="0"),
+
     clags_flag('w', "warnings", &warnings, "print warnings"),
     
     // This is how you create a flag that exits the parsing on occurrence, just like with `clags_flag_help`
@@ -60,6 +67,6 @@ int main(int argc, char **argv)
         printf("02_types: v1.0.0\n");
         return 0;
     }
-    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Warnings: %d\n", input_file, output_file, quality, warnings);
+    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Compression Level: %"PRId64", Warnings: %d\n", input_file, output_file, quality, compression, warnings);
     return 0;
 }
