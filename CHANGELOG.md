@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.3.0] - 12.03.2026
+
+### Added
+- allow default input values for optional positional arguments
+
+---
+
 ## [v2.2.0] - 05.03.2026
 
 ### Added

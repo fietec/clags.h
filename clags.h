@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 2.2.0
+  Version: 2.3.0
 
   MIT License
 
@@ -389,6 +389,7 @@ typedef struct{
     const char *description;               // help text describing the positional argument
     // options
     clags_value_type_t value_type;         // type of the positional value. See `clags__types` for a list of all types
+    const char *default_input;             // fallback string parsed according to the argument's value_type if the user does not provide a value
     bool is_list;                          // if true, this positional consumes multiple values into a `clags_list_t` of the `value_type`
     bool optional;                         // if true, the positional argument is optional, meaning it may be omitted
     union{                                 // only one of these should be set
@@ -1404,6 +1405,21 @@ bool clags__validate_positional(clags_config_t *config, clags_positional_t pos)
 {
     if (!clags__validate_data_type(config, pos.value_type, pos._data, pos.arg_name)) return false;
     if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return false;
+    if (pos.default_input){
+        // verify and write default value
+        if (!pos.optional){
+            clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
+        }
+        if (pos.is_list){
+            clags_log(config, Clags_ConfigError, "default values are not supported for lists. Argument '%s' must be initialized via user input only.", pos.arg_name);
+            return false;
+        }
+        if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos._data, pos.is_list)){
+            clags_log(config, Clags_ConfigError, "invalid default value for argument '%s'!", pos.arg_name);
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1984,7 +2000,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
             if (pos.optional) snprintf(optional_hint, sizeof(optional_hint), "(optional)");
             snprintf(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE, "%s %s", pos.arg_name, optional_hint);
             printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, pos.description);
-            clags__type_usage(pos.value_type, pos._data, pos.is_list, NULL);
+            clags__type_usage(pos.value_type, pos._data, pos.is_list, pos.default_input);
             printf("\n");
         }
     }
