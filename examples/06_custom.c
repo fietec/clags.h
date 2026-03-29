@@ -9,14 +9,16 @@
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
 
-// A custom verification function of type `clags_custom_verify_func_t`
+// A custom verification function of type `clags_verify_func_t`
 // Arguments provided by the parser:
 //   - `config`   : the config currently being parsed, mostly useful for logging
 //   - `arg_name` : the name of the argument currently being parsed, useful for logging
 //   - `arg`      : the argument currently being parsed
 //   - `variable` : the pointer of the variable to set
-bool verify_lower_case(clags_config_t *config, const char *arg_name, const char *arg, void *variable)
+//   - `data`     : addtional custom data
+bool verify_lower_case(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
+    (void) data;
     // Only accept lower case strings
     if (arg && islower(*arg)){
         // Set the variable to the current arg since we are operating on strings here
@@ -31,13 +33,15 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
     return false;
 }
 
+clags_custom_t custom_lower_case_type = {"lowercase", verify_lower_case, NULL};
+
 // For custom types, use `clags_custom_list(SIZE)` instead of `clags_list(Clags_Custom)` and provide the size of the stored values
 clags_list_t list = clags_custom_list(sizeof(char*));
 bool help = false;
 
 clags_arg_t args[] = {
-    // Set `.verify` to the custom verfication function
-    clags_positional(&list, "values", "lower case strings", .value_type=Clags_Custom, .verify=verify_lower_case, .is_list=true),
+    // Set `.custom` to the custom value type
+    clags_positional(&list, "values", "lower case strings", .value_type=Clags_Custom, .custom=&custom_lower_case_type, .is_list=true),
     clags_flag_help(&help),
 };
 

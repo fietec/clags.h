@@ -1,7 +1,7 @@
 /*
   clags.h - A simple declarative command line arguments parser for C
 
-  Version: 2.3.0
+  Version: 3.0.0
 
   MIT License
 
@@ -181,17 +181,36 @@
 #endif // _WIN32
 
 // memory allocation functions; can be overridden
-#ifndef CLAGS_FREE
-#define CLAGS_FREE free       // default free function
-#endif // CLAGS_FREE
-
 #ifndef CLAGS_CALLOC
-#define CLAGS_CALLOC calloc   // default calloc function
-#endif // CLAGS_CALLOC
+/*
+    CLAGS_CALLOC: Allocate zero-initialized memory for 'count' elements of 'size' bytes each.
+    Parameters:
+        count - the number of elements to allocate
+        size  - the size in bytes of one element
+*/
+#define CLAGS_CALLOC(count, size) calloc(count, size)
+#endif
 
 #ifndef CLAGS_REALLOC
-#define CLAGS_REALLOC realloc // default realloc function
-#endif // CLAGS_REALLOC
+/*
+    CLAGS_REALLOC: Resize an existing memory block.
+    Parameters:
+        ptr   - pointer to the existing memory block (may be NULL)
+        oldsz - previous size of the allocation in bytes (default realloc ignores this)
+        newsz - new requested size in bytes
+*/
+#define CLAGS_REALLOC(ptr, oldsz, newsz) realloc(ptr, newsz)
+#endif
+
+#ifndef CLAGS_FREE
+/*
+    CLAGS_FREE: Free a memory block.
+    Parameters:
+        ptr - pointer to memory to free
+        sz  - size of the allocation in bytes (default free ignores this)
+*/
+#define CLAGS_FREE(ptr, sz) free(ptr)
+#endif
 
 // the initial capacity of lists
 #ifndef CLAGS_LIST_INIT_CAPACITY
@@ -231,34 +250,33 @@ typedef enum{
 typedef struct clags_config_t clags_config_t;
 typedef struct clags_choice_t clags_choice_t;
 typedef struct clags_subcmd_t clags_subcmd_t;
-typedef bool (*clags_custom_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable);       // the function type for custom verifiers
-typedef bool (clags_verify_func_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *verify);
-typedef clags_verify_func_t *clags_verify_func_ptr_t;
+typedef bool (clags_verify_func_def_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data);
+typedef clags_verify_func_def_t *clags_verify_func_t;
 typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);                                  // the function type of custom log handlers
 typedef void (*clags_callback_func_t)(clags_config_t *config);                                                                   // the function type of callback functions
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
 // all available value verifiers
-clags_verify_func_t clags__verify_string;
-clags_verify_func_t clags__verify_custom;
-clags_verify_func_t clags__verify_subcmd;
-clags_verify_func_t clags__verify_bool;
-clags_verify_func_t clags__verify_number;
-clags_verify_func_t clags__verify_int8;
-clags_verify_func_t clags__verify_uint8;
-clags_verify_func_t clags__verify_int32;
-clags_verify_func_t clags__verify_uint32;
-clags_verify_func_t clags__verify_int64;
-clags_verify_func_t clags__verify_uint64;
-clags_verify_func_t clags__verify_double;
-clags_verify_func_t clags__verify_choice;
-clags_verify_func_t clags__verify_path;
-clags_verify_func_t clags__verify_file;
-clags_verify_func_t clags__verify_dir;
-clags_verify_func_t clags__verify_size;
-clags_verify_func_t clags__verify_time_s;
-clags_verify_func_t clags__verify_time_ns;
+clags_verify_func_def_t clags__verify_string;
+clags_verify_func_def_t clags__verify_custom;
+clags_verify_func_def_t clags__verify_subcmd;
+clags_verify_func_def_t clags__verify_bool;
+clags_verify_func_def_t clags__verify_number;
+clags_verify_func_def_t clags__verify_int8;
+clags_verify_func_def_t clags__verify_uint8;
+clags_verify_func_def_t clags__verify_int32;
+clags_verify_func_def_t clags__verify_uint32;
+clags_verify_func_def_t clags__verify_int64;
+clags_verify_func_def_t clags__verify_uint64;
+clags_verify_func_def_t clags__verify_double;
+clags_verify_func_def_t clags__verify_choice;
+clags_verify_func_def_t clags__verify_path;
+clags_verify_func_def_t clags__verify_file;
+clags_verify_func_def_t clags__verify_dir;
+clags_verify_func_def_t clags__verify_size;
+clags_verify_func_def_t clags__verify_time_s;
+clags_verify_func_def_t clags__verify_time_ns;
 
 // the definition of all supported value types. Format: (enum value, verification function, type name, variable type)
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
@@ -382,6 +400,13 @@ typedef struct{
     int64_t max;
 } clags_range_t;
 
+// the definition of a custom value type
+typedef struct{
+    const char *name;
+    clags_verify_func_t func;
+    void *data;                            // additional custom data to be passed to the custom verification function
+} clags_custom_t;
+
 // the definition of a positional argument, construct with `clags_positional`
 typedef struct{
     void *variable;                        // pointer to store the parsed value at; type must match `value_type`, or `clags_list_t` of that type if `is_list` is set
@@ -393,7 +418,7 @@ typedef struct{
     bool is_list;                          // if true, this positional consumes multiple values into a `clags_list_t` of the `value_type`
     bool optional;                         // if true, the positional argument is optional, meaning it may be omitted
     union{                                 // only one of these should be set
-        clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
+        clags_custom_t *custom;            // pointer to custom type definition, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
         clags_subcmds_t *subcmds;          // pointer to subcommand definitions, only if `value_type` == `Clags_Subcmd`
         clags_range_t *range;              // pointer to range definition, only if `value_type` == `Clags_Number`
@@ -413,7 +438,7 @@ typedef struct{
     const char* default_input;             // fallback string parsed according to the argument's value_type if the user does not provide a value
     bool is_list;                          // if true, each occurrence appends one value to a clags_list_t
     union{                                 // only one of these should be set
-        clags_custom_verify_func_t verify; // a custom verification function pointer, only if `value_type` == `Clags_Custom`
+        clags_custom_t *custom;            // pointer to custom type definition, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
         clags_range_t *range;              // pointer to range definition, only if `value_type` == `Clags_Number`
         void *_data;                       // internal, do not touch
@@ -462,7 +487,7 @@ typedef struct{
 
 // the available config options
 typedef struct{
-    const char *ignore_prefix;        // a custom prefix that instructs the parser to ignore rguments starting with this prefix
+    const char *ignore_prefix;        // a custom prefix that instructs the parser to ignore arguments starting with this prefix
     clags_list_t *ignored_args;       // append all ignored arguments to this list without the `ignore_prefix`
     const char *list_terminator;      // a custom list terminator that tells the parser that following positional arguments do no longer belong to the current list
     bool print_no_notes;              // do not print the `Notes` section in the usage
@@ -622,7 +647,7 @@ struct clags_config_t{
     - config        : pointer to a config with argument definitions and other options
 
   Returns:
-    clags_config_t* : pointer to the failed config. If parsing fails, the `.error` field
+    clags_config_t* : pointer to the failed config or `NULL` on success. If parsing fails, the `.error` field
                       will be set to indicate the type of the encountered error.
 */
 clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
@@ -766,7 +791,7 @@ void clags_sb_free(clags_sb_t *sb);
 #ifdef CLAGS_IMPLEMENTATION
 
 #define X(type, func, name, vtype) [type] = func,
-static clags_verify_func_ptr_t clags__verify_funcs[] = {
+static clags_verify_func_t clags__verify_funcs[] = {
     clags__types
 };
 #undef X
@@ -806,12 +831,17 @@ static inline char* clags__strchrnull(const char *string, char c)
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
 {
     if (sb->capacity >= capacity) return;
+    size_t old_capacity = sb->capacity;
     if (sb->capacity == 0) sb->capacity = CLAGS_LIST_INIT_CAPACITY;
     while (capacity > sb->capacity){
         sb->capacity *= 2;
     }
-    sb->items = CLAGS_REALLOC(sb->items, sb->capacity*sizeof(*sb->items));
+    size_t old_bytes = old_capacity * sizeof(*sb->items);
+    size_t new_bytes = sb->capacity * sizeof(*sb->items);
+    sb->items = CLAGS_REALLOC(sb->items, old_bytes, new_bytes);
     clags_assert(sb->items != NULL, "Out of memory!");
+    (void) old_bytes;
+    (void) old_capacity;
 }
 
 void clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
@@ -842,7 +872,7 @@ void clags_sb_append_null(clags_sb_t *sb)
 void clags_sb_free(clags_sb_t *sb)
 {
     if (!sb) return;
-    CLAGS_FREE(sb->items);
+    CLAGS_FREE(sb->items, sb->capacity*sizeof(*sb->items));
     sb->items = NULL;
     sb->count = sb->capacity = 0;
 }
@@ -903,9 +933,12 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
         if (allocs->item_size == 0) allocs->item_size = sizeof(char*);
         if (allocs->count >= allocs->capacity){
             size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
-            allocs->items = CLAGS_REALLOC(allocs->items, allocs->item_size*new_capacity);
+            size_t old_bytes = allocs->item_size*allocs->capacity;
+            size_t new_bytes = allocs->item_size*new_capacity;
+            allocs->items = CLAGS_REALLOC(allocs->items, old_bytes, new_bytes);
             clags_assert(allocs->items != NULL, "Out of memory!");
             allocs->capacity = new_capacity;
+            (void) old_bytes;
         }
         ((char**) allocs->items)[allocs->count++] = duplicate;
     } else{
@@ -1292,8 +1325,11 @@ bool clags__verify_subcmd(clags_config_t *config, const char *arg_name, const ch
 
 bool clags__verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    clags_custom_verify_func_t value_func = (clags_custom_verify_func_t) data;
-    return value_func(config, arg_name, (char*) arg, pvalue);
+    clags_custom_t *custom = (clags_custom_t*) data;
+    if (custom && custom->func){
+        return custom->func(config, arg_name, arg, pvalue, custom->data);
+    }
+    return false;
 }
 
 static inline bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
@@ -1302,9 +1338,12 @@ static inline bool clags__append_to_list(clags_config_t *config, clags_value_typ
     size_t item_size = list->item_size;
     if (list->count >= list->capacity){
         size_t new_capacity = list->capacity==0? CLAGS_LIST_INIT_CAPACITY:list->capacity*2;
-        list->items = CLAGS_REALLOC(list->items, new_capacity*item_size);
+        size_t old_bytes = list->capacity*item_size;
+        size_t new_bytes = new_capacity*item_size;
+        list->items = CLAGS_REALLOC(list->items, old_bytes, new_bytes);
         clags_assert(list->items != NULL, "Out of memory!");
         list->capacity = new_capacity;
+        (void) old_bytes;
     }
     char *ptr = (char*) list->items;
     if (clags__verify_funcs[value_type](config, arg_name, arg, ptr+item_size*list->count, data)){
@@ -1362,7 +1401,7 @@ bool clags__validate_list(clags_config_t *config, void *variable, clags_value_ty
             return false;
         }
         if (list->item_size == 0){
-            // set item size of not initialized yet
+            // set item size if not initialized yet
             list->item_size = clags__type_sizes[list->value_type];
         }
     }
@@ -1392,7 +1431,7 @@ bool clags__validate_data_type(clags_config_t *config, clags_value_type_t type, 
         } break;
         case Clags_Custom:{
             if (data == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.verify` for custom verification!", arg_name);
+                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.custom` for custom verification!", arg_name);
                 return false;
             }
         } break;
@@ -1626,7 +1665,10 @@ void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const 
             if (range) printf(", %"PRId64"-%"PRId64, range->min, range->max);
             printf(")");
         }break;
-        case Clags_Custom:
+        case Clags_Custom:{
+            clags_custom_t *custom = (clags_custom_t*) data;
+            printf(" (%s%s)", (custom && custom->name)? custom->name : "", is_list? "[]" : "");
+        }break;
         case Clags_String:{
             if (is_list) printf(" ([])");
         }break;
@@ -1868,9 +1910,9 @@ clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config)
 
 defer:
     // cleanup memory of sorted args
-    CLAGS_FREE(positional);
-    CLAGS_FREE(option);
-    CLAGS_FREE(flags);
+    CLAGS_FREE(positional, config->args_count*sizeof(*positional));
+    CLAGS_FREE(option, config->args_count*sizeof(*option));
+    CLAGS_FREE(flags, config->args_count*sizeof(*flags));
     return result;
 }
 
@@ -2045,10 +2087,10 @@ void clags_usage(const char *program_name, clags_config_t *config)
         clags_log(config, Clags_ConfigWarning, "Some flag names were too long and were cut off! Increase `CLAGS_USAGE_ALIGNMENT` to give them more space.");
     }
 
-    CLAGS_FREE(positional);
-    CLAGS_FREE(option);
-    CLAGS_FREE(flags);
-    CLAGS_FREE(temp_buffer);
+    CLAGS_FREE(positional, config->args_count*sizeof(*positional));
+    CLAGS_FREE(option, config->args_count*sizeof(*option));
+    CLAGS_FREE(flags, config->args_count*sizeof(*flags));
+    CLAGS_FREE(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE*sizeof(*temp_buffer));
 }
 
 int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
@@ -2072,7 +2114,7 @@ int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 void clags_list_free(clags_list_t *list)
 {
     if (list == NULL) return;
-    CLAGS_FREE(list->items);
+    CLAGS_FREE(list->items, list->capacity*list->item_size);
     list->items = NULL;
     list->count = list->capacity = 0;
 }
@@ -2082,9 +2124,9 @@ void clags_config_free_allocs(clags_config_t *config)
     if (config == NULL) return;
     clags_list_t *allocs = &config->allocs;
     for (size_t i=0; i<allocs->count; ++i){
-        CLAGS_FREE(((char**) allocs->items)[i]);
+        CLAGS_FREE((char**) allocs->items, allocs->item_size);
     }
-    CLAGS_FREE(allocs->items);
+    CLAGS_FREE(allocs->items, allocs->capacity*allocs->item_size);
     allocs->items = NULL;
     allocs->count = allocs->capacity = 0;
 }
