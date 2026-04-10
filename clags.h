@@ -257,49 +257,28 @@ typedef void (*clags_callback_func_t)(clags_config_t *config);                  
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
-// all available value verifiers
-clags_verify_func_def_t clags__verify_string;
-clags_verify_func_def_t clags__verify_custom;
-clags_verify_func_def_t clags__verify_subcmd;
-clags_verify_func_def_t clags__verify_bool;
-clags_verify_func_def_t clags__verify_number;
-clags_verify_func_def_t clags__verify_int8;
-clags_verify_func_def_t clags__verify_uint8;
-clags_verify_func_def_t clags__verify_int32;
-clags_verify_func_def_t clags__verify_uint32;
-clags_verify_func_def_t clags__verify_int64;
-clags_verify_func_def_t clags__verify_uint64;
-clags_verify_func_def_t clags__verify_double;
-clags_verify_func_def_t clags__verify_choice;
-clags_verify_func_def_t clags__verify_path;
-clags_verify_func_def_t clags__verify_file;
-clags_verify_func_def_t clags__verify_dir;
-clags_verify_func_def_t clags__verify_size;
-clags_verify_func_def_t clags__verify_time_s;
-clags_verify_func_def_t clags__verify_time_ns;
-
 // the definition of all supported value types. Format: (enum value, verification function, type name, variable type)
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define clags__types                                                                                                                            \
-    X(Clags_String, clags__verify_string,  "string",  char*           ) /* string value                                                      */ \
-    X(Clags_Custom, clags__verify_custom,  "custom",  void*           ) /* custom type, defined via custom verification function             */ \
-    X(Clags_Bool,   clags__verify_bool,    "bool",    bool            ) /* boolean value                                                     */ \
-    X(Clags_Number, clags__verify_number,  "number",  int64_t         ) /* a signed integer within user-defined limits                       */ \
-    X(Clags_Int8,   clags__verify_int8,    "int8",    int8_t          ) /* signed 8-bit integer                                              */ \
-    X(Clags_UInt8,  clags__verify_uint8,   "uint8",   uint8_t         ) /* unsigned 8-bit integer                                            */ \
-    X(Clags_Int32,  clags__verify_int32,   "int32",   int32_t         ) /* signed 32-bit integer                                             */ \
-    X(Clags_UInt32, clags__verify_uint32,  "uint32",  uint32_t        ) /* unsigned 32-bit integer                                           */ \
-    X(Clags_Int64,  clags__verify_int64,   "int64",   int64_t         ) /* signed 64-bit integer                                             */ \
-    X(Clags_UInt64, clags__verify_uint64,  "uint64",  uint64_t        ) /* unsigned 64-bit integer                                           */ \
-    X(Clags_Double, clags__verify_double,  "double",  double          ) /* floating-point value                                              */ \
-    X(Clags_Choice, clags__verify_choice,  "choice",  clags_choice_t* ) /* selects one value from a set of choices                           */ \
-    X(Clags_Path,   clags__verify_path,    "path",    char*           ) /* valid filesystem path                                             */ \
-    X(Clags_File,   clags__verify_file,    "file",    char*           ) /* path to a regular file                                            */ \
-    X(Clags_Dir,    clags__verify_dir,     "dir",     char*           ) /* path to a directory                                               */ \
-    X(Clags_Size,   clags__verify_size,    "size",    clags_fsize_t   ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
-    X(Clags_TimeS,  clags__verify_time_s,  "time_s",  clags_time_t    ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
-    X(Clags_TimeNS, clags__verify_time_ns, "time_ns", clags_time_t    ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
-    X(Clags_Subcmd, clags__verify_subcmd,  "subcmd",  clags_subcmd_t* ) /* subcommand                                                        */ \
+    X(Clags_String, clags_verify_string,  "string",  char*           ) /* string value                                                      */ \
+    X(Clags_Custom, clags_verify_custom,  "custom",  void*           ) /* custom type, defined via custom verification function             */ \
+    X(Clags_Bool,   clags_verify_bool,    "bool",    bool            ) /* boolean value                                                     */ \
+    X(Clags_Number, clags_verify_number,  "number",  int64_t         ) /* a signed integer within user-defined limits                       */ \
+    X(Clags_Int8,   clags_verify_int8,    "int8",    int8_t          ) /* signed 8-bit integer                                              */ \
+    X(Clags_UInt8,  clags_verify_uint8,   "uint8",   uint8_t         ) /* unsigned 8-bit integer                                            */ \
+    X(Clags_Int32,  clags_verify_int32,   "int32",   int32_t         ) /* signed 32-bit integer                                             */ \
+    X(Clags_UInt32, clags_verify_uint32,  "uint32",  uint32_t        ) /* unsigned 32-bit integer                                           */ \
+    X(Clags_Int64,  clags_verify_int64,   "int64",   int64_t         ) /* signed 64-bit integer                                             */ \
+    X(Clags_UInt64, clags_verify_uint64,  "uint64",  uint64_t        ) /* unsigned 64-bit integer                                           */ \
+    X(Clags_Double, clags_verify_double,  "double",  double          ) /* floating-point value                                              */ \
+    X(Clags_Choice, clags_verify_choice,  "choice",  clags_choice_t* ) /* selects one value from a set of choices                           */ \
+    X(Clags_Path,   clags_verify_path,    "path",    char*           ) /* valid filesystem path                                             */ \
+    X(Clags_File,   clags_verify_file,    "file",    char*           ) /* path to a regular file                                            */ \
+    X(Clags_Dir,    clags_verify_dir,     "dir",     char*           ) /* path to a directory                                               */ \
+    X(Clags_Size,   clags_verify_size,    "size",    clags_fsize_t   ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
+    X(Clags_TimeS,  clags_verify_time_s,  "time_s",  clags_time_t    ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
+    X(Clags_TimeNS, clags_verify_time_ns, "time_ns", clags_time_t    ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
+    X(Clags_Subcmd, clags_verify_subcmd,  "subcmd",  clags_subcmd_t* ) /* subcommand                                                        */ \
 
 // the definition of all error types and their respective descriptions
 #define clags__errors                                                                           \
@@ -402,9 +381,9 @@ typedef struct{
 
 // the definition of a custom value type
 typedef struct{
-    const char *name;
-    clags_verify_func_t func;
-    void *data;                            // additional custom data to be passed to the custom verification function
+    const char *name;                      // name of the custom type
+    clags_verify_func_t func;              // custom verfication to call
+    void *data;                            // additional custom data to be passed to the custom verification function via the `data` argument
 } clags_custom_t;
 
 // the definition of a positional argument, construct with `clags_positional`
@@ -782,6 +761,28 @@ void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
 void clags_sb_append_null(clags_sb_t *sb);
 void clags_sb_free(clags_sb_t *sb);
 
+/* Value Verifiers */
+// useful when creating custom verfiers that build on these basic ones
+clags_verify_func_def_t clags_verify_string;
+clags_verify_func_def_t clags_verify_custom;
+clags_verify_func_def_t clags_verify_subcmd;
+clags_verify_func_def_t clags_verify_bool;
+clags_verify_func_def_t clags_verify_number;
+clags_verify_func_def_t clags_verify_int8;
+clags_verify_func_def_t clags_verify_uint8;
+clags_verify_func_def_t clags_verify_int32;
+clags_verify_func_def_t clags_verify_uint32;
+clags_verify_func_def_t clags_verify_int64;
+clags_verify_func_def_t clags_verify_uint64;
+clags_verify_func_def_t clags_verify_double;
+clags_verify_func_def_t clags_verify_choice;
+clags_verify_func_def_t clags_verify_path;
+clags_verify_func_def_t clags_verify_file;
+clags_verify_func_def_t clags_verify_dir;
+clags_verify_func_def_t clags_verify_size;
+clags_verify_func_def_t clags_verify_time_s;
+clags_verify_func_def_t clags_verify_time_ns;
+
 #endif // CLAGS_H
 
 /*
@@ -956,7 +957,7 @@ clags_path_type_t clags_path_type(const char *path)
     return Clags_Path_Other;
 }
 
-bool clags__verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     (void) arg_name;
@@ -964,7 +965,7 @@ bool clags__verify_string(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     if (strcasecmp(arg, "true") == 0 || strcasecmp(arg, "yes") == 0 || strcasecmp(arg, "y") == 0){
@@ -978,7 +979,7 @@ bool clags__verify_bool(clags_config_t *config, const char *arg_name, const char
     return false;
 }
 
-bool clags__verify_number(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_number(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     clags_range_t range;
     if (data != NULL){
@@ -1004,7 +1005,7 @@ bool clags__verify_number(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags__verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1024,7 +1025,7 @@ bool clags__verify_int8(clags_config_t *config, const char *arg_name, const char
     return true;
 }
 
-bool clags__verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1044,7 +1045,7 @@ bool clags__verify_uint8(clags_config_t *config, const char *arg_name, const cha
     return true;
 }
 
-bool clags__verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1064,7 +1065,7 @@ bool clags__verify_int32(clags_config_t *config, const char *arg_name, const cha
     return true;
 }
 
-bool clags__verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1084,7 +1085,7 @@ bool clags__verify_uint32(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags__verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1104,7 +1105,7 @@ bool clags__verify_int64(clags_config_t *config, const char *arg_name, const cha
     return true;
 }
 
-bool clags__verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1124,7 +1125,7 @@ bool clags__verify_uint64(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags__verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1144,7 +1145,7 @@ bool clags__verify_double(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags__verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     if (pvalue == NULL) return false;
     clags_choice_t  **pchoice = (clags_choice_t**) pvalue;
@@ -1160,7 +1161,7 @@ bool clags__verify_choice(clags_config_t *config, const char *arg_name, const ch
     return false;
 }
 
-bool clags__verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1172,7 +1173,7 @@ bool clags__verify_path(clags_config_t *config, const char *arg_name, const char
     return true;
 }
 
-bool clags__verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1192,7 +1193,7 @@ bool clags__verify_file(clags_config_t *config, const char *arg_name, const char
     }
 }
 
-bool clags__verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1212,7 +1213,7 @@ bool clags__verify_dir(clags_config_t *config, const char *arg_name, const char 
     }
 }
 
-bool clags__verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1246,7 +1247,7 @@ bool clags__verify_size(clags_config_t *config, const char *arg_name, const char
     return true;
 }
 
-bool clags__verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1274,7 +1275,7 @@ bool clags__verify_time_s(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags__verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
     char *endptr;
@@ -1305,7 +1306,7 @@ bool clags__verify_time_ns(clags_config_t *config, const char *arg_name, const c
     return true;
 }
 
-bool clags__verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     for (size_t i=0; i<subcmds->count; ++i){
@@ -1323,7 +1324,7 @@ bool clags__verify_subcmd(clags_config_t *config, const char *arg_name, const ch
     return false;
 }
 
-bool clags__verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     clags_custom_t *custom = (clags_custom_t*) data;
     if (custom && custom->func){
@@ -2124,7 +2125,7 @@ void clags_config_free_allocs(clags_config_t *config)
     if (config == NULL) return;
     clags_list_t *allocs = &config->allocs;
     for (size_t i=0; i<allocs->count; ++i){
-        CLAGS_FREE((char**) allocs->items, allocs->item_size);
+        CLAGS_FREE(((char**) allocs->items)[i], allocs->item_size);
     }
     CLAGS_FREE(allocs->items, allocs->capacity*allocs->item_size);
     allocs->items = NULL;
@@ -2142,6 +2143,7 @@ void clags_config_free(clags_config_t *config)
             clags_list_free(arg.opt.variable);
         }
     }
+    clags_list_free(config->options.ignored_args);
     clags_config_free_allocs(config);
 }
 
@@ -2166,4 +2168,3 @@ const char* clags_path_type_name(clags_path_type_t type)
 }
 
 #endif // CLAGS_IMPLEMENTATION
-
