@@ -138,10 +138,9 @@
   --------------------------------------------------------------------------
   string        | "hello", world              | Any sequence of characters.
   bool          | true, false, yes, N         | Case-insensitive.
-
   number        | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
-                                              | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
-                                              | Values must fit in the type’s bounds or the defined range.
+                |                             | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
+                |                             | Values must fit in the type’s bounds ((u)int<8/32/64>_t) or the defined range.
   double        | 3.14, -0.001, 2e10          | Floating-point value.
   choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive by default, can be disabled.
   path          | /home/user/docs, C:\Windows | Any filesystem path.
@@ -251,15 +250,15 @@ typedef struct clags_config_t clags_config_t;
 typedef struct clags_choice_t clags_choice_t;
 typedef struct clags_subcmd_t clags_subcmd_t;
 typedef bool (clags_verify_func_def_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data);
-typedef clags_verify_func_def_t *clags_verify_func_t;
-typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args);                                  // the function type of custom log handlers
-typedef void (*clags_callback_func_t)(clags_config_t *config);                                                                   // the function type of callback functions
+typedef clags_verify_func_def_t *clags_verify_func_t;                                           // the function type of verifiers
+typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args); // the function type of custom log handlers
+typedef void (*clags_callback_func_t)(clags_config_t *config);                                  // the function type of callback functions
 typedef uint64_t clags_fsize_t;
 typedef uint64_t clags_time_t;
 
 // the definition of all supported value types. Format: (enum value, verification function, type name, variable type)
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
-#define clags__types                                                                                                                            \
+#define clags__types                                                                                                                           \
     X(Clags_String, clags_verify_string,  "string",  char*           ) /* string value                                                      */ \
     X(Clags_Custom, clags_verify_custom,  "custom",  void*           ) /* custom type, defined via custom verification function             */ \
     X(Clags_Bool,   clags_verify_bool,    "bool",    bool            ) /* boolean value                                                     */ \
@@ -494,7 +493,7 @@ struct clags_config_t{
 
 // helper macros
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
-#define clags_return_defer(value) do{result = (value); goto defer;}while(0)
+#define clags_return_defer(value) do{result = (value); goto defer;}while(0) // set the `result` variable and jump to the `defer` label
 #define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); abort();}}while(0)
 #define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); fflush(stderr); abort();}while(0)
 

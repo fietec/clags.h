@@ -1,6 +1,6 @@
 /*
-  Example 6: Custom Verifiers
-      This example shows how to use custom verification functions.
+  Example 6.1: Custom Verifiers
+      This example shows how to use custom types.
 */
 
 #include <stdio.h>
@@ -33,6 +33,11 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
     return false;
 }
 
+// The definition of a custom type
+// Arguments:
+//   - `name` : the display name of the type
+//   - `func` : the verification function to call
+//   - `data` : additional argument for the verification function. See Example 6.2 for more details.
 clags_custom_t custom_lower_case_type = {"lowercase", verify_lower_case, NULL};
 
 // For custom types, use `clags_custom_list(SIZE)` instead of `clags_list(Clags_Custom)` and provide the size of the stored values
