@@ -27,7 +27,7 @@
 */
 
 /*
-  Clags Syntax Reference
+  Syntax Reference
   ======================
 
   Positional arguments
@@ -372,10 +372,23 @@ typedef struct{
     size_t count;
 } clags_subcmds_t;
 
-// the definition of a range, both limits are inclusive
+// the available range types
+typedef enum {
+    Clags_IntRange,
+    Clags_DoubleRange,
+} clags_range_type_t;
+
+// the definition of a range, both limits are inclusive, construct with `clags_int_range` and `clags_double_range`
 typedef struct{
-    int64_t min;
-    int64_t max;
+    clags_range_type_t type;
+    union{
+        int64_t as_int;
+        double as_double;
+    } min;
+    union{
+        int64_t as_int;
+        double as_double;
+    } max;
 } clags_range_t;
 
 // the definition of a custom value type
@@ -537,6 +550,9 @@ struct clags_config_t{
 
 // wrapper for a `clags_subcmd_t` array
 #define clags_subcmds(subcmds) (clags_subcmds_t){.items=(subcmds), .count=clags_arr_len(subcmds)}
+
+#define clags_int_range(from, to) (clags_range_t){.type=Clags_IntRange, .min.as_int=(from), .max.as_int=(to)}
+#define clags_double_range(from, to) (clags_range_t){.type=Clags_DoubleRange, .min.as_double=(from), .max.as_double=(to)}
 
 /* Argument Constructors */
 
@@ -980,11 +996,14 @@ bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char 
 
 bool clags_verify_number(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    clags_range_t range;
+    int64_t min, max;
     if (data != NULL){
-        range = *(clags_range_t*)data;
+        clags_range_t *range = (clags_range_t*) data;
+        min = range->min.as_int;
+        max = range->max.as_int;
     } else{
-        range = (clags_range_t){INT64_MIN, INT64_MAX};
+        min = INT64_MIN;
+        max = INT64_MAX;
     }
 
     char *endptr;
@@ -995,8 +1014,8 @@ bool clags_verify_number(clags_config_t *config, const char *arg_name, const cha
         clags_log(config, Clags_Error, "Invalid number value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value < range.min || value > range.max) {
-        clags_log(config, Clags_Error, "number out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", range.min, range.max, arg_name, arg);
+    if (errno == ERANGE || value < min || value > max) {
+        clags_log(config, Clags_Error, "number out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", min, max, arg_name, arg);
         return false;
     }
 
@@ -1126,7 +1145,16 @@ bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const cha
 
 bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    (void) data;
+    double min, max;
+    if (data != NULL){
+        clags_range_t *range = (clags_range_t*) data;
+        min = range->min.as_double;
+        max = range->max.as_double;
+    } else{
+        min = -DBL_MAX;
+        max = DBL_MAX;
+    }
+
     char *endptr;
     errno = 0;
     double value = strtod(arg, &endptr);
@@ -1135,8 +1163,8 @@ bool clags_verify_double(clags_config_t *config, const char *arg_name, const cha
         clags_log(config, Clags_Error, "Invalid double value for argument '%s': '%s'!", arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value > DBL_MAX || value < -DBL_MAX) {
-        clags_log(config, Clags_Error, "double value out of range (%lf to %lf) for argument '%s': '%s'!", DBL_MAX, -DBL_MAX, arg_name, arg);
+    if (errno == ERANGE || value > max || value < min) {
+        clags_log(config, Clags_Error, "double value out of range [%g-%g] for argument '%s': '%s'!", min, max, arg_name, arg);
         return false;
     }
 
@@ -1435,6 +1463,20 @@ bool clags__validate_data_type(clags_config_t *config, clags_value_type_t type, 
                 return false;
             }
         } break;
+        case Clags_Number:{
+            clags_range_t *range = (clags_range_t*) data;
+            if (range != NULL && range->type != Clags_IntRange){
+                clags_log(config, Clags_ConfigError, "argument '%s' of type '%s' expects an integer range but got a double range!", arg_name, clags__type_names[type]);
+                return false;
+            }
+        } break;
+        case Clags_Double:{
+            clags_range_t *range = (clags_range_t*) data;
+            if (range != NULL && range->type != Clags_DoubleRange){
+                clags_log(config, Clags_ConfigError, "argument '%s' of type '%s' expects a double range but got an integer range!", arg_name, clags__type_names[type]);
+                return false;
+            }
+        } break;
         default: break;
     }
     return true;
@@ -1662,7 +1704,13 @@ void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const 
         case Clags_Number:{
             printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
             clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %"PRId64"-%"PRId64, range->min, range->max);
+            if (range) printf(", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
+            printf(")");
+        }break;
+        case Clags_Double:{
+            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            clags_range_t *range = (clags_range_t*) data;
+            if (range) printf(", %g-%g", range->min.as_double, range->max.as_double);
             printf(")");
         }break;
         case Clags_Custom:{

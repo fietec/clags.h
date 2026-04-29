@@ -18,7 +18,8 @@ bool help = false;
 bool warnings = false;
 bool version = false;
 
-clags_range_t compression_range = {0, 100};
+// You can define custom ranges for the `Clags_Number` and `Clags_Double` (use `clags_double_range`) types
+clags_range_t compression_range = clags_int_range(0, 100);
 
 clags_arg_t args[] = {
     clags_positional(&input_file, "input_file", "the file to read"),
@@ -35,7 +36,7 @@ clags_arg_t args[] = {
     //    `value_type` (e.g., converted to uint8_t, double, etc.).
     //  - For lists, default inputs are **not supported**, because each list element is
     //    appended individually from user input.
-    //  - It is the caller's responsibility to ensure the string represents a valid value
+    //  - It is the caller's responsibilitcy to ensure the string represents a valid value
     //    for the argument's type, as it will be processed through the same verification as
     //    user-provided values.
     clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8, .default_input="50"),
