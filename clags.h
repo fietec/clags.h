@@ -132,7 +132,7 @@
   Value Types
   -----------
 
-  This table describes the supported value types and their expected syntax.
+  This table describes the supported value types and their expected syntax. See the `clags__types` macro for more details.
 
   Value Type    | Syntax / Examples           | Notes
   --------------------------------------------------------------------------
@@ -140,8 +140,8 @@
   bool          | true, false, yes, N         | Case-insensitive.
   number        | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
                 |                             | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
-                |                             | Values must fit in the type’s bounds ((u)int<8/32/64>_t) or the defined range.
-  double        | 3.14, -0.001, 2e10          | Floating-point value.
+                |                             | Values must fit in the type’s bounds ((u)int<8/16/32/64>_t) or the defined range.
+  real          | 3.14, -0.001, 2e10          | Floating-point value.
   choice        | "red", "green", "blue"      | Must match one of the configured choices. Case-sensitive by default, can be disabled.
   path          | /home/user/docs, C:\Windows | Any filesystem path.
   file          | /etc/passwd, myfile.txt     | Must be a regular file.
@@ -262,14 +262,17 @@ typedef uint64_t clags_time_t;
     X(Clags_String, clags_verify_string,  "string",  char*           ) /* string value                                                      */ \
     X(Clags_Custom, clags_verify_custom,  "custom",  void*           ) /* custom type, defined via custom verification function             */ \
     X(Clags_Bool,   clags_verify_bool,    "bool",    bool            ) /* boolean value                                                     */ \
-    X(Clags_Number, clags_verify_number,  "number",  int64_t         ) /* a signed integer within user-defined limits                       */ \
+    X(Clags_Int,    clags_verify_int,     "int",     int64_t         ) /* a signed integer within user-defined limits                       */ \
     X(Clags_Int8,   clags_verify_int8,    "int8",    int8_t          ) /* signed 8-bit integer                                              */ \
-    X(Clags_UInt8,  clags_verify_uint8,   "uint8",   uint8_t         ) /* unsigned 8-bit integer                                            */ \
+    X(Clags_Int16,  clags_verify_int16,   "int16",   int16_t         ) /* signed 16-bit integer                                             */ \
     X(Clags_Int32,  clags_verify_int32,   "int32",   int32_t         ) /* signed 32-bit integer                                             */ \
-    X(Clags_UInt32, clags_verify_uint32,  "uint32",  uint32_t        ) /* unsigned 32-bit integer                                           */ \
     X(Clags_Int64,  clags_verify_int64,   "int64",   int64_t         ) /* signed 64-bit integer                                             */ \
+    X(Clags_UInt,   clags_verify_uint,    "uint",    uint64_t        ) /* an unsigned integer within user-defined limits                    */ \
+    X(Clags_UInt8,  clags_verify_uint8,   "uint8",   uint8_t         ) /* unsigned 8-bit integer                                            */ \
+    X(Clags_UInt16, clags_verify_uint16,  "uint16",  uint16_t        ) /* unsigned 16-bit integer                                           */ \
+    X(Clags_UInt32, clags_verify_uint32,  "uint32",  uint32_t        ) /* unsigned 32-bit integer                                           */ \
     X(Clags_UInt64, clags_verify_uint64,  "uint64",  uint64_t        ) /* unsigned 64-bit integer                                           */ \
-    X(Clags_Double, clags_verify_double,  "double",  double          ) /* floating-point value                                              */ \
+    X(Clags_Real,   clags_verify_real,    "real",    double          ) /* a fractional number                                               */ \
     X(Clags_Choice, clags_verify_choice,  "choice",  clags_choice_t* ) /* selects one value from a set of choices                           */ \
     X(Clags_Path,   clags_verify_path,    "path",    char*           ) /* valid filesystem path                                             */ \
     X(Clags_File,   clags_verify_file,    "file",    char*           ) /* path to a regular file                                            */ \
@@ -372,21 +375,17 @@ typedef struct{
     size_t count;
 } clags_subcmds_t;
 
-// the available range types
-typedef enum {
-    Clags_IntRange,
-    Clags_DoubleRange,
-} clags_range_type_t;
-
-// the definition of a range, both limits are inclusive, construct with `clags_int_range` and `clags_double_range`
+// the definition of a range, both limits are inclusive, construct with `clags_<int/uint/real>_range` macros
 typedef struct{
-    clags_range_type_t type;
+    clags_value_type_t type;
     union{
         int64_t as_int;
+        uint64_t as_uint;
         double as_double;
     } min;
     union{
         int64_t as_int;
+        uint64_t as_uint;
         double as_double;
     } max;
 } clags_range_t;
@@ -412,7 +411,7 @@ typedef struct{
         clags_custom_t *custom;            // pointer to custom type definition, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
         clags_subcmds_t *subcmds;          // pointer to subcommand definitions, only if `value_type` == `Clags_Subcmd`
-        clags_range_t *range;              // pointer to range definition, only if `value_type` == `Clags_Number`
+        clags_range_t *range;              // pointer to range definition, only if `value_type` is `Clags_Int`, `Clags_UInt` or `Clags_Real`
         void *_data;                       // internal, do not touch
     };
 } clags_positional_t;
@@ -431,7 +430,7 @@ typedef struct{
     union{                                 // only one of these should be set
         clags_custom_t *custom;            // pointer to custom type definition, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
-        clags_range_t *range;              // pointer to range definition, only if `value_type` == `Clags_Number`
+        clags_range_t *range;              // pointer to range definition, only if `value_type` is `Clags_Int`, `Clags_UInt` or `Clags_Real`
         void *_data;                       // internal, do not touch
     };
 } clags_option_t;
@@ -531,7 +530,7 @@ struct clags_config_t{
 #define clags_uint32_list()     clags_list(Clags_UInt32)
 #define clags_int64_list()      clags_list(Clags_Int64)
 #define clags_uint64_list()     clags_list(Clags_UInt64)
-#define clags_double_list()     clags_list(Clags_Double)
+#define clags_real_list()       clags_list(Clags_Real)
 #define clags_size_list()       clags_list(Clags_Size)
 #define clags_timeS_list()      clags_list(Clags_TimeS)
 #define clags_timeNS_list()     clags_list(Clags_TimeNS)
@@ -551,8 +550,9 @@ struct clags_config_t{
 // wrapper for a `clags_subcmd_t` array
 #define clags_subcmds(subcmds) (clags_subcmds_t){.items=(subcmds), .count=clags_arr_len(subcmds)}
 
-#define clags_int_range(from, to) (clags_range_t){.type=Clags_IntRange, .min.as_int=(from), .max.as_int=(to)}
-#define clags_double_range(from, to) (clags_range_t){.type=Clags_DoubleRange, .min.as_double=(from), .max.as_double=(to)}
+#define clags_int_range(from, to) (clags_range_t){.type=Clags_Int, .min.as_int=(from), .max.as_int=(to)}
+#define clags_uint_range(from, to) (clags_range_t){.type=Clags_UInt, .min.as_uint=(from), .max.as_uint=(to)}
+#define clags_real_range(from, to) (clags_range_t){.type=Clags_Real, .min.as_double=(from), .max.as_double=(to)}
 
 /* Argument Constructors */
 
@@ -782,14 +782,17 @@ clags_verify_func_def_t clags_verify_string;
 clags_verify_func_def_t clags_verify_custom;
 clags_verify_func_def_t clags_verify_subcmd;
 clags_verify_func_def_t clags_verify_bool;
-clags_verify_func_def_t clags_verify_number;
+clags_verify_func_def_t clags_verify_int;
 clags_verify_func_def_t clags_verify_int8;
-clags_verify_func_def_t clags_verify_uint8;
+clags_verify_func_def_t clags_verify_int16;
 clags_verify_func_def_t clags_verify_int32;
-clags_verify_func_def_t clags_verify_uint32;
 clags_verify_func_def_t clags_verify_int64;
+clags_verify_func_def_t clags_verify_uint;
+clags_verify_func_def_t clags_verify_uint8;
+clags_verify_func_def_t clags_verify_uint16;
+clags_verify_func_def_t clags_verify_uint32;
 clags_verify_func_def_t clags_verify_uint64;
-clags_verify_func_def_t clags_verify_double;
+clags_verify_func_def_t clags_verify_real;
 clags_verify_func_def_t clags_verify_choice;
 clags_verify_func_def_t clags_verify_path;
 clags_verify_func_def_t clags_verify_file;
@@ -994,11 +997,10 @@ bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char 
     return false;
 }
 
-bool clags_verify_number(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_signed_integer(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
 {
     int64_t min, max;
-    if (data != NULL){
-        clags_range_t *range = (clags_range_t*) data;
+    if (range != NULL){
         min = range->min.as_int;
         max = range->max.as_int;
     } else{
@@ -1011,131 +1013,84 @@ bool clags_verify_number(clags_config_t *config, const char *arg_name, const cha
     long long value = strtoll(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid number value for argument '%s': '%s'!", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value < min || value > max) {
-        clags_log(config, Clags_Error, "number out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", min, max, arg_name, arg);
+        clags_log(config, Clags_Error, "%s out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", clags__type_names[type], min, max, arg_name, arg);
         return false;
     }
 
     if (pvalue) *(int64_t*)pvalue = (int64_t)value;
     return true;
+}
+
+bool clags_verify_int(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    return clags__verify_signed_integer(config, Clags_Int, data, arg_name, arg, pvalue);
 }
 
 bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    char *endptr;
-    errno = 0;
-    long value = strtol(arg, &endptr, 0);
-
-    if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid int8 value for argument '%s': '%s'!", arg_name, arg);
-        return false;
-    }
-    if (errno == ERANGE || value < INT8_MIN || value > INT8_MAX) {
-        clags_log(config, Clags_Error, "int8 out of range [%"PRId8"-%"PRId8"] for argument '%s': '%s'!", INT8_MIN, INT8_MAX, arg_name, arg);
-        return false;
-    }
-
-    if (pvalue) *(int8_t*)pvalue = (int8_t)value;
-    return true;
+    int64_t var;
+    clags_range_t range = clags_int_range(INT8_MIN, INT8_MAX);
+    bool result = clags__verify_signed_integer(config, Clags_Int8, &range, arg_name, arg, &var);
+    if (result && pvalue) *(int8_t*)pvalue = (int8_t)var;
+    return result;
 }
 
-bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    char *endptr;
-    errno = 0;
-    unsigned long value = strtoul(arg, &endptr, 0);
-
-    if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid uint8 value for argument '%s': '%s'!", arg_name, arg);
-        return false;
-    }
-    if (errno == ERANGE || value > UINT8_MAX || *arg == '-') {
-        clags_log(config, Clags_Error, "uint8 out of range [0-%"PRIu8"] for argument '%s': '%s'!", UINT8_MAX, arg_name, arg);
-        return false;
-    }
-
-    if (pvalue) *(uint8_t*)pvalue = (uint8_t)value;
-    return true;
+    int64_t var;
+    clags_range_t range = clags_int_range(INT16_MIN, INT16_MAX);
+    bool result = clags__verify_signed_integer(config, Clags_Int16, &range, arg_name, arg, &var);
+    if (result && pvalue) *(int16_t*)pvalue = (int16_t)var;
+    return result;
 }
 
 bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    char *endptr;
-    errno = 0;
-    long value = strtol(arg, &endptr, 0);
-
-    if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid int32 value for argument '%s': '%s'!", arg_name, arg);
-        return false;
-    }
-    if (errno == ERANGE || value < INT32_MIN || value > INT32_MAX) {
-        clags_log(config, Clags_Error, "int32 out of range [%"PRId32"-%"PRId32"] for argument '%s': '%s'!", INT32_MIN, INT32_MAX, arg_name, arg);
-        return false;
-    }
-
-    if (pvalue) *(int32_t*)pvalue = (int32_t)value;
-    return true;
-}
-
-bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
-{
-    (void) data;
-    char *endptr;
-    errno = 0;
-    unsigned long value = strtoul(arg, &endptr, 0);
-
-    if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid uint32 value for argument '%s': '%s'!", arg_name, arg);
-        return false;
-    }
-    if (errno == ERANGE || value > UINT32_MAX || *arg == '-') {
-        clags_log(config, Clags_Error, "uint32 out of range [0-%"PRIu32"] for argument '%s': '%s'!", UINT32_MAX, arg_name, arg);
-        return false;
-    }
-
-    if (pvalue) *(uint32_t*)pvalue = (uint32_t)value;
-    return true;
+    int64_t var;
+    clags_range_t range = clags_int_range(INT32_MIN, INT32_MAX);
+    bool result = clags__verify_signed_integer(config, Clags_Int32, &range, arg_name, arg, &var);
+    if (result && pvalue) *(int32_t*)pvalue = (int32_t)var;
+    return result;
 }
 
 bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    char *endptr;
-    errno = 0;
-    long long value = strtoll(arg, &endptr, 0);
-
-    if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid int64 value for argument '%s': '%s'!", arg_name, arg);
-        return false;
-    }
-    if (errno == ERANGE || value < INT64_MIN || value > INT64_MAX) {
-        clags_log(config, Clags_Error, "int64 out of range [%"PRId64"-%"PRId64"] for argument '%s': '%s'!", INT64_MIN, INT64_MAX, arg_name, arg);
-        return false;
-    }
-
-    if (pvalue) *(int64_t*)pvalue = (int64_t)value;
-    return true;
+    int64_t var;
+    clags_range_t range = clags_int_range(INT64_MIN, INT64_MAX);
+    bool result = clags__verify_signed_integer(config, Clags_Int64, &range, arg_name, arg, &var);
+    if (result && pvalue) *(int64_t*)pvalue = (int64_t)var;
+    return result;
 }
 
-bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
 {
-    (void) data;
+    uint64_t min, max;
+    if (range){
+        min = range->min.as_uint;
+        max = range->max.as_uint;
+    } else {
+        min = 0;
+        max = UINT64_MAX;
+    }
+    
     char *endptr;
     errno = 0;
     unsigned long long value = strtoull(arg, &endptr, 0);
 
     if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid uint64 value for argument '%s': '%s'!", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value > UINT64_MAX || *arg == '-') {
-        clags_log(config, Clags_Error, "uint64 out of range [0-%"PRIu64"] for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
+    if (errno == ERANGE || value < min || value > max || *arg == '-') {
+        clags_log(config, Clags_Error, "%s value out of range [%"PRIu64"-%"PRIu64"] for argument '%s': '%s'!", clags__type_names[type], min, max, arg_name, arg);
         return false;
     }
 
@@ -1143,7 +1098,52 @@ bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const cha
     return true;
 }
 
-bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    return clags__verify_unsigned_int(config, Clags_UInt, data, arg_name, arg, pvalue);
+}
+
+bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    (void) data;
+    uint64_t var;
+    clags_range_t range = clags_uint_range(0, UINT8_MAX);
+    bool result = clags__verify_unsigned_int(config, Clags_UInt8, &range, arg_name, arg, &var);
+    if (result && pvalue) *(uint8_t*)pvalue = (uint8_t) var;
+    return result;
+}
+
+bool clags_verify_uint16(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    (void) data;
+    uint64_t var;
+    clags_range_t range = clags_uint_range(0, UINT16_MAX);
+    bool result = clags__verify_unsigned_int(config, Clags_UInt16, &range, arg_name, arg, &var);
+    if (result && pvalue) *(uint16_t*)pvalue = (uint16_t) var;
+    return result;
+}
+
+bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    (void) data;
+    uint64_t var;
+    clags_range_t range = clags_uint_range(0, UINT32_MAX);
+    bool result = clags__verify_unsigned_int(config, Clags_UInt32, &range, arg_name, arg, &var);
+    if (result && pvalue) *(uint32_t*)pvalue = (uint32_t) var;
+    return result;
+}
+
+bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    (void) data;
+    uint64_t var;
+    clags_range_t range = clags_uint_range(0, UINT64_MAX);
+    bool result = clags__verify_unsigned_int(config, Clags_UInt64, &range, arg_name, arg, &var);
+    if (result && pvalue) *(uint64_t*)pvalue = (uint64_t) var;
+    return result;
+}
+
+bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     double min, max;
     if (data != NULL){
@@ -1160,11 +1160,11 @@ bool clags_verify_double(clags_config_t *config, const char *arg_name, const cha
     double value = strtod(arg, &endptr);
 
     if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid double value for argument '%s': '%s'!", arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[Clags_Real], arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value > max || value < min) {
-        clags_log(config, Clags_Error, "double value out of range [%g-%g] for argument '%s': '%s'!", min, max, arg_name, arg);
+        clags_log(config, Clags_Error, "%s value out of range [%g-%g] for argument '%s': '%s'!", clags__type_names[Clags_Real], min, max, arg_name, arg);
         return false;
     }
 
@@ -1463,21 +1463,16 @@ bool clags__validate_data_type(clags_config_t *config, clags_value_type_t type, 
                 return false;
             }
         } break;
-        case Clags_Number:{
-            clags_range_t *range = (clags_range_t*) data;
-            if (range != NULL && range->type != Clags_IntRange){
-                clags_log(config, Clags_ConfigError, "argument '%s' of type '%s' expects an integer range but got a double range!", arg_name, clags__type_names[type]);
-                return false;
-            }
-        } break;
-        case Clags_Double:{
-            clags_range_t *range = (clags_range_t*) data;
-            if (range != NULL && range->type != Clags_DoubleRange){
-                clags_log(config, Clags_ConfigError, "argument '%s' of type '%s' expects a double range but got an integer range!", arg_name, clags__type_names[type]);
-                return false;
-            }
-        } break;
         default: break;
+        case Clags_Int:
+        case Clags_UInt:
+        case Clags_Real:{
+            clags_range_t *range = (clags_range_t*)data;
+            if (range && range->type != type){
+                clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s': expected range type '%s', but got '%s'!", arg_name, clags__type_names[type], clags__type_names[range->type]);
+                return false;
+            }
+        } break;
     }
     return true;
 }
@@ -1701,13 +1696,20 @@ void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const 
         case Clags_Subcmd:{
             clags__subcmd_usage((clags_subcmds_t*) data);
         }return;
-        case Clags_Number:{
+        case Clags_Int:{
             printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
             clags_range_t *range = (clags_range_t*) data;
             if (range) printf(", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
             printf(")");
         }break;
-        case Clags_Double:{
+        case Clags_UInt:{
+            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            clags_range_t *range = (clags_range_t*) data;
+            if (range) printf(", %"PRIu64"-%"PRIu64, range->min.as_uint, range->max.as_uint);
+            printf(")");
+        }break;
+
+        case Clags_Real:{
             printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
             clags_range_t *range = (clags_range_t*) data;
             if (range) printf(", %g-%g", range->min.as_double, range->max.as_double);
@@ -2002,7 +2004,7 @@ static void clags__format_lhs(char *buffer, size_t buf_size, char short_flag, co
     size_t suffix_len = strlen(suffix) + 3;
     size_t remaining = buf_size > 1 ? buf_size - 1 : 0;
 
-    char prefix[32] = {0};
+    char prefix[64] = {0};
     if (short_flag && long_flag) strcpy(prefix, "-o, --");
     else strcpy(prefix, "--");
 

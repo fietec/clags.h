@@ -48,7 +48,7 @@ void test_float_option() {
                 .type = Clags_Option,
                 .opt = {
                     .long_flag = "value",
-                    .value_type = Clags_Double,
+                    .value_type = Clags_Real,
                     .variable = &fval
                 }
             }

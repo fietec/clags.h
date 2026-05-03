@@ -15,9 +15,9 @@
 bool multiple_of(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     int64_t value;
-    // First, we need to verify that the argument is a number, so we can use the already built-in `Clags_Number` type verifiers.
+    // First, we need to verify that the argument is a number, so we can use the already built-in `Clags_Int` type verifiers.
     // Therefore, this custom types "inherits" functionality of that type and extends its functionality
-    if (!clags_verify_number(config, arg_name, arg, &value, NULL)) return false;
+    if (!clags_verify_int(config, arg_name, arg, &value, NULL)) return false;
     // Get the base defined by the custom type
     intptr_t base = (intptr_t) data;
     if (value % base != 0){

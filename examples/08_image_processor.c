@@ -22,8 +22,10 @@ const clags_options_t options = {.ignore_prefix="!", .list_terminator="::"};
 
 char *convert_input_file = NULL;
 char *convert_output_file = NULL;
-uint8_t convert_quality = 0;
+int64_t convert_quality = 0;
 bool convert_warnings = false;
+
+clags_range_t convert_quality_range = clags_int_range(0, 100);
 
 clags_choice_t convert_choices[] = {
     {"PNG", ""},
@@ -38,7 +40,7 @@ clags_arg_t convert_args[] = {
     clags_positional(&convert_input_file, "input_file", "the file to convert", .value_type=Clags_File),
     clags_option('o', "output", &convert_output_file, "FILE", "the file to output", .default_input="a.out"),
     clags_option('f', "format", &convert_format, "FORMAT", "the format which to convert to", .value_type=Clags_Choice, .choices=&choices, .default_input="PNG"),
-    clags_option('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_UInt8, .default_input="90"),
+    clags_option('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_Int, .default_input="90", .range=&convert_quality_range),
     clags_flag('w', "warnings", &convert_warnings, "print warnings"),
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help_config(&help),
@@ -149,7 +151,7 @@ int main(int argc, char **argv)
             printf("  Input file : %s\n", convert_input_file);
             printf("  Output file: %s\n", convert_output_file);
             printf("  Format     : %s\n", convert_format->value);
-            printf("  Quality    : %" PRIu8 "\n", convert_quality);
+            printf("  Quality    : %" PRId64 "\n", convert_quality);
             printf("  Warnings   : %s\n", convert_warnings ? "true" : "false");
 
             // convertion implementation goes here
