@@ -644,7 +644,7 @@ struct clags_config_t{
     clags_config_t* : pointer to the failed config or `NULL` on success. If parsing fails, the `.error` field
                       will be set to indicate the type of the encountered error.
 */
-clags_config_t* clags_parse(int argc, char **argv, clags_config_t *config);
+clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config);
 
 /*
   Print a detailed usage based on the provided config.
@@ -1882,7 +1882,7 @@ clags__result_t clags__parse_short_options_and_flags(clags_config_t *config, cla
             return Clags_Result_Error;
         }
     }
-    return Clags_Result_Pass;
+    return Clags_Result_Succ;
 }
 
 clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t *parser, bool *exit)

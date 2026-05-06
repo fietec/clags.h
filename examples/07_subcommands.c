@@ -78,8 +78,8 @@ clags_arg_t main_args[] = {
 
 clags_config_t main_config = clags_config(main_args);
 
-int main(int argc, char **argv) {
-
+int main(int argc, char **argv)
+{
     // `clags_parse` returns the config that failed.
     // In basic examples this will always be the config provided to `clags_parse` or `NULL`.
     // But since we have nested configs here, this can be used to determine which subcommand failed
