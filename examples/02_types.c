@@ -14,6 +14,7 @@ char *input_file = NULL;
 uint64_t compression = 0;
 char *output_file = "a.out";
 uint8_t quality = 100;
+float scaling;
 bool help = false;
 bool warnings = false;
 bool version = false;
@@ -43,6 +44,7 @@ clags_arg_t args[] = {
 
     // Use `Clags_Int` together with the `range` field for custom number ranges
     clags_option('c', "compression", &compression, "NUM", "compression value of the output file", .value_type=Clags_UInt, .range=&compression_range, .default_input="0"),
+    clags_option('s', "scaling", &scaling, "FACT", "the factor by which to scale the image", .value_type=Clags_Float, .default_input="1.0"),
 
     clags_flag('w', "warnings", &warnings, "print warnings"),
     
@@ -68,6 +70,6 @@ int main(int argc, char **argv)
         printf("02_types: v1.0.0\n");
         return 0;
     }
-    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Compression Level: %"PRId64", Warnings: %d\n", input_file, output_file, quality, compression, warnings);
+    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Compression Level: %"PRId64", Scaling: %f, Warnings: %d\n", input_file, output_file, quality, compression, scaling, warnings);
     return 0;
 }

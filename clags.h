@@ -272,7 +272,9 @@ typedef uint64_t clags_time_t;
     X(Clags_UInt16, clags_verify_uint16,  "uint16",  uint16_t        ) /* unsigned 16-bit integer                                           */ \
     X(Clags_UInt32, clags_verify_uint32,  "uint32",  uint32_t        ) /* unsigned 32-bit integer                                           */ \
     X(Clags_UInt64, clags_verify_uint64,  "uint64",  uint64_t        ) /* unsigned 64-bit integer                                           */ \
-    X(Clags_Real,   clags_verify_real,    "real",    double          ) /* a fractional number                                               */ \
+    X(Clags_Real,   clags_verify_real,    "real",    double          ) /* a fractional number within user-defined limits                    */ \
+    X(Clags_Float,  clags_verify_float,   "float",   float           ) /* a single-precision fractional number                              */ \
+    X(Clags_Double, clags_verify_double,  "double",  double          ) /* a double-precision fractional number                              */ \
     X(Clags_Choice, clags_verify_choice,  "choice",  clags_choice_t* ) /* selects one value from a set of choices                           */ \
     X(Clags_Path,   clags_verify_path,    "path",    char*           ) /* valid filesystem path                                             */ \
     X(Clags_File,   clags_verify_file,    "file",    char*           ) /* path to a regular file                                            */ \
@@ -793,6 +795,8 @@ clags_verify_func_def_t clags_verify_uint16;
 clags_verify_func_def_t clags_verify_uint32;
 clags_verify_func_def_t clags_verify_uint64;
 clags_verify_func_def_t clags_verify_real;
+clags_verify_func_def_t clags_verify_float;
+clags_verify_func_def_t clags_verify_double;
 clags_verify_func_def_t clags_verify_choice;
 clags_verify_func_def_t clags_verify_path;
 clags_verify_func_def_t clags_verify_file;
@@ -1143,11 +1147,10 @@ bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const cha
     return result;
 }
 
-bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
 {
     double min, max;
-    if (data != NULL){
-        clags_range_t *range = (clags_range_t*) data;
+    if (range != NULL){
         min = range->min.as_double;
         max = range->max.as_double;
     } else{
@@ -1160,16 +1163,41 @@ bool clags_verify_real(clags_config_t *config, const char *arg_name, const char 
     double value = strtod(arg, &endptr);
 
     if (*endptr != '\0') {
-        clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[Clags_Real], arg_name, arg);
+        clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
         return false;
     }
     if (errno == ERANGE || value > max || value < min) {
-        clags_log(config, Clags_Error, "%s value out of range [%g-%g] for argument '%s': '%s'!", clags__type_names[Clags_Real], min, max, arg_name, arg);
+        clags_log(config, Clags_Error, "%s value out of range [%g-%g] for argument '%s': '%s'!", clags__type_names[type], min, max, arg_name, arg);
         return false;
     }
 
     if (pvalue) *(double*)pvalue = value;
     return true;
+}
+
+bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    return clags__verify_real(config, Clags_Real, data, arg_name, arg, pvalue);
+}
+
+bool clags_verify_float(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    (void) data;
+    double var;
+    clags_range_t range = clags_real_range(-FLT_MAX, FLT_MAX);
+    bool result = clags__verify_real(config, Clags_Float, &range, arg_name, arg, &var);
+    if (result && pvalue) *(float*)pvalue = (float) var;
+    return result;
+}
+
+bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+{
+    (void) data;
+    double var;
+    clags_range_t range = clags_real_range(-DBL_MAX, DBL_MAX);
+    bool result = clags__verify_real(config, Clags_Double, &range, arg_name, arg, &var);
+    if (result && pvalue) *(double*)pvalue = var;
+    return result;
 }
 
 bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
@@ -1340,6 +1368,7 @@ bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const cha
         clags_subcmd_t subcmd = subcmds->items[i];
         if (strcmp(subcmd.name, arg) == 0){
             if (pvalue) *(clags_subcmd_t**) pvalue = &subcmds->items[i];
+             // TODO: make this part of pre-processing
             clags_config_t *child_config = subcmd.config;
             if (child_config){
                 child_config->parent = config;
@@ -1523,6 +1552,7 @@ bool clags__validate_option(clags_config_t *config, clags_option_t opt)
 
     if (opt.default_input){
         // verify and write default value
+        // TODO: make this part of pre-processing
         if (opt.is_list){
             clags_log(config, Clags_ConfigError, "default values are not supported for option lists. Argument '%s' must be initialized via user input only.", name);
             return false;
@@ -1655,87 +1685,6 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
                 clags_unreachable("Invalid clags_arg_type_t");
             }
         }
-    }
-}
-
-void clags__choice_usage(clags_choices_t *choices, bool is_list, const char *default_value)
-{
-    if (!choices->print_no_details || choices->count >= 6){
-        printf(" (%s%s)", clags__type_names[Clags_Choice], is_list?"[]":"");
-        if (default_value) printf(" (default: %s)", default_value);
-        printf("\n        Choices%s:", choices->case_insensitive? " (case-insensitive)" : "");
-        for (size_t j=0; j<choices->count; ++j){
-            clags_choice_t choice = choices->items[j];
-            printf("\n          - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
-        }
-    } else{
-        printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
-        for (size_t j=0; j<choices->count; ++j){
-            printf("%s%s", j>0?" | ":" ", choices->items[j].value);
-        }
-        printf(")");
-        if (default_value) printf(" (default: %s)", default_value);
-    }
-}
-
-void clags__subcmd_usage(clags_subcmds_t *subcmds)
-{
-    printf(" (%s)\n      Subcommands:", clags__type_names[Clags_Subcmd]);
-    for (size_t i=0; i<subcmds->count; ++i){
-        clags_subcmd_t subcmd = subcmds->items[i];
-        printf("\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
-    }
-}
-
-void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const char *default_value)
-{
-    switch (type){
-        case Clags_Choice:{
-            clags__choice_usage((clags_choices_t *)data, is_list, default_value);
-        }return;
-        case Clags_Subcmd:{
-            clags__subcmd_usage((clags_subcmds_t*) data);
-        }return;
-        case Clags_Int:{
-            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
-            clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
-            printf(")");
-        }break;
-        case Clags_UInt:{
-            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
-            clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %"PRIu64"-%"PRIu64, range->min.as_uint, range->max.as_uint);
-            printf(")");
-        }break;
-
-        case Clags_Real:{
-            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
-            clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %g-%g", range->min.as_double, range->max.as_double);
-            printf(")");
-        }break;
-        case Clags_Custom:{
-            clags_custom_t *custom = (clags_custom_t*) data;
-            printf(" (%s%s)", (custom && custom->name)? custom->name : "", is_list? "[]" : "");
-        }break;
-        case Clags_String:{
-            if (is_list) printf(" ([])");
-        }break;
-        default:{
-            printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
-        }
-    }
-    if (default_value) printf(" (default: %s)", default_value);
-}
-
-void clags__subcommand_path_usage(const char *program_name, clags_config_t *config)
-{
-    if (config->parent){
-        clags__subcommand_path_usage(program_name, config->parent);
-        printf(" %s", config->name);
-    } else{
-        printf("Usage: %s", program_name);
     }
 }
 
@@ -2108,6 +2057,87 @@ static void clags__format_lhs(char *buffer, size_t buf_size, char short_flag, co
     }
 
     if (lines_cut_off) *lines_cut_off = true;
+}
+
+void clags__choice_usage(clags_choices_t *choices, bool is_list, const char *default_value)
+{
+    if (!choices->print_no_details || choices->count >= 6){
+        printf(" (%s%s)", clags__type_names[Clags_Choice], is_list?"[]":"");
+        if (default_value) printf(" (default: %s)", default_value);
+        printf("\n        Choices%s:", choices->case_insensitive? " (case-insensitive)" : "");
+        for (size_t j=0; j<choices->count; ++j){
+            clags_choice_t choice = choices->items[j];
+            printf("\n          - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
+        }
+    } else{
+        printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
+        for (size_t j=0; j<choices->count; ++j){
+            printf("%s%s", j>0?" | ":" ", choices->items[j].value);
+        }
+        printf(")");
+        if (default_value) printf(" (default: %s)", default_value);
+    }
+}
+
+void clags__subcmd_usage(clags_subcmds_t *subcmds)
+{
+    printf(" (%s)\n      Subcommands:", clags__type_names[Clags_Subcmd]);
+    for (size_t i=0; i<subcmds->count; ++i){
+        clags_subcmd_t subcmd = subcmds->items[i];
+        printf("\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
+    }
+}
+
+void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const char *default_value)
+{
+    switch (type){
+        case Clags_Choice:{
+            clags__choice_usage((clags_choices_t *)data, is_list, default_value);
+        }return;
+        case Clags_Subcmd:{
+            clags__subcmd_usage((clags_subcmds_t*) data);
+        }return;
+        case Clags_Int:{
+            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            clags_range_t *range = (clags_range_t*) data;
+            if (range) printf(", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
+            printf(")");
+        }break;
+        case Clags_UInt:{
+            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            clags_range_t *range = (clags_range_t*) data;
+            if (range) printf(", %"PRIu64"-%"PRIu64, range->min.as_uint, range->max.as_uint);
+            printf(")");
+        }break;
+
+        case Clags_Real:{
+            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            clags_range_t *range = (clags_range_t*) data;
+            if (range) printf(", %g-%g", range->min.as_double, range->max.as_double);
+            printf(")");
+        }break;
+        case Clags_Custom:{
+            clags_custom_t *custom = (clags_custom_t*) data;
+            printf(" (%s%s)", (custom && custom->name)? custom->name : "", is_list? "[]" : "");
+        }break;
+        case Clags_String:{
+            if (is_list) printf(" ([])");
+        }break;
+        default:{
+            printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
+        }
+    }
+    if (default_value) printf(" (default: %s)", default_value);
+}
+
+void clags__subcommand_path_usage(const char *program_name, clags_config_t *config)
+{
+    if (config->parent){
+        clags__subcommand_path_usage(program_name, config->parent);
+        printf(" %s", config->name);
+    } else{
+        printf("Usage: %s", program_name);
+    }
 }
 
 void clags_usage(const char *program_name, clags_config_t *config)
