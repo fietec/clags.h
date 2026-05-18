@@ -997,7 +997,7 @@ bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char 
     return false;
 }
 
-bool clags__verify_signed_integer(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
+bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
 {
     int64_t min, max;
     if (range != NULL){
@@ -1027,7 +1027,7 @@ bool clags__verify_signed_integer(clags_config_t *config, clags_value_type_t typ
 
 bool clags_verify_int(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    return clags__verify_signed_integer(config, Clags_Int, data, arg_name, arg, pvalue);
+    return clags__verify_signed_int(config, Clags_Int, data, arg_name, arg, pvalue);
 }
 
 bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
@@ -1035,7 +1035,7 @@ bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char 
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT8_MIN, INT8_MAX);
-    bool result = clags__verify_signed_integer(config, Clags_Int8, &range, arg_name, arg, &var);
+    bool result = clags__verify_signed_int(config, Clags_Int8, &range, arg_name, arg, &var);
     if (result && pvalue) *(int8_t*)pvalue = (int8_t)var;
     return result;
 }
@@ -1045,7 +1045,7 @@ bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT16_MIN, INT16_MAX);
-    bool result = clags__verify_signed_integer(config, Clags_Int16, &range, arg_name, arg, &var);
+    bool result = clags__verify_signed_int(config, Clags_Int16, &range, arg_name, arg, &var);
     if (result && pvalue) *(int16_t*)pvalue = (int16_t)var;
     return result;
 }
@@ -1055,7 +1055,7 @@ bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT32_MIN, INT32_MAX);
-    bool result = clags__verify_signed_integer(config, Clags_Int32, &range, arg_name, arg, &var);
+    bool result = clags__verify_signed_int(config, Clags_Int32, &range, arg_name, arg, &var);
     if (result && pvalue) *(int32_t*)pvalue = (int32_t)var;
     return result;
 }
@@ -1065,7 +1065,7 @@ bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT64_MIN, INT64_MAX);
-    bool result = clags__verify_signed_integer(config, Clags_Int64, &range, arg_name, arg, &var);
+    bool result = clags__verify_signed_int(config, Clags_Int64, &range, arg_name, arg, &var);
     if (result && pvalue) *(int64_t*)pvalue = (int64_t)var;
     return result;
 }
