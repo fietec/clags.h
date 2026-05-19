@@ -1097,7 +1097,7 @@ bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type,
         min = 0;
         max = UINT64_MAX;
     }
-    
+
     char *endptr;
     errno = 0;
     unsigned long long value = strtoull(arg, &endptr, 0);
@@ -1293,7 +1293,7 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
         return false;
     }
     clags_fsize_t factor;
-    if (*endptr == '\0' || strcmp(endptr, "B") == 0) factor = 1;
+    if (*endptr == '\0' || strcasecmp(endptr, "B") == 0) factor = 1;
     else if (strcasecmp(endptr, "KiB") == 0)             factor = 1ULL << 10;
     else if (strcasecmp(endptr, "KB")  == 0)             factor = 1000;
     else if (strcasecmp(endptr, "MiB") == 0)             factor = 1ULL << 20;
@@ -1531,7 +1531,6 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
     if (failed_config != NULL) return failed_config;
     if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return config;
     if (pos.default_input){
-        // verify and write default value
         if (!pos.optional){
             clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
         }
@@ -1539,12 +1538,7 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
             clags_log(config, Clags_ConfigError, "default values are not supported for lists. Argument '%s' must be initialized via user input only.", pos.arg_name);
             return config;
         }
-        if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos._data, pos.is_list)){
-            clags_log(config, Clags_ConfigError, "invalid default value for argument '%s'!", pos.arg_name);
-            return config;
-        }
     }
-
     return NULL;
 }
 
@@ -1689,36 +1683,56 @@ defer:
 
 bool clags__preprocess_config(clags_config_t *config, const char *name)
 {
+    bool result = true;
     config->name  = clags_config_duplicate_string(config, name);
     config->error = Clags_Error_Ok;
-    
+
     for (size_t i=0; i<config->args_count; ++i){
         clags_arg_t arg = config->args[i];
         switch (arg.type){
             case Clags_Positional:{
-                if (arg.pos.value_type == Clags_Subcmd){
+                  clags_positional_t pos = arg.pos;
+                  if (pos.default_input){
+                    // verify and write default value
+                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos._data, pos.is_list)){
+                        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s'!", pos.arg_name, name);
+                        clags_return_defer(false);
+                    }
+                }
+
+                if (pos.value_type == Clags_Subcmd){
                     // set parent config for all child configs
-                    clags_subcmds_t *subcmds = arg.pos.subcmds;
+                    clags_subcmds_t *subcmds = pos.subcmds;
                     for (size_t j=0; j<subcmds->count; ++j){
-                        clags_config_t *child_config = subcmds->items[i].config;
-                        if (child_config) child_config->parent = config;
+                        clags_config_t *child_config = subcmds->items[j].config;
+                        if (child_config){
+                           child_config->parent = config;
+                           if (!clags__preprocess_config(child_config, subcmds->items[j].name)) clags_return_defer(false);
+                        }
                     }
                 }
             } break;
             case Clags_Option:{
                 clags_option_t opt = arg.opt;
                 if (opt.default_input){
+                    char buf[3] = {'-', '\0', '\0'};
+                    const char *opt_name = opt.long_flag ? opt.long_flag : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
                     // verify and write default value
-                    if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt._data, opt.is_list)){
-                        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s'!", name);
-                        return false;
+                    if (!clags__set_arg(config, opt.value_type, opt_name, opt.default_input, opt.variable, opt._data, opt.is_list)){
+                        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s'!", opt_name, name);
+                        clags_return_defer(false);
                     }
                 }
             } break;
             default: break;
         }
     }
-    return true;
+defer:
+    if (!result){
+        config->state = Clags_Config_Invalid;
+        config->error = Clags_Error_InvalidValue;
+    }
+    return result;
 }
 
 void clags__sort_args(clags_args_t *args, clags_config_t *config)
