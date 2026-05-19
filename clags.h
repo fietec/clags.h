@@ -222,6 +222,12 @@
 #define CLAGS_USAGE_ALIGNMENT 36
 #endif // CLAGS_USAGE_ALIGNMENT
 
+// the maximum amount of choices to print in the inline format, when `.print_no_details=true`
+// if there are more than the defined maximum of choices the detailed output will be printed nevertheless
+#ifndef CLAGS_MAX_INLINE_CHOICES
+#define CLAGS_MAX_INLINE_CHOICES 5
+#endif // CLAGS_MAX_INLINE_CHOICES
+
 #define CLAGS__USAGE_PRINTF_ALIGNMENT -(CLAGS_USAGE_ALIGNMENT-4)
 #define CLAGS__USAGE_TEMP_BUFFER_SIZE (CLAGS_USAGE_ALIGNMENT-3)
 
@@ -2135,13 +2141,14 @@ static void clags__format_lhs(char *buffer, size_t buf_size, char short_flag, co
 
 void clags__choice_usage(clags_choices_t *choices, bool is_list, const char *default_value)
 {
-    if (!choices->print_no_details || choices->count >= 6){
+    if (!choices->print_no_details || choices->count > CLAGS_MAX_INLINE_CHOICES){
         printf(" (%s%s)", clags__type_names[Clags_Choice], is_list?"[]":"");
         if (default_value) printf(" (default: %s)", default_value);
         printf("\n        Choices%s:", choices->case_insensitive? " (case-insensitive)" : "");
         for (size_t j=0; j<choices->count; ++j){
             clags_choice_t choice = choices->items[j];
-            printf("\n          - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value, choice.description);
+            printf("\n          - %*s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value);
+            if (choice.description) printf(" : %s", choice.description);
         }
     } else{
         printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
