@@ -1940,14 +1940,13 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
             // validate the configuration, exit and mark config as invalid on fatal error
             clags_config_t *failed_config = clags__validate_config(config);
             if (failed_config != NULL) return failed_config;
+            // parse default inputs, prepare config hierarchy
+            if (!clags__preprocess_config(config, argv[0])) return config;
         } break;
         case Clags_Config_Invalid: return config;
         case Clags_Config_Valid: break;
         default: clags_unreachable("invalid config state");
     }
-
-    // parse default inputs, prepare config hierarchy
-    if (!clags__preprocess_config(config, argv[0])) return config;
 
     clags_config_t *result = NULL;
 
