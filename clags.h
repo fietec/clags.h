@@ -514,6 +514,7 @@ struct clags_config_t{
     const char *name;                 // the program name or the name of the current subcommand
     clags_config_t *parent;           // pointer to the parent (sub)command's config
     clags_config_state_t state;       // the validation state of the config
+    bool defaults_applied;            // flag indicating that the default values have been applied
     clags_list_t allocs;              // all duplicated strings allocated in this config's context, only if `options.duplicate_strings` is enabled
     clags_error_t error;              // the last error detected while parsing this config
 };
@@ -1458,7 +1459,21 @@ static inline void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
     }
 }
 
-clags_config_t* clags__validate_config(clags_config_t *config);
+clags_config_t* clags__validate_config(clags_config_t *config, const char *name, bool populate_defaults);
+
+bool clags__validate_default(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *value, void *variable, void *data, bool is_list, bool populate_defaults)
+{
+    if (is_list){
+        clags_log(config, Clags_ConfigError, "default values are not supported for lists. Argument '%s' must be initialized via user input only.", arg_name);
+        return false;
+    }
+    // verify and write default value
+    if (populate_defaults && !config->defaults_applied && !clags__set_arg(config, value_type, arg_name, value, variable, data, is_list)){
+        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s': '%s'", arg_name, arg_name, value);
+        return false;
+    }
+    return true;
+}
 
 bool clags__validate_list(clags_config_t *config, void *variable, clags_value_type_t value_type, const char *arg_name)
 {
@@ -1481,7 +1496,7 @@ bool clags__validate_list(clags_config_t *config, void *variable, clags_value_ty
     return true;
 }
 
-clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_type_t type, void *data, const char *arg_name)
+clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_type_t type, void *data, const char *arg_name, bool populate_defaults)
 {
     switch (type){
         case Clags_Subcmd:{
@@ -1489,16 +1504,19 @@ clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_ty
                 clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", arg_name);
                 return config;
             }
+
             clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
             if (subcmds->count == 0){
-                clags_log(config, Clags_ConfigWarning, "subcommand definition must contain at least one subcommand for argument '%s'!", arg_name);
+                clags_log(config, Clags_ConfigWarning, "subcommand definition should contain at least one subcommand for argument '%s'!", arg_name);
             }
             for (size_t i=0; i<subcmds->count; ++i){
-                if (subcmds->items[i].config == NULL){
+                clags_config_t *child_config = subcmds->items[i].config;
+                if (child_config == NULL){
                     clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand '%s' has no config assigned!", arg_name, subcmds->items[i].name);
                     return config;
                 }
-                clags_config_t *failed_config = clags__validate_config(subcmds->items[i].config);
+                child_config->parent = config;
+                clags_config_t *failed_config = clags__validate_config(child_config, subcmds->items[i].name, populate_defaults);
                 if (failed_config != NULL) return failed_config;
             }
         } break;
@@ -1531,24 +1549,21 @@ clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_ty
     return NULL;
 }
 
-clags_config_t* clags__validate_positional(clags_config_t *config, clags_positional_t pos)
+clags_config_t* clags__validate_positional(clags_config_t *config, clags_positional_t pos, bool populate_defaults)
 {
-    clags_config_t *failed_config = clags__validate_data_type(config, pos.value_type, pos._data, pos.arg_name);
+    clags_config_t *failed_config = clags__validate_data_type(config, pos.value_type, pos._data, pos.arg_name, populate_defaults);
     if (failed_config != NULL) return failed_config;
     if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return config;
     if (pos.default_input){
         if (!pos.optional){
             clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
         }
-        if (pos.is_list){
-            clags_log(config, Clags_ConfigError, "default values are not supported for lists. Argument '%s' must be initialized via user input only.", pos.arg_name);
-            return config;
-        }
+        if (!clags__validate_default(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos._data, pos.is_list, populate_defaults)) return config;
     }
     return NULL;
 }
 
-clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t opt)
+clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t opt, bool populate_defaults)
 {
     char buf[3] = {'-', '\0', '\0'};
     const char *name = opt.long_flag ? opt.long_flag
@@ -1567,13 +1582,12 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
         clags_log(config, Clags_ConfigError, "option argument '%s' may not be a subcommand!", name);
         return config;
     }
-    clags_config_t *failed_config = clags__validate_data_type(config, opt.value_type, opt._data, name);
+    clags_config_t *failed_config = clags__validate_data_type(config, opt.value_type, opt._data, name, populate_defaults);
     if (failed_config != NULL) return failed_config;
     if (opt.is_list && !clags__validate_list(config, opt.variable, opt.value_type, name)) return config;
 
-    if (opt.default_input && opt.is_list){
-        clags_log(config, Clags_ConfigError, "default values are not supported for option lists. Argument '%s' must be initialized via user input only.", name);
-        return config;
+    if (opt.default_input){
+        if (!clags__validate_default(config, opt.value_type, name, opt.default_input, opt.variable, opt._data, opt.is_list, populate_defaults)) return config;
     }
     return NULL;
 }
@@ -1603,10 +1617,12 @@ clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
     return NULL;
 }
 
-clags_config_t* clags__validate_config(clags_config_t *config)
+clags_config_t* clags__validate_config(clags_config_t *config, const char *name, bool populate_defaults)
 {
     if (config->state != Clags_Config_Unvalidated) return NULL;
     clags_config_t *result = NULL;
+    if (config->name == NULL) config->name  = clags_config_duplicate_string(config, name);
+
     // validate options
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
         clags_log(config, Clags_ConfigError,"'.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!");
@@ -1634,7 +1650,7 @@ clags_config_t* clags__validate_config(clags_config_t *config)
         switch (config->args[i].type){
             case Clags_Positional:{
                 clags_positional_t pos = config->args[i].pos;
-                clags_config_t *failed_config = clags__validate_positional(config, pos);
+                clags_config_t *failed_config = clags__validate_positional(config, pos, populate_defaults);
                 if (failed_config != NULL) clags_return_defer(failed_config);
                 if (optional_found && !pos.optional){
                     clags_log(config, Clags_ConfigError, "invalid positional argument order: required argument '%s' appears after optional argument '%s'", pos.arg_name, last_pos_name);
@@ -1667,7 +1683,7 @@ clags_config_t* clags__validate_config(clags_config_t *config)
             } break;
             case Clags_Option:{
                 last_was_list = false;
-                clags_config_t *failed_config = clags__validate_option(config, config->args[i].opt);
+                clags_config_t *failed_config = clags__validate_option(config, config->args[i].opt, populate_defaults);
                 if (failed_config != NULL) clags_return_defer(failed_config);
             } break;
             case Clags_Flag:{
@@ -1683,62 +1699,29 @@ defer:
         result->state = Clags_Config_Invalid;
     } else{
         config->state = Clags_Config_Valid;
+        if (populate_defaults) config->defaults_applied = true;
     }
     return result;
 }
 
-bool clags__preprocess_config(clags_config_t *config, const char *name)
+void clags_preprocess_config(clags_config_t *config, const char *name)
 {
-    bool result = true;
-    config->name  = clags_config_duplicate_string(config, name);
-    config->error = Clags_Error_Ok;
-
+    if (config->name == NULL) config->name = clags_config_duplicate_string(config, name);
     for (size_t i=0; i<config->args_count; ++i){
         clags_arg_t arg = config->args[i];
-        switch (arg.type){
-            case Clags_Positional:{
-                  clags_positional_t pos = arg.pos;
-                  if (pos.default_input){
-                    // verify and write default value
-                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos._data, pos.is_list)){
-                        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s'!", pos.arg_name, name);
-                        clags_return_defer(false);
+        if (arg.type == Clags_Positional){
+            clags_positional_t pos = arg.pos;
+            if (pos.value_type == Clags_Subcmd && pos.subcmds != NULL){
+                for (size_t j=0; j<pos.subcmds->count; ++j){
+                    clags_subcmd_t subcmd = pos.subcmds->items[j];
+                    if (subcmd.config != NULL){
+                        subcmd.config->parent = config;
+                        clags_preprocess_config(subcmd.config, subcmd.name);
                     }
                 }
-
-                if (pos.value_type == Clags_Subcmd){
-                    // set parent config for all child configs
-                    clags_subcmds_t *subcmds = pos.subcmds;
-                    for (size_t j=0; j<subcmds->count; ++j){
-                        clags_config_t *child_config = subcmds->items[j].config;
-                        if (child_config){
-                           child_config->parent = config;
-                           if (!clags__preprocess_config(child_config, subcmds->items[j].name)) clags_return_defer(false);
-                        }
-                    }
-                }
-            } break;
-            case Clags_Option:{
-                clags_option_t opt = arg.opt;
-                if (opt.default_input){
-                    char buf[3] = {'-', '\0', '\0'};
-                    const char *opt_name = opt.long_flag ? opt.long_flag : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
-                    // verify and write default value
-                    if (!clags__set_arg(config, opt.value_type, opt_name, opt.default_input, opt.variable, opt._data, opt.is_list)){
-                        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s'!", opt_name, name);
-                        clags_return_defer(false);
-                    }
-                }
-            } break;
-            default: break;
+            }
         }
     }
-defer:
-    if (!result){
-        config->state = Clags_Config_Invalid;
-        config->error = Clags_Error_InvalidValue;
-    }
-    return result;
 }
 
 void clags__sort_args(clags_args_t *args, clags_config_t *config)
@@ -1944,10 +1927,8 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
     switch (config->state){
         case Clags_Config_Unvalidated:{
             // validate the configuration, exit and mark config as invalid on fatal error
-            clags_config_t *failed_config = clags__validate_config(config);
+            clags_config_t *failed_config = clags__validate_config(config, argv[0], true);
             if (failed_config != NULL) return failed_config;
-            // parse default inputs, prepare config hierarchy
-            if (!clags__preprocess_config(config, argv[0])) return config;
         } break;
         case Clags_Config_Invalid: return config;
         case Clags_Config_Valid: break;
@@ -2217,7 +2198,7 @@ void clags__subcommand_path_usage(const char *program_name, clags_config_t *conf
         clags__subcommand_path_usage(program_name, config->parent);
         printf(" %s", config->name);
     } else{
-        printf("Usage: %s", program_name);
+        printf("Usage: %s", program_name?program_name:config->name);
     }
 }
 
@@ -2227,7 +2208,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
 
     // validate the config if necessary
     if (config->state == Clags_Config_Unvalidated){
-        (void) clags__validate_config(config);
+        (void) clags__validate_config(config, program_name, false);
     }
     clags_assert(config->state == Clags_Config_Valid, "cannot print usage for invalid config!");
 
