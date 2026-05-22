@@ -496,6 +496,7 @@ typedef struct{
     clags_log_handler_t log_handler;  // a custom log handler
     clags_log_level_t min_log_level;  // the minimal log level for which to print logs
     const char *description;          // a description of the current (sub)command
+    bool no_inheritance;              // do not inherit any option or flags from parent configs
 } clags_options_t;
 
 // the definition of config states
@@ -1780,7 +1781,7 @@ clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *
         for (size_t i=0; i<ancestor->args_count; ++i){
             clags_arg_t *arg = &ancestor->args[i];
             bool match = false;
-            bool global = false;
+            bool inherit = false;
             if (arg->type == Clags_Option){
                 clags_option_t opt = arg->opt;
                 if (opt.long_flag != NULL){
@@ -1789,7 +1790,7 @@ clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *
                         char *end = long_flag + long_flag_len;
                         if (*end == '\0' || *end == '='){
                             match = true;
-                            global = opt.inherit;
+                            inherit = opt.inherit;
                         }
                     }
                 }
@@ -1797,14 +1798,15 @@ clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *
                 clags_flag_t flag = arg->flag;
                 if (flag.long_flag != NULL && strcmp(flag.long_flag, long_flag) == 0){
                     match = true;
-                    global = flag.inherit;
+                    inherit = flag.inherit;
                 }
             }
             if (match){
                 *found_in = ancestor;
-                if (config == ancestor || global) return arg;
+                if (config == ancestor || inherit) return arg;
             }
         }
+        if (ancestor->options.no_inheritance) break;
         ancestor = ancestor->parent;
     }
     return NULL;
@@ -1830,6 +1832,7 @@ clags_arg_t* clags__search_short_options_and_flags(clags_config_t *config, char 
                 if (config == ancestor || global) return arg;
             }
         }
+        if (ancestor->options.no_inheritance) break;
         ancestor = ancestor->parent;
     }
     return NULL;
@@ -2298,6 +2301,7 @@ static inline void clags__flag_usage(clags_flag_t flag, char *temp_buffer, bool 
 
 void clags__inherited_options_usage(clags_config_t *config, char *temp_buffer, bool *lines_cut_off)
 {
+    if (config->options.no_inheritance) return;
     clags_config_t *ancestor = config->parent;
     while (ancestor != NULL){
         if (ancestor->inherit_options_count > 0){
@@ -2309,12 +2313,14 @@ void clags__inherited_options_usage(clags_config_t *config, char *temp_buffer, b
                 }
             }
         }
+        if (ancestor->options.no_inheritance) break;
         ancestor = ancestor->parent;
     }
 }
 
 void clags__inherited_flags_usage(clags_config_t *config, char *temp_buffer, bool *lines_cut_off)
 {
+    if (config->options.no_inheritance) return;
     clags_config_t *ancestor = config->parent;
     while (ancestor != NULL){
         if (ancestor->inherit_flags_count > 0){
@@ -2326,6 +2332,7 @@ void clags__inherited_flags_usage(clags_config_t *config, char *temp_buffer, boo
                 }
             }
         }
+        if (ancestor->options.no_inheritance) break;
         ancestor = ancestor->parent;
     }
 }
