@@ -1,7 +1,7 @@
 /*
-  clags.h - A simple declarative command line arguments parser for C
+  clags.h - Version 3.0.0 - https://github.com/fietec/clags.h
 
-  Version: 3.0.0
+  A simple declarative command line arguments parser for C
 
   MIT License
 
