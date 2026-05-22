@@ -1,7 +1,7 @@
 /*
-  clags.h - A simple declarative command line arguments parser for C
+  clags.h - Version 3.0.0 - https://github.com/fietec/clags.h
 
-  Version: 3.0.0
+  A simple declarative command line arguments parser for C
 
   MIT License
 
@@ -435,6 +435,7 @@ typedef struct{
     clags_value_type_t value_type;         // type of the option's value. See `clags__types` for a list of all types
     const char* default_input;             // fallback string parsed according to the argument's value_type if the user does not provide a value
     bool is_list;                          // if true, each occurrence appends one value to a clags_list_t
+    bool global;                           // if true, each child config will have access to this option as well
     union{                                 // only one of these should be set
         clags_custom_t *custom;            // pointer to custom type definition, only if `value_type` == `Clags_Custom`
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
@@ -451,6 +452,7 @@ typedef struct{
     const char *description;               // help text describing the flag
     // options
     bool exit;                             // true if parsing should exit immediately when the flag occurs
+    bool global;                           // if true, each child config will have access to this flag as well
     clags_flag_type_t type;                // behavior of the flag; see `clags_flag_type_t` (BoolFlag, CountFlag, ConfigFlag, CallbackFlag)
 } clags_flag_t;
 
@@ -667,7 +669,7 @@ struct clags_config_t{
 
   Returns:
     clags_config_t* : pointer to the failed config or `NULL` on success. If parsing
-                      or validation fails, the `.error` field will indicate the type.
+                      fails, the `.error` field will indicate the type.
 */
 clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config);
 
@@ -1771,6 +1773,87 @@ typedef enum {
     Clags_Result_Error,
 } clags__result_t;
 
+clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *long_flag, clags_config_t **found_in)
+{
+    clags_config_t *ancestor = config;
+     while (ancestor != NULL){
+        for (size_t i=0; i<ancestor->args_count; ++i){
+            clags_arg_t *arg = &ancestor->args[i];
+            bool match = false;
+            bool global = false;
+            if (arg->type == Clags_Option){
+                clags_option_t opt = arg->opt;
+                if (opt.long_flag != NULL){
+                    size_t long_flag_len = strlen(opt.long_flag);
+                    if (strncmp(opt.long_flag, long_flag, long_flag_len) == 0){
+                        char *end = long_flag + long_flag_len;
+                        if (*end == '\0' || *end == '='){
+                            match = true;
+                            global = opt.global;
+                        }
+                    }
+                }
+            } else if (arg->type = Clags_Flag){
+                clags_flag_t flag = arg->flag;
+                if (flag.long_flag != NULL && strcmp(flag.long_flag, long_flag) == 0){
+                    match = true;
+                    global = flag.global;
+                }
+            }
+            if (match){
+                *found_in = ancestor;
+                if (config == ancestor || global) return arg;
+            }
+        }
+        ancestor = ancestor->parent;
+    }
+    return NULL;
+}
+
+clags_flag_t* clags__search_long_flags(clags_config_t *config, char *long_flag, clags_config_t **found_in)
+{
+    clags_config_t *ancestor = config;
+    while (ancestor != NULL){
+        for (size_t i=0; i<ancestor->args_count; ++i){
+            clags_arg_t *arg = &ancestor->args[i];
+            if (arg->type == Clags_Flag){
+                clags_flag_t *flag = &arg->flag;
+                if (flag->long_flag != NULL && strcmp(flag->long_flag, long_flag) == 0){
+                    *found_in = ancestor;
+                    if (config == ancestor || flag->global) return flag;
+                }
+            }
+        }
+        ancestor = ancestor->parent;
+    }
+    return NULL;
+}
+
+clags_arg_t* clags__search_short_flags_and_options(clags_config_t *config, char short_flag, clags_config_t **found_in)
+{
+    clags_config_t *ancestor = config;
+    while (ancestor != NULL){
+        for (size_t i=0; i<ancestor->args_count; ++i){
+            clags_arg_t *arg = &ancestor->args[i];
+            bool global = false;
+            bool match = false;
+            if (arg->type == Clags_Flag && arg->flag.short_flag == short_flag){
+                global = arg->flag.global;
+                match = true;
+            } else if (arg->type == Clags_Option && arg->opt.short_flag == short_flag){
+                global = arg->opt.global;
+                match = true;
+            }
+            if (match){
+                *found_in = ancestor;
+                if (config == ancestor || global) return arg;
+            }
+        }
+        ancestor = ancestor->parent;
+    }
+    return NULL;
+}
+
 const char* clags__get_next_arg(clags_config_t *config, clags__parser_t *parser)
 {
     const char *ignore_prefix = config->options.ignore_prefix;
@@ -1791,37 +1874,34 @@ clags__result_t clags__parse_long_options(clags_config_t *config, clags__parser_
     const char *arg = parser->argv[parser->index];
     const char *rest = arg + 2; // skip '--'
     if (*rest == '\0'){
-        clags_log(config, Clags_Error, "Missing flag or option name: '--%s'!", arg);
+        clags_log(config, Clags_Error, "Missing flag: '--%s'!", arg);
         return Clags_Result_Error;
     }
-    for (size_t i=0; i<parser->args.option_count; ++i){
-        clags_option_t opt = parser->args.options[i];
-        if (opt.long_flag == NULL) continue;
-        size_t long_flag_len = strlen(opt.long_flag);
-        if (strncmp(rest, opt.long_flag, long_flag_len) == 0){
-            // flag matches
-            const char *value = rest + long_flag_len;
-            if (*value == '\0'){
-                // value is next argument
-                value = clags__get_next_arg(config, parser);
-                if (value == NULL){
-                    clags_log(config, Clags_Error, "Option flag %s requires argument!", arg);
-                    config->error = Clags_Error_InvalidOption;
-                    return Clags_Result_Error;
-                }
-            } else if (*value++ == '='){
-                if (*value == '\0'){
-                    clags_log(config, Clags_Error, "Designated option assignment may not have an empty value: '%s'!", arg);
-                    return Clags_Result_Error;
-                }
-            } else {
-                // flag does not match
-                continue;
+    clags_config_t *opt_config = NULL;
+    clags_option_t *opt = clags__search_long_options(config, rest, &opt_config);
+    if (opt){
+        const char *value = rest + strlen(opt->long_flag_len);
+        if (*value == '\0'){
+            // value is next argument
+            value = clags__get_next_arg(opt_config, parser);
+            if (value == NULL){
+                clags_log(opt_config, Clags_Error, "Option flag %s requires argument!", arg);
+                opt_config->error = Clags_Error_InvalidOption;
+                return Clags_Result_Error;
             }
-            // write value
-            if (!clags__set_arg(config, opt.value_type, arg, value, opt.variable, opt._data, opt.is_list)) return Clags_Result_Error;
-            return Clags_Result_Succ;
+        } else if (*value++ == '='){
+            if (*value == '\0'){
+                clags_log(opt_config, Clags_Error, "Designated option assignment may not have an empty value: '%s'!", arg);
+                return Clags_Result_Error;
+            }
+        } else {
+            clags_unreachable("long options no longer match");
         }
+        // write value
+        if (!clags__set_arg(opt_config, opt->value_type, arg, value, opt->variable, opt->_data, opt->is_list)) return Clags_Result_Error;
+        return Clags_Result_Succ;
+    } else if (opt_config){
+        clags_log(config, Clags_Error, "Unknown long option '%s'! Did you mean to use it with the '%s' subcommand?", arg, opt_config->name);
     }
     return Clags_Result_Pass;
 }
@@ -1831,14 +1911,15 @@ clags__result_t clags__parse_long_flags(clags_config_t *config, clags__parser_t 
     *exit = false;
     const char *arg = parser->argv[parser->index];
     const char *rest = arg + 2; // skip '--'
-    for (size_t i=0; i<parser->args.flag_count; ++i){
-        clags_flag_t flag = parser->args.flags[i];
-        if (flag.long_flag && strcmp(rest, flag.long_flag) == 0){
-            // flag matches
-            clags__set_flag(config, &flag);
-            *exit = flag.exit;
-            return Clags_Result_Succ;
-        }
+    
+    clags_config_t *flag_config = NULL;
+    clags_flag_t *flag = clags__search_long_flags(config, rest, &flag_config);
+    if (flag){
+        clags__set_flag(flag_config, flag);
+        *exit = flag->exit;
+        return Clags_Result_Succ;
+    } else if (flag_config){
+        clags_log(config, Clags_Error, "Unknown long flag '%s'! Did you mean to use it with the '%s' subcommand?", arg, flag_config->name);
     }
     return Clags_Result_Pass;
 }
@@ -1856,44 +1937,48 @@ clags__result_t clags__parse_short_options_and_flags(clags_config_t *config, cla
     }
     for (const char *c=rest; c<rest+flag_len; ++c){
         // check for short options
-        for (size_t i=0; i<parser->args.option_count; ++i){
-            clags_option_t opt = parser->args.options[i];
-            if (*c == opt.short_flag){
+        clags_config_t *found_config = NULL;
+        clags_arg_t *arg = clags__search_short_options_and_flags(config, *c, &found_config);
+        if (arg != NULL){
+            if (arg->type == Clags_Option){
+                clags_option_t opt = arg->opt;
                 const char *value = c + 1;
                 if (*value == '\0'){
                     // value is next argument
-                    value = clags__get_next_arg(config, parser);
+                    value = clags__get_next_arg(found_config, parser);
                     if (value == NULL){
-                        clags_log(config, Clags_Error, "Option flag %s requires argument!", arg);
-                        config->error = Clags_Error_InvalidOption;
+                        clags_log(found_config, Clags_Error, "Option flag %s requires argument!", arg);
+                        found_config->error = Clags_Error_InvalidOption;
                         return Clags_Result_Error;
                     }
                 }
-                if (!clags__set_arg(config, opt.value_type, arg, value, opt.variable, opt._data, opt.is_list)) return Clags_Result_Error;
+                if (!clags__set_arg(found_config, opt.value_type, arg, value, opt.variable, opt._data, opt.is_list)) return Clags_Result_Error;
                 return Clags_Result_Succ;
-            }
-        }
-        bool matched = false;
-        for (size_t i=0; i<parser->args.flag_count; ++i){
-            clags_flag_t flag = parser->args.flags[i];
-            if (*c == flag.short_flag){
-                clags__set_flag(config, &flag);
-                if (flag.exit){
+            } else if (arg->type == Clags_Flag){
+                clags_flag_t *flag = &arg->flag;
+                clags__set_flag(config, flag);
+                if (flag->exit){
                     *exit = true;
                     return Clags_Result_Succ;
                 }
-                matched = true;
+            } else {
+                clags_unreachable("arg type has changed");
             }
-        }
-        if (!matched){
+        } else if (found_config != NULL){
+            if (flag_len > 1){
+                clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '-%s'! Did you mean to use it with the '%s' subcommand?", *c, arg, found_config->name);
+            } else{
+                clags_log(config, Clags_Error, "Unknown short flag '-%c'! Did you mean to use it with the '%s' subcommand?", *c, found_config->name);
+            }
+        } else {
             if (flag_len > 1){
                 clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '-%s'!", *c, arg);
             } else{
                 clags_log(config, Clags_Error, "Unknown short flag '-%c'!", *c);
             }
-            config->error = Clags_Error_InvalidOption;
-            return Clags_Result_Error;
         }
+        config->error = Clags_Error_InvalidOption;
+        return Clags_Result_Error;
     }
     return Clags_Result_Succ;
 }
@@ -1992,6 +2077,8 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
             }
             continue;
         }
+
+        // TODO: add global arguments support
 
         if (parser.accept_options && strncmp(arg, "--", 2) == 0){
             // parse long options
