@@ -24,19 +24,6 @@ char *copy_dest   = NULL;
 clags_arg_t copy_args[] = {
     clags_positional(&copy_source, "source", "Source file path", .value_type=Clags_File),
     clags_positional(&copy_dest, "dest", "Destination file path"),
-
-    // With the `.type` field, we specify how the flag stores its result.
-    // A full list of available storage types can be found in the `clags_flag_type_t` enum.
-    // The default is `Clags_BoolFlag`, a normal boolean flag.
-
-    // `.type = Clags_CountFlag` instructs the parser to track how many times
-    // this flag was encountered. The associated variable must be of type `size_t`.
-    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
-
-    // `.type = Clags_ConfigFlag` instructs the parser to store a pointer to
-    // the `clags_config_t` of the (sub)command in which the flag was encountered.
-    // The associated variable must be of type `clags_config_t *`.
-    clags_flag('h', "help", &help, "print this help dialog", .exit=true, .type=Clags_ConfigFlag),
 };
 
 clags_config_t copy_config = clags_config(copy_args);
@@ -48,10 +35,6 @@ bool delete_force   = false;
 clags_arg_t delete_args[] = {
     clags_positional(&delete_target, "target", "Target file to delete", .value_type=Clags_File),
     clags_flag('f', "force", &delete_force, "Force deletion"),
-
-    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
-    // This is a built-in shorthand for the previously defined help flag
-    clags_flag_help_config(&help)
 };
 
 clags_config_t delete_config = clags_config(delete_args);
@@ -72,8 +55,19 @@ clags_subcmd_t *selected_subcmd = NULL;
 clags_arg_t main_args[] = {
     // With `.subcmds` you set the subcommand parsing verifier
     clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .subcmds=&my_subcmds),
-    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag),
-    clags_flag_help_config(&help)
+    // With the `.type` field, we specify how the flag stores its result.
+    // A full list of available storage types can be found in the `clags_flag_type_t` enum.
+    // The default is `Clags_BoolFlag`, a normal boolean flag.
+    // `.type = Clags_CountFlag` instructs the parser to track how many times
+    // this flag was encountered. The associated variable must be of type `size_t`.
+    // `inherit = true` tells the parser that this argument should be available in all child subcommands
+    clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag, .inherit=true),
+    
+    // `.type = Clags_ConfigFlag` instructs the parser to store a pointer to
+    // the `clags_config_t` of the (sub)command in which the flag was encountered.
+    // The associated variable must be of type `clags_config_t *`.
+    // For this exact flag you can also use `clags_flag_help_config(phelp)` macro
+    clags_flag('h', "help", &help, "print this help dialog", .exit=true, .type=Clags_ConfigFlag, .inherit=true),
 };
 
 clags_config_t main_config = clags_config(main_args);

@@ -630,7 +630,7 @@ struct clags_config_t{
 
 // simple helpers for the common help flags
 #define clags_flag_help(val)        clags_flag('h', "help", val, "print this help dialog", .exit=true, .inherit=true)
-#define clags_flag_help_config(val) clags_flag('h', "help", val, "print the help dialog for this (sub)command", .exit=true, .type=Clags_ConfigFlag, .inherit=true)
+#define clags_flag_help_config(val) clags_flag('h', "help", val, "print the help dialog for this subcommand", .exit=true, .type=Clags_ConfigFlag, .inherit=true)
 
 /* Config Constructors */
 
