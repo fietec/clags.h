@@ -255,6 +255,8 @@ typedef enum{
 typedef struct clags_config_t clags_config_t;
 typedef struct clags_choice_t clags_choice_t;
 typedef struct clags_subcmd_t clags_subcmd_t;
+// the definition of the verification function type
+// Note: must evaluate and return the argument's validity even if `variable` is NULL
 typedef bool (clags_verify_func_def_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data);
 typedef clags_verify_func_def_t *clags_verify_func_t;                                           // the function type of verifiers
 typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args); // the function type of custom log handlers
@@ -1256,13 +1258,11 @@ bool clags_verify_double(clags_config_t *config, const char *arg_name, const cha
 
 bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
-    if (pvalue == NULL) return false;
-    clags_choice_t  **pchoice = (clags_choice_t**) pvalue;
     clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
         if ((choices->case_insensitive && strcasecmp(choice->value, arg) == 0) || (!choices->case_insensitive && strcmp(choice->value, arg) == 0)){
-            if (pchoice) *pchoice = choice;
+            if (pvalue) *(clags_choice_t**)pvalue = choice;
             return true;
         }
     }
@@ -1493,14 +1493,14 @@ static inline void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
     }
 }
 
-bool clags__validate_default(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *value, void *variable, void *data, bool is_list)
+bool clags__validate_default(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *value, void *data, bool is_list)
 {
     if (is_list){
         clags_log(config, Clags_ConfigError, "default values are not supported for lists. Argument '%s' must be initialized via user input only.", arg_name);
         return false;
     }
     // verify and write default value
-    if (!clags__set_arg(config, value_type, arg_name, value, variable, data, is_list)){
+    if (!clags__set_arg(config, value_type, arg_name, value, NULL, data, false)){
         clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s': '%s'", arg_name, config->name, value);
         return false;
     }
@@ -1590,7 +1590,7 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
         if (!pos.optional){
             clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
         }
-        if (!clags__validate_default(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos._data, pos.is_list)) return config;
+        if (!clags__validate_default(config, pos.value_type, pos.arg_name, pos.default_input, pos._data, pos.is_list)) return config;
     }
     return NULL;
 }
@@ -1619,7 +1619,7 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
     if (opt.is_list && !clags__validate_list(config, opt.variable, opt.value_type, name)) return config;
 
     if (opt.default_input){
-        if (!clags__validate_default(config, opt.value_type, name, opt.default_input, opt.variable, opt._data, opt.is_list)) return config;
+        if (!clags__validate_default(config, opt.value_type, name, opt.default_input, opt._data, opt.is_list)) return config;
     }
     return NULL;
 }
@@ -1681,10 +1681,10 @@ bool clags__validate_duplicates(clags_config_t *config, char short_flag, const c
                 const char *p_long = (p_arg->type == Clags_Option) ? p_arg->opt.long_flag : p_arg->flag.long_flag;
 
                 if (short_flag != '\0' && short_flag == p_short) {
-                    clags_log(config, Clags_ConfigWarning, "Local short flag '-%c' shadows an inherited flag from parent command '%s'.", short_flag, parent->name ? parent->name : "parent");
+                    clags_log(config, Clags_ConfigWarning, "Local short flag '-%c' in config '%s' shadows an inherited flag from parent config '%s'.", short_flag, config->name, parent->name ? parent->name : "parent");
                 }
                 if (long_flag && p_long && strcmp(long_flag, p_long) == 0) {
-                    clags_log(config, Clags_ConfigWarning, "Local long flag '--%s' shadows an inherited flag from parent command '%s'.", long_flag, parent->name ? parent->name : "parent");
+                    clags_log(config, Clags_ConfigWarning, "Local long flag '--%s' in config '%s' shadows an inherited flag from parent config '%s'.", long_flag, config->name, parent->name ? parent->name : "parent");
                 }
             }
             if (parent->options.no_inheritance) break;
@@ -2020,6 +2020,29 @@ clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t 
     return NULL;
 }
 
+bool clags__set_defaults(clags_config_t *config)
+{
+    for (size_t i=0; i<config->args_count; ++i){
+        clags_arg_t arg = config->args[i];
+        switch (arg.type){
+            case Clags_Positional:{
+                if (arg.pos.optional && arg.pos.default_input != NULL){
+                    if (!clags__set_arg(config, arg.pos.value_type, arg.pos.arg_name, arg.pos.default_input, arg.pos.variable, arg.pos._data, arg.pos.is_list)) return false;
+                }
+            } break;
+            case Clags_Option:{
+                if (arg.pos.default_input != NULL){
+                    char buf[3] = {'-', '\0', '\0'};
+                    const char *name = arg.opt.long_flag ? arg.opt.long_flag : (arg.opt.short_flag ? (buf[1] = arg.opt.short_flag, buf) : "(unnamed)");
+                    if (!clags__set_arg(config, arg.opt.value_type, name, arg.opt.default_input, arg.opt.variable, arg.opt._data, arg.opt.is_list)) return false;
+                }
+            } break;
+            default: continue;
+        }
+    }
+    return true;
+}
+
 clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 {
     if (config == NULL || config->args == NULL || argc < 1) return NULL;
@@ -2029,6 +2052,8 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
         clags_assert(failed_config == NULL, "validation error in config tree");
     }
     clags_assert(config->state == Clags_Config_Valid, "config is invalid");
+
+    clags_assert(clags__set_defaults(config) == true, "setting default values of valid config failed");
 
     clags_config_t *result = NULL;
 
