@@ -160,7 +160,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <strings.h>
 #include <errno.h>
 #include <float.h>
 #include <ctype.h>
@@ -210,6 +209,12 @@
 */
 #define CLAGS_FREE(ptr, sz) free(ptr)
 #endif
+
+// terminates the program due to a unrecoverable fatal error.
+// can be redefined for custom behavior (e.g., `#define CLAGS_PANIC exit(1)`).
+#ifndef CLAGS_PANIC
+#define CLAGS_PANIC abort()
+#endif // CLAGS_PANIC
 
 // the initial capacity of lists
 #ifndef CLAGS_LIST_INIT_CAPACITY
@@ -528,8 +533,8 @@ struct clags_config_t{
 // helper macros
 #define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
 #define clags_return_defer(value) do{result = (value); goto defer;}while(0) // set the `result` variable and jump to the `defer` label
-#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); abort();}}while(0)
-#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); fflush(stderr); abort();}while(0)
+#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); CLAGS_PANIC;}}while(0)
+#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); fflush(stderr); CLAGS_PANIC;}while(0)
 
 /* Custom Variable Types */
 
@@ -907,6 +912,28 @@ static inline char* clags__strchrnull(const char *string, char c)
     return s;
 }
 
+static inline int clags__tolower(int c)
+{
+    return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
+}
+
+int clags__strcasecmp(const char *s1, const char *s2)
+{
+    if (s1 == s2) return 0;
+    if (s1 == NULL) return -1;
+    if (s2 == NULL) return 1;
+
+    while (*s1 && *s2) {
+        int c1 = clags__tolower((unsigned char)*s1);
+        int c2 = clags__tolower((unsigned char)*s2);
+
+        if (c1 != c2) return c1 - c2;
+        s1++;
+        s2++;
+    }
+    return clags__tolower((unsigned char)*s1) - clags__tolower((unsigned char)*s2);
+}
+
 static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
 {
     if (sb->capacity >= capacity) return;
@@ -1046,10 +1073,10 @@ bool clags_verify_string(clags_config_t *config, const char *arg_name, const cha
 bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
 {
     (void) data;
-    if (strcasecmp(arg, "true") == 0 || strcasecmp(arg, "yes") == 0 || strcasecmp(arg, "y") == 0){
+    if (clags__strcasecmp(arg, "true") == 0 || clags__strcasecmp(arg, "yes") == 0 || clags__strcasecmp(arg, "y") == 0){
         if (pvalue) *(bool*)pvalue = true;
         return true;
-    } else if (strcasecmp(arg, "false") == 0 || strcasecmp(arg, "no") == 0 || strcasecmp(arg, "n") == 0){
+    } else if (clags__strcasecmp(arg, "false") == 0 || clags__strcasecmp(arg, "no") == 0 || clags__strcasecmp(arg, "n") == 0){
         if (pvalue) *(bool*)pvalue = false;
         return true;
     }
@@ -1261,7 +1288,7 @@ bool clags_verify_choice(clags_config_t *config, const char *arg_name, const cha
     clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
-        if ((choices->case_insensitive && strcasecmp(choice->value, arg) == 0) || (!choices->case_insensitive && strcmp(choice->value, arg) == 0)){
+        if ((choices->case_insensitive && clags__strcasecmp(choice->value, arg) == 0) || (!choices->case_insensitive && strcmp(choice->value, arg) == 0)){
             if (pvalue) *(clags_choice_t**)pvalue = choice;
             return true;
         }
@@ -1334,15 +1361,15 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
         return false;
     }
     clags_fsize_t factor;
-    if (*endptr == '\0' || strcasecmp(endptr, "B") == 0) factor = 1;
-    else if (strcasecmp(endptr, "KiB") == 0)             factor = 1ULL << 10;
-    else if (strcasecmp(endptr, "KB")  == 0)             factor = 1000;
-    else if (strcasecmp(endptr, "MiB") == 0)             factor = 1ULL << 20;
-    else if (strcasecmp(endptr, "MB")  == 0)             factor = 1000000;
-    else if (strcasecmp(endptr, "GiB") == 0)             factor = 1ULL << 30;
-    else if (strcasecmp(endptr, "GB")  == 0)             factor = 1000000000;
-    else if (strcasecmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
-    else if (strcasecmp(endptr, "TB")  == 0)             factor = 1000000000000;
+    if (*endptr == '\0' || clags__strcasecmp(endptr, "B") == 0) factor = 1;
+    else if (clags__strcasecmp(endptr, "KiB") == 0)             factor = 1ULL << 10;
+    else if (clags__strcasecmp(endptr, "KB")  == 0)             factor = 1000;
+    else if (clags__strcasecmp(endptr, "MiB") == 0)             factor = 1ULL << 20;
+    else if (clags__strcasecmp(endptr, "MB")  == 0)             factor = 1000000;
+    else if (clags__strcasecmp(endptr, "GiB") == 0)             factor = 1ULL << 30;
+    else if (clags__strcasecmp(endptr, "GB")  == 0)             factor = 1000000000;
+    else if (clags__strcasecmp(endptr, "TiB") == 0)             factor = 1ULL << 40;
+    else if (clags__strcasecmp(endptr, "TB")  == 0)             factor = 1000000000000;
     else {
         clags_log(config, Clags_Error, "Invalid size unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
@@ -1368,10 +1395,10 @@ bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const cha
         return false;
     }
     clags_time_t factor;
-    if (*endptr == '\0' || strcasecmp(endptr, "s") == 0)  factor =       1;
-    else if (strcasecmp(endptr, "m")  == 0)               factor =      60;
-    else if (strcasecmp(endptr, "h")  == 0)               factor =    3600;
-    else if (strcasecmp(endptr, "d")  == 0)               factor = 24*3600;
+    if (*endptr == '\0' || clags__strcasecmp(endptr, "s") == 0)  factor =       1;
+    else if (clags__strcasecmp(endptr, "m")  == 0)               factor =      60;
+    else if (clags__strcasecmp(endptr, "h")  == 0)               factor =    3600;
+    else if (clags__strcasecmp(endptr, "d")  == 0)               factor = 24*3600;
     else {
         clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
@@ -1396,13 +1423,13 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
         return false;
     }
     clags_time_t factor;
-    if (*endptr == '\0' || strcasecmp(endptr, "ns") == 0)      factor = 1;
-    else if (strcasecmp(endptr, "us") == 0)                    factor = 1000ULL;
-    else if (strcasecmp(endptr, "ms") == 0)                    factor = 1000000ULL;
-    else if (strcasecmp(endptr, "s") == 0)                     factor = 1000000000ULL;
-    else if (strcasecmp(endptr, "m") == 0)                     factor = 60ULL * 1000000000ULL;
-    else if (strcasecmp(endptr, "h") == 0)                     factor = 3600ULL * 1000000000ULL;
-    else if (strcasecmp(endptr, "d") == 0)                     factor = 24ULL * 3600ULL * 1000000000ULL;
+    if (*endptr == '\0' || clags__strcasecmp(endptr, "ns") == 0)      factor = 1;
+    else if (clags__strcasecmp(endptr, "us") == 0)                    factor = 1000ULL;
+    else if (clags__strcasecmp(endptr, "ms") == 0)                    factor = 1000000ULL;
+    else if (clags__strcasecmp(endptr, "s") == 0)                     factor = 1000000000ULL;
+    else if (clags__strcasecmp(endptr, "m") == 0)                     factor = 60ULL * 1000000000ULL;
+    else if (clags__strcasecmp(endptr, "h") == 0)                     factor = 3600ULL * 1000000000ULL;
+    else if (clags__strcasecmp(endptr, "d") == 0)                     factor = 24ULL * 3600ULL * 1000000000ULL;
     else {
         clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%s'!", arg_name, endptr);
         return false;
@@ -2031,7 +2058,7 @@ bool clags__set_defaults(clags_config_t *config)
                 }
             } break;
             case Clags_Option:{
-                if (arg.pos.default_input != NULL){
+                if (arg.opt.default_input != NULL){
                     char buf[3] = {'-', '\0', '\0'};
                     const char *name = arg.opt.long_flag ? arg.opt.long_flag : (arg.opt.short_flag ? (buf[1] = arg.opt.short_flag, buf) : "(unnamed)");
                     if (!clags__set_arg(config, arg.opt.value_type, name, arg.opt.default_input, arg.opt.variable, arg.opt._data, arg.opt.is_list)) return false;
