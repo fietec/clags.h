@@ -58,8 +58,8 @@ bool resize_keep_aspect = false;
 clags_arg_t resize_args[] = {
     clags_positional(&resize_input_file, "input_file", "the file to resize", .value_type=Clags_File),
     clags_option('o', "output", &resize_output_file, "FILE", "the file to output", .default_input="resized.png"),
-    clags_option('w', "width", &resize_width, "PIXELS", "the width of the output image", .value_type=Clags_UInt32),
-    clags_option('h', "height", &resize_height, "PIXELS", "the height of the output image", .value_type=Clags_UInt32),
+    clags_option(0, "width", &resize_width, "PIXELS", "the width of the output image", .value_type=Clags_UInt32),
+    clags_option(0, "height", &resize_height, "PIXELS", "the height of the output image", .value_type=Clags_UInt32),
     clags_flag('k', "keep-aspect", &resize_keep_aspect, "keep the aspect ratio of the input image"),
 };
 

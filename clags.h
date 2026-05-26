@@ -1560,18 +1560,18 @@ clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_ty
     switch (type){
         case Clags_Subcmd:{
             if (data == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", arg_name);
+                clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s' in config '%s'! Define `.subcmds` for subcommand verification!", arg_name, config->name);
                 return config;
             }
 
             clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
             if (subcmds->count == 0){
-                clags_log(config, Clags_ConfigWarning, "subcommand definition should contain at least one subcommand for argument '%s'!", arg_name);
+                clags_log(config, Clags_ConfigWarning, "subcommand definition should contain at least one subcommand for argument '%s' in config '%s'!", arg_name, config->name);
             }
             for (size_t i=0; i<subcmds->count; ++i){
                 clags_config_t *child_config = subcmds->items[i].config;
                 if (child_config == NULL){
-                    clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand '%s' has no config assigned!", arg_name, subcmds->items[i].name);
+                    clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s' in config '%s'! Subcommand '%s' has no config assigned!", arg_name, config->name, subcmds->items[i].name);
                     return config;
                 }
                 child_config->parent = config;
@@ -1581,16 +1581,16 @@ clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_ty
         } break;
         case Clags_Choice:{
             if (data == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", arg_name);
+                clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s' in config '%s'! Define `.choices` for choice verification!", arg_name, config->name);
                 return config;
             }
             if (((clags_choices_t*) data)->count == 0){
-                clags_log(config, Clags_ConfigWarning, "choice definition must contain at least one choice for arguments '%s'!", arg_name);
+                clags_log(config, Clags_ConfigWarning, "choice definition must contain at least one choice for argument '%s' in config '%s'!", arg_name, config->name);
             }
         } break;
         case Clags_Custom:{
             if (data == NULL){
-                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.custom` for custom verification!", arg_name);
+                clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s' in config '%s'! Define `.custom` for custom verification!", arg_name, config->name);
                 return config;
             }
         } break;
@@ -1600,7 +1600,7 @@ clags_config_t* clags__validate_data_type(clags_config_t *config, clags_value_ty
         case Clags_Real:{
             clags_range_t *range = (clags_range_t*)data;
             if (range && range->type != type){
-                clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s': expected range type '%s', but got '%s'!", arg_name, clags__type_names[type], clags__type_names[range->type]);
+                clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s' in config '%s': expected range type '%s', but got '%s'!", arg_name, config->name, clags__type_names[type], clags__type_names[range->type]);
                 return config;
             }
         } break;
@@ -1615,7 +1615,7 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
     if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return config;
     if (pos.default_input){
         if (!pos.optional){
-            clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
+            clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s' in config '%s'! This value will always be overwritten and never used.", pos.arg_name, config->name);
         }
         if (!clags__validate_default(config, pos.value_type, pos.arg_name, pos.default_input, pos._data, pos.is_list)) return config;
     }
@@ -1628,17 +1628,17 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
     const char *name = opt.long_flag ? opt.long_flag
                       : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
     if (opt.short_flag == '\0' && opt.long_flag == NULL){
-        clags_log(config, Clags_ConfigWarning, "option argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
+        clags_log(config, Clags_ConfigWarning, "unreachable option in config '%s'. Define at least one of `short_flag` and `long_flag`.", config->name);
     }
     if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
         clags_log(config, Clags_ConfigWarning,
-                  "option long flag '%s' should not start with '--'. "
+                  "option long flag '%s' in config '%s' should not start with '--'. "
                   "The parser automatically handles leading '--' for long flags, "
                   "so including it in the config may cause incorrect parsing.",
-                  opt.long_flag);
+                  opt.long_flag, config->name);
     }
     if (opt.value_type == Clags_Subcmd){
-        clags_log(config, Clags_ConfigError, "option argument '%s' may not be a subcommand!", name);
+        clags_log(config, Clags_ConfigError, "option argument '%s' in config '%s' may not be a subcommand!", name, config->name);
         return config;
     }
     clags_config_t *failed_config = clags__validate_data_type(config, opt.value_type, opt._data, name);
@@ -1653,15 +1653,18 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
 
 clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
 {
+    char buf[3] = {'-', '\0', '\0'};
+    const char *name = flag.long_flag ? flag.long_flag
+                      : (flag.short_flag ? (buf[1] = flag.short_flag, buf) : "(unnamed)");
     if (flag.short_flag == '\0' && flag.long_flag == NULL){
-        clags_log(config, Clags_ConfigWarning, "flag argument is unreachable. Define at least one of `short_flag` and `long_flag`.");
+        clags_log(config, Clags_ConfigWarning, "unreachable flag in config '%s'. Define at least one of `short_flag` and `long_flag`.", config->name);
     }
     if (flag.long_flag && strncmp(flag.long_flag, "--", 2) == 0){
         clags_log(config, Clags_ConfigWarning,
-                  "long flag '%s' should not start with '--'. "
+                  "long flag '%s' in config '%s' should not start with '--'. "
                   "The parser automatically handles leading '--' for long flags, "
                   "so including it in the config may cause incorrect parsing.",
-                  flag.long_flag);
+                  flag.long_flag, config->name);
     }
     switch (flag.type){
         case Clags_BoolFlag:
@@ -1669,7 +1672,7 @@ clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
         case Clags_CountFlag:
         case Clags_CallbackFlag:break;
         default:{
-            clags_log(config, Clags_ConfigError, "invalid flag type: %d!", flag.type);
+            clags_log(config, Clags_ConfigError, "invalid flag type for flag '%s' in config '%s': %d!", name, config->name, flag.type);
             return config;
         }
     }
@@ -1686,11 +1689,11 @@ bool clags__validate_duplicates(clags_config_t *config, char short_flag, const c
         const char *arg_long_flag = (b->type == Clags_Option) ? b->opt.long_flag : b->flag.long_flag;
 
         if (short_flag != '\0' && short_flag == arg_short_flag) {
-            clags_log(config, Clags_ConfigError, "Duplicate short flag '-%c' already defined in config.", short_flag);
+            clags_log(config, Clags_ConfigError, "Duplicate short flag '-%c' already defined in config '%s'.", short_flag, config->name);
             return false;
         }
         if (long_flag && arg_long_flag && strcmp(long_flag, arg_long_flag) == 0) {
-            clags_log(config, Clags_ConfigError, "Duplicate long flag '--%s' already defined in config.", long_flag);
+            clags_log(config, Clags_ConfigError, "Duplicate long flag '--%s' already defined in config '%s'.", long_flag, config->name);
             return false;
         }
     }
@@ -1729,17 +1732,17 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
 
     // validate options
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
-        clags_log(config, Clags_ConfigError,"'.list_terminator' may not be '--' because '--' is reserved for toggling option and flag parsing!");
+        clags_log(config, Clags_ConfigError,"'.list_terminator' of config '%s' may not be '--' because '--' is reserved for toggling option and flag parsing!", config->name);
         clags_return_defer(config);
     }
     if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
-        clags_log(config, Clags_ConfigError, "'.ignore_prefix' may not be '--' since this conflicts with the long option and flag prefix!");
+        clags_log(config, Clags_ConfigError, "'.ignore_prefix' of config '%s' may not be '--' since this conflicts with the long option and flag prefix!", config->name);
         clags_return_defer(config);
     }
     if (config->options.ignored_args){
         clags_list_t *ignored_args = config->options.ignored_args;
         if (ignored_args->value_type != Clags_String || !(ignored_args->item_size == sizeof(char*) || ignored_args->item_size == 0)){
-            clags_log(config, Clags_ConfigError, "'.ignored_args' list is not correctly initialized as a string list!");
+            clags_log(config, Clags_ConfigError, "'.ignored_args' of config '%s' list is not correctly initialized as a string list!", config->name);
             clags_return_defer(config);
         }
     }
@@ -1757,23 +1760,23 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
                 clags_config_t *failed_config = clags__validate_positional(config, pos);
                 if (failed_config != NULL) clags_return_defer(failed_config);
                 if (optional_found && !pos.optional){
-                    clags_log(config, Clags_ConfigError, "invalid positional argument order: required argument '%s' appears after optional argument '%s'", pos.arg_name, last_pos_name);
+                    clags_log(config, Clags_ConfigError, "invalid positional argument order in config '%s': required argument '%s' appears after optional argument '%s'", config->name, pos.arg_name, last_pos_name);
                     clags_return_defer(config);
                 }
                 optional_found = pos.optional;
                 if (pos.value_type == Clags_Subcmd){
                     subcmd_found = true;
                     if (last_pos_name != NULL){
-                        clags_log(config, Clags_ConfigError, "subcommand '%s' must be the only positional argument in its config!", pos.arg_name);
+                        clags_log(config, Clags_ConfigError, "subcommand '%s' must be the only positional argument in config '%s'!", pos.arg_name, config->name);
                         clags_return_defer(config);
                     }
                 } else if (subcmd_found){
-                    clags_log(config, Clags_ConfigError, "trailing positional argument after subcommand: '%s'!", pos.arg_name);
+                    clags_log(config, Clags_ConfigError, "trailing positional argument after subcommand in config '%s': '%s'!", config->name, pos.arg_name);
                     clags_return_defer(config);
                 }
                 if (last_was_list && config->options.list_terminator == NULL){
                     clags_sb_t sb = {0};
-                    clags_sb_appendf(&sb, "positional argument '%s' is unreachable after list '%s'! Define '.list_terminator' in 'clags_config' to separate them", pos.arg_name, last_pos_name);
+                    clags_sb_appendf(&sb, "positional argument '%s' is unreachable after list '%s' in config '%s'! Define '.list_terminator' in 'clags_config' to separate them", pos.arg_name, last_pos_name, config->name);
                     if (!pos.is_list){
                         clags_sb_appendf(&sb, " or make '%s' option", pos.arg_name);
                     }
