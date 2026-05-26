@@ -5,11 +5,11 @@
 ### Added
 - Argument inheritance:
   - added the `.inherit` flag to option and flag definitions
-  - all such declared arguments are shared will all child configs automatically
+  - all such declared arguments are shared with all child configs automatically
   - added `.no_inheritance` flag to config options to disable inheritance for a specific config
 - `clags_validate` is now part of the api to cover cases where `clags_usage` is called on a child config without the root config having been validated
 - duplicate flag and option definitions are now detected for the entire scope of each config
-- new `CLAGS_MAX_INLINE_CHOICES` macro: set the maxium amount of choices to print inline when `.print_no_details` is set
+- new `CLAGS_MAX_INLINE_CHOICES` macro: set the maximum amount of choices to print inline when `.print_no_details` is set
 - new `Clags_Float` and `Clags_Double` value types
 - new `Clags_Int`, `Clags_UInt` and `Clags_Real` value types with new custom ranges, respectively
   - custom ranges:
@@ -19,7 +19,7 @@
   - this allows you to have multiple custom types share the same verification function
 - exposed internal verifiers:
   - all verifiers such as `clags_verify_int32` are now part of the api
-  - this allows custom types to inherit/extendfunctionality of already existing ones
+  - this allows custom types to inherit/extend functionality of already existing ones
 - redefinable `CLAGS_PANIC` macro used by `clags_assert` and `clags_unreachable`
 - new examples `06_2_custom_inheritance` and `10_allocator`
 - added more tests
