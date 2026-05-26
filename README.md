@@ -1,83 +1,119 @@
 # clags.h
-A simple declarative command line argument parser, written in C.
+
+A declarative command line argument parser for C99. Single-header, no dependencies.
+
+Instead of writing manual `while(getopt(...))` loops and parsing strings with `strtol`, `clags.h` uses C99 designated initializers to define your CLI schema in arrays.
+It handles type validation, bounds checking, variadic lists, and subcommands internally.
 
 ## Features
-- Positional, option and flag arguments
-- Typed arguments: `bool`, `int8`, `uint8`, `int32`, `uint32`, `int64`, `uint64`, `double`, `path`, `size`, `time_s`, `time_ns`
-- Choice arguments: restrict values to a fixed set (like an enum)
-- Custom parsing functions for user-defined types
-- Native recursive subcommands
-- Option arguments with default values
 
-## How to use
-`clags.h` is an stb-style library, which means a single header file
-and headers and implementations separated by the `CLAGS_IMPLEMENTATION` header guard.  
-You can compile the library with any `C99+` compiler. No further dependencies are required.
+- **Declarative API:** Define arguments as static arrays of structs.
+- **Config Validation:** Performs an upfront validation step to catch schema definition errors before parsing begins.
+- **Built-in Type Validation:** Automatically parses and validates `int`, `uint`, `double`, `bool`, `size` (e.g., "10KiB"), and `time` (e.g., "50ms").
+- **Filesystem Checks:** `Clags_File` and `Clags_Dir` types automatically verify existence via `stat()` before parsing succeeds.
+- **Restricted Choices:** Bind inputs to a specific set of strings (like an enum).
+- **Lists and Terminators:** Consume multiple positional arguments into dynamic arrays, with support for custom list terminators (e.g., `::`).
+- **Subcommands:** Native routing to child configurations.
+- **Auto-generated Usage:** Formats and aligns help menus based on your config.
+- **Memory Tracking:** Tracks its own string duplications and list allocations for a single-call cleanup.
 
-### Example
+## Integration
+
+`clags.h` uses the standard [stb-style](https://github.com/nothings/stb#how-do-i-use-these-libraries) implementation pattern. Include the header wherever you need the types, but define `CLAGS_IMPLEMENTATION` in exactly one `.c` file before including it to compile the definitions.
+
+```c
+#define CLAGS_IMPLEMENTATION
+#include "clags.h"
+```
+## Example
+
+This example demonstrates lists, bounds-checked integers, choices, and memory cleanup.  
+See the `examples/` directory for advanced examples including multi-level subcommands and variadic list terminators.
 ```c
 #include <stdio.h>
-#include <stdbool.h>
+#include <stdint.h>
 
-// This includes the function implementations and only has to be done once per translation unit
 #define CLAGS_IMPLEMENTATION
 #include "clags.h"
 
-// Declare argument variables with optional default values
-const char *input_file = NULL;
-const char *output_file = NULL;
-bool warnings = false;
-bool help = false;
-
-// Declare all expected arguments
-clags_arg_t args[] = {
-    // Positional arguments are parsed in the order they are defined here
-    clags_positional(&input_file, "input_file", "the input file"),
-    
-    // Option arguments support both short and long flags
-    // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
-    clags_option('o', "output", &output_file, "FILE", "the output file", .default_input="a.out"),
-
-    // Use flags to set boolean values on occurrence
-    // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
-    clags_flag('w', "warnings", &warnings, "print warnings"),
-    // This is a neat short-hand since the `--help` flags are so common
-    clags_flag_help(&help),
-};
-
-clags_config_t config = clags_config(args);
-
 int main(int argc, char **argv)
 {
-    // Parse the arguments using the previously defined rules, returns the config on error
-    if (clags_parse(argc, argv, &config) != NULL){
-        // Print an automatic usage, based on the defined config
+    // 1. Declare variables to hold the parsed state
+    clags_list_t inputs = clags_list(Clags_File);
+    int64_t optimization = 0;
+    clags_choice_t *format = NULL;
+    bool verbose = false;
+    bool help = false;
+
+    // 2. Define constraints
+    clags_range_t opt_range = clags_int_range(0, 3);
+    clags_choice_t format_choices[] = {{"elf", "an executable file"}, {"bin", "a binary blob"}, {"hex", "binary values as hex strings"}};
+    clags_choices_t formats = clags_choices(format_choices);
+
+    // 3. Define the argument schema
+    clags_arg_t args[] = {
+        clags_positional(&inputs, "files", "input files to process", .is_list=true, .value_type=Clags_File),
+        clags_option('O', "opt", &optimization, "LEVEL", "optimization level", .value_type=Clags_Int, .range=&opt_range, .default_input="1"),
+        clags_option('f', "format", &format, "FMT", "output format", .value_type=Clags_Choice, .choices=&formats, .default_input="elf"),
+        clags_flag('v', "verbose", &verbose, "enable verbose output"),
+        clags_flag_help(&help),
+    };
+
+    // 4. Initialize the config (with optional parser behaviors)
+    clags_config_t config = clags_config(args, .ignore_prefix="!");
+
+    // 5. Parse
+    if (clags_parse(argc, argv, &config) != NULL) {
+        // clags_parse returns the failed config on error
         clags_usage(argv[0], &config);
+        clags_config_free(&config);
         return 1;
     }
-    // You can now use the set argument variables
-    if (help){
+
+    if (help) {
         clags_usage(argv[0], &config);
+        clags_config_free(&config);
         return 0;
     }
-    printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");
+
+    // 6. Use the validated data
+    printf("Format: %s | Opt Level: %ld | Verbose: %d\n", format->value, optimization, verbose);
+    printf("Valid files found: %zu\n", inputs.count);
+
+    for (size_t i = 0; i < inputs.count; i++) {
+        printf("  - %s\n", clags_list_element(inputs, char*, i));
+    }
+
+    // 7. Free lists and duplicated strings
+    clags_config_free(&config);
     return 0;
 }
 ```
-When run with this input:
-```console
-./example --help
-```
-**clags** will print the following usage:
-```console
-Usage: ./example [OPTIONS] [FLAGS] <input_file>
-  Arguments:
-    input_file                       : the input file
-  Options:
-    -o, --output(=)FILE              : the output file (default: a.out)
-  Flags:
-    -w, --warnings                   : print warnings
-    -h, --help                       : print this help dialog and exit
-```
-For more advanced examples see the [examples](/examples) directory.
 
+When run with ./build --help, clags generates the following:
+```Plaintext
+Usage: ./build [OPTIONS] [FLAGS] <files..>
+  Arguments:
+    files                            : input files to process (file[])
+  Options:
+    -O, --opt(=)LEVEL                : optimization level (int, 0-3) (default: 1)
+    -f, --format(=)FMT               : output format (choice) (default: elf)
+        Choices:
+          - elf                      : an executable file
+          - bin                      : a binary blob
+          - hex                      : binary values as hex strings
+  Flags:
+    -v, --verbose                    : enable verbose output
+    -h, --help                       : print this help dialog and exit
+
+  Notes:
+    Arguments prefixed with '!' are ignored.
+
+```
+## Memory Management
+
+By default, clags points char* variables directly to the argv strings to avoid unnecessary allocations.
+
+If you enable `.duplicate_strings = true` in your `clags_options_t`, the parser will calloc duplicates. It tracks all internal allocations (including variadic lists) in the `clags_config_t` context.
+
+Calling `clags_config_free(&config)` at the end of your program will safely clean up all tracked memory. You can override the default allocators by defining `CLAGS_CALLOC`, `CLAGS_REALLOC`, and `CLAGS_FREE` before including the implementation.
