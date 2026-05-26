@@ -1649,6 +1649,51 @@ clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
     return NULL;
 }
 
+bool clags__validate_duplicates(clags_config_t *config, char short_flag, const char *long_flag, size_t index)
+{
+    for (size_t j = index + 1; j < config->args_count; ++j) {
+        clags_arg_t *b = &config->args[j];
+        if (b->type == Clags_Positional) continue;
+
+        char arg_short_flag = (b->type == Clags_Option) ? b->opt.short_flag : b->flag.short_flag;
+        const char *arg_long_flag = (b->type == Clags_Option) ? b->opt.long_flag : b->flag.long_flag;
+
+        if (short_flag != '\0' && short_flag == arg_short_flag) {
+            clags_log(config, Clags_ConfigError, "Duplicate short flag '-%c' already defined in config.", short_flag);
+            return false;
+        }
+        if (long_flag && arg_long_flag && strcmp(long_flag, arg_long_flag) == 0) {
+            clags_log(config, Clags_ConfigError, "Duplicate long flag '--%s' already defined in config.", long_flag);
+            return false;
+        }
+    }
+    if (!config->options.no_inheritance) {
+        clags_config_t *parent = config->parent;
+        while (parent != NULL) {
+            for (size_t j = 0; j < parent->args_count; ++j) {
+                clags_arg_t *p_arg = &parent->args[j];
+                if (p_arg->type == Clags_Positional) continue;
+
+                bool inherits = (p_arg->type == Clags_Option) ? p_arg->opt.inherit : p_arg->flag.inherit;
+                if (!inherits) continue;
+
+                char p_short = (p_arg->type == Clags_Option) ? p_arg->opt.short_flag : p_arg->flag.short_flag;
+                const char *p_long = (p_arg->type == Clags_Option) ? p_arg->opt.long_flag : p_arg->flag.long_flag;
+
+                if (short_flag != '\0' && short_flag == p_short) {
+                    clags_log(config, Clags_ConfigWarning, "Local short flag '-%c' shadows an inherited flag from parent command '%s'.", short_flag, parent->name ? parent->name : "parent");
+                }
+                if (long_flag && p_long && strcmp(long_flag, p_long) == 0) {
+                    clags_log(config, Clags_ConfigWarning, "Local long flag '--%s' shadows an inherited flag from parent command '%s'.", long_flag, parent->name ? parent->name : "parent");
+                }
+            }
+            if (parent->options.no_inheritance) break;
+            parent = parent->parent;
+        }
+    }
+    return true;
+}
+
 clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
 {
     if (config->state != Clags_Config_Unvalidated) return NULL;
@@ -1719,6 +1764,7 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
                 if (opt.inherit) config->inherit_options_count += 1;
                 clags_config_t *failed_config = clags__validate_option(config, opt);
                 if (failed_config != NULL) clags_return_defer(failed_config);
+                if (!clags__validate_duplicates(config, opt.short_flag, opt.long_flag, i)) clags_return_defer(config);
             } break;
             case Clags_Flag:{
                 last_was_list = false;
@@ -1726,6 +1772,7 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
                 if (flag.inherit) config->inherit_flags_count += 1;
                 clags_config_t *failed_config = clags__validate_flag(config, flag);
                 if (failed_config != NULL) clags_return_defer(failed_config);
+                if (!clags__validate_duplicates(config, flag.short_flag, flag.long_flag, i)) clags_return_defer(config);
             } break;
         }
     }

@@ -1,5 +1,40 @@
 # Changelog
 
+## [v3.0.0] - 26.05.2026
+
+### Added
+- Argument inheritance:
+  - added the `.inherit` flag to option and flag definitions
+  - all such declared arguments are shared will all child configs automatically
+  - added `.no_inheritance` flag to config options to disable inheritance for a specific config
+- `clags_validate` is now part of the api to cover cases where `clags_usage` is called on a child config without the root config having been validated
+- new `CLAGS_MAX_INLINE_CHOICES` macro: set the maxium amount of choices to print inline when `.print_no_details` is set
+- new `Clags_Float` and `Clags_Double` value types
+- new `Clags_Int`, `Clags_UInt` and `Clags_Real` value types with new custom ranges, respectively
+  - custom ranges:
+	- added `clags_<int/uint/real>_range(min, max)` macros and `.range` field for arguments of these types
+- new `clags_custom_t` type for custom type definition:
+  - you can now create a custom type with a name verification function and also additional custom arguments
+  - this allows you to have multiple custom types share the same verification function
+- exposed internal verifiers:
+  - all verifiers such as `clags_verify_int32` are now part of the api
+  - this allows custom types to inherit/extendfunctionality of already existing ones
+- new examples `06_2_custom_inheritance` and `10_allocator`
+- added more tests
+
+### Breaking Changes
+- `.custom` field now expects a pointer to the new `clags_custom_t` struct
+- removed `clags_custom_verify_func_t`, custom verifiers now use the same signature as all internal verifiers
+- allocation macros are now parameterized, this is to add support for non-size-tracking custom allocators like arenas
+  - `CLAGS_CALLOC(count, size)`
+  - `CLAGS_REALLOC(ptr, oldsz, newsz)`
+  - `CLAGS_FREE(ptr, sz)`
+
+### Changes
+- completely re-wrote the parser and validator to cover more cases and make the code more readable
+
+---
+
 ## [v2.3.0] - 12.03.2026
 
 ### Added
