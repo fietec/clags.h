@@ -31,6 +31,8 @@
   - `CLAGS_CALLOC(count, size)`
   - `CLAGS_REALLOC(ptr, oldsz, newsz)`
   - `CLAGS_FREE(ptr, sz)`
+- removed `clags_args_t` from api since it was only used internally
+- renamed `clags_timeS_list` and `clags_timeNS_list` to `clags_time_s_list` and `clags_time_ns_list`, respectively
 
 ### Changes
 - completely re-wrote the parser and validator to cover more cases and make the code more readable

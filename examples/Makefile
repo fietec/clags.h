@@ -1,6 +1,6 @@
 # Makefile to compile each .c file into its own executable
 
-CFLAGS = -Wall -Wextra --std=c99
+CFLAGS = -Wall -Wextra -Werror --std=c99
 
 SRC = $(wildcard *.c)
 EXE = $(SRC:.c=)

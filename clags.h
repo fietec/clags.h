@@ -1,7 +1,7 @@
 /*
   clags.h - Version 3.0.0 - https://github.com/fietec/clags.h
 
-  A simple declarative command line arguments parser for C
+  A simple declarative command line arguments parser for C99
 
   MIT License
 
@@ -138,7 +138,7 @@
   --------------------------------------------------------------------------
   string        | "hello", world              | Any sequence of characters.
   bool          | true, false, yes, N         | Case-insensitive.
-  number        | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
+  int / uint    | 0, -128, 127, 0x1F, 0b1010  | Signed and unsigned integers of various sizes.
                 |                             | Accepts decimal, hex (0x), octal (0), and binary (0b) notation.
                 |                             | Values must fit in the type’s bounds ((u)int<8/16/32/64>_t) or the defined range.
   real          | 3.14, -0.001, 2e10          | Floating-point value.
@@ -168,13 +168,15 @@
 #include <sys/stat.h>
 
 #ifdef _WIN32
-#ifndef S_ISREG
-#define S_ISREG(m) (((m) & _S_IFREG) != 0)
-#endif // S_ISREG
-#ifndef S_ISDIR
-#define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
-#endif // S_ISDIR
-#define stat _stat
+  #ifndef S_ISREG
+    #define S_ISREG(m) (((m) & _S_IFREG) != 0)
+  #endif // S_ISREG
+  #ifndef S_ISDIR
+    #define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
+  #endif // S_ISDIR
+  #define clags__stat _stat
+#else
+  #define clags__stat stat
 #endif // _WIN32
 
 // memory allocation functions; can be overridden
@@ -519,7 +521,7 @@ struct clags_config_t{
 };
 
 // helper macros
-#define clags_arr_len(arr) ((arr)==NULL?0:(sizeof(arr)/sizeof(arr[0])))
+#define clags_arr_len(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define clags_return_defer(value) do{result = (value); goto defer;}while(0) // set the `result` variable and jump to the `defer` label
 #define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); CLAGS_PANIC;}}while(0)
 #define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); fflush(stderr); CLAGS_PANIC;}while(0)
@@ -553,8 +555,8 @@ struct clags_config_t{
 #define clags_float_list()      clags_list(Clags_Float)
 #define clags_double_list()     clags_list(Clags_Double)
 #define clags_size_list()       clags_list(Clags_Size)
-#define clags_timeS_list()      clags_list(Clags_TimeS)
-#define clags_timeNS_list()     clags_list(Clags_TimeNS)
+#define clags_time_s_list()     clags_list(Clags_TimeS)
+#define clags_time_ns_list()    clags_list(Clags_TimeNS)
 #define clags_choice_list()     clags_list(Clags_Choice)
 
 // macros for easy value extraction from lists
@@ -799,13 +801,12 @@ clags_path_type_t clags_path_type(const char *path);
   Return the name of the provided path type.
 
   Arguments:
-    - error         : the path type
+    - type          : the path type
 
   Returns:
     const char*     : the name of the provided type
 */
 const char* clags_path_type_name(clags_path_type_t type);
-
 
 /* Logging */
 
@@ -1044,7 +1045,7 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
 clags_path_type_t clags_path_type(const char *path)
 {
     struct stat attrs;
-    if (stat(path, &attrs) == -1) return Clags_Path_Missing;
+    if (clags__stat(path, &attrs) == -1) return Clags_Path_Missing;
     if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
     if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
     return Clags_Path_Other;
