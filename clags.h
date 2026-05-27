@@ -462,17 +462,6 @@ typedef struct{
     clags_flag_type_t type;                // behavior of the flag; see `clags_flag_type_t` (BoolFlag, CountFlag, ConfigFlag, CallbackFlag)
 } clags_flag_t;
 
-// entirely internal
-typedef struct{
-    clags_positional_t *positionals;
-    size_t positional_count;
-    size_t required_count;
-    clags_option_t *options;
-    size_t option_count;
-    clags_flag_t *flags;
-    size_t flag_count;
-} clags_args_t;
-
 typedef enum{
     Clags_Positional,
     Clags_Option,
@@ -1729,6 +1718,10 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
     clags_config_t *result = NULL;
     if (config->name == NULL) config->name  = clags_config_duplicate_string(config, program_name);
 
+    if (config->args == NULL){
+        clags_log(config, Clags_ConfigWarning, "config '%s' does not have any arguments defined! Use the `clags_config(args)` macro to create a config linked to an arguments definition.", config->name);
+    }
+
     // validate options
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
         clags_log(config, Clags_ConfigError,"'.list_terminator' of config '%s' may not be '--' because '--' is reserved for toggling option and flag parsing!", config->name);
@@ -1815,7 +1808,30 @@ defer:
     return result;
 }
 
-void clags__sort_args(clags_args_t *args, clags_config_t *config)
+typedef struct{
+    clags_positional_t *positionals;
+    size_t positional_count;
+    size_t required_count;
+    clags_option_t *options;
+    size_t option_count;
+    clags_flag_t *flags;
+    size_t flag_count;
+} clags__args_t;
+
+typedef struct {
+    clags__args_t args;
+    size_t argc;
+    char **argv;
+    size_t index;
+    bool args_ignored;
+    bool in_list;
+    bool parsing_optionals;
+    bool accept_options;
+    size_t pos_count;
+    size_t req_count;
+} clags__parser_t;
+
+void clags__sort_args(clags__args_t *args, clags_config_t *config)
 {
     for (size_t i=0; i<config->args_count; ++i){
         switch(config->args[i].type){
@@ -1836,19 +1852,6 @@ void clags__sort_args(clags_args_t *args, clags_config_t *config)
         }
     }
 }
-
-typedef struct {
-    clags_args_t args;
-    size_t argc;
-    char **argv;
-    size_t index;
-    bool args_ignored;
-    bool in_list;
-    bool parsing_optionals;
-    bool accept_options;
-    size_t pos_count;
-    size_t req_count;
-} clags__parser_t;
 
 clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *long_flag, clags_config_t **found_in)
 {
@@ -2074,7 +2077,7 @@ bool clags__set_defaults(clags_config_t *config)
 
 clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 {
-    if (config == NULL || config->args == NULL || argc < 1) return NULL;
+    if (config == NULL || argc < 1) return NULL;
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
         clags_config_t *failed_config = clags_validate(argv[0], config);
@@ -2454,7 +2457,7 @@ void clags_usage(const char *program_name, clags_config_t *config)
     clags_flag_t       *flags      = CLAGS_CALLOC(config->args_count, sizeof(*flags));
     clags_assert(positional && option && flags, "Out of memory!");
 
-    clags_args_t args = {.positionals=positional, .options=option, .flags=flags};
+    clags__args_t args = {.positionals=positional, .options=option, .flags=flags};
     clags__sort_args(&args, config);
 
     char *temp_buffer = CLAGS_CALLOC(CLAGS__USAGE_TEMP_BUFFER_SIZE, sizeof(*temp_buffer));

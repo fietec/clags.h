@@ -60,7 +60,7 @@ clags_arg_t main_args[] = {
     // The default is `Clags_BoolFlag`, a normal boolean flag.
     // `.type = Clags_CountFlag` instructs the parser to track how many times
     // this flag was encountered. The associated variable must be of type `size_t`.
-    // `inherit = true` tells the parser that this argument should be available in all child subcommands
+    // `.inherit = true` tells the parser that this argument should be available in all child subcommands
     clags_flag('v', "verbose", &verbosity, "increase verbosity", .type=Clags_CountFlag, .inherit=true),
     
     // `.type = Clags_ConfigFlag` instructs the parser to store a pointer to
