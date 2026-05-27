@@ -174,9 +174,16 @@
   #ifndef S_ISDIR
     #define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
   #endif // S_ISDIR
-  #define clags__stat _stat
+  #if defined(_WIN64) || defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__)
+    #define clags__stat_struct struct __stat64
+    #define clags__stat_func   _stat64
+  #else
+    #define clags__stat_struct struct _stat
+    #define clags__stat_func   _stat
+  #endif
 #else
-  #define clags__stat stat
+  #define clags__stat_struct struct stat
+  #define clags__stat_func   stat
 #endif // _WIN32
 
 // memory allocation functions; can be overridden
@@ -1044,8 +1051,8 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
 
 clags_path_type_t clags_path_type(const char *path)
 {
-    struct stat attrs;
-    if (clags__stat(path, &attrs) == -1) return Clags_Path_Missing;
+    clags__stat_struct attrs;
+    if (clags__stat_func(path, &attrs) == -1) return Clags_Path_Missing;
     if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
     if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
     return Clags_Path_Other;
