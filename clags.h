@@ -1164,7 +1164,11 @@ bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type,
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value < min || value > max || *arg == '-') {
+
+    const char *check_neg = arg;
+    while (isblank((unsigned char)*check_neg)) check_neg++;
+
+    if (errno == ERANGE || value < min || value > max || *check_neg == '-') {
         clags_log(config, Clags_Error, "%s value out of range [%"PRIu64"-%"PRIu64"] for argument '%s': '%s'!", clags__type_names[type], min, max, arg_name, arg);
         return false;
     }
@@ -1363,7 +1367,10 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
         return false;
     }
 
-    if (errno == ERANGE || value > UINT64_MAX/factor || *arg == '-') {
+    const char *check_neg = arg;
+    while (isblank((unsigned char)*check_neg)) check_neg++;
+
+    if (errno == ERANGE || value > UINT64_MAX/factor || *check_neg == '-') {
         clags_log(config, Clags_Error, "clags_fsize_t value out of range (0 to %"PRIu64") for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
