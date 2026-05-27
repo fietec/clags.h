@@ -1731,11 +1731,11 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
 
     // validate options
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
-        clags_log(config, Clags_ConfigError,"'.list_terminator' of config '%s' may not be '--' because '--' is reserved for toggling option and flag parsing!", config->name);
+        clags_log(config, Clags_ConfigError,"'.list_terminator' of config '%s' may not be '--' because it is reserved for toggling option and flag parsing!", config->name);
         clags_return_defer(config);
     }
     if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
-        clags_log(config, Clags_ConfigError, "'.ignore_prefix' of config '%s' may not be '--' since this conflicts with the long option and flag prefix!", config->name);
+        clags_log(config, Clags_ConfigError, "'.ignore_prefix' of config '%s' may not be '--' because it is reserved for toggling option and flag parsing!", config->name);
         clags_return_defer(config);
     }
     if (config->options.ignored_args){
@@ -1946,7 +1946,7 @@ bool clags__parse_long_option(clags_config_t *config, clags__parser_t *parser, c
         // value is next argument
         value = clags__get_next_arg(config, parser);
         if (value == NULL){
-            clags_log(config, Clags_Error, "Option flag %s requires argument!", arg);
+            clags_log(config, Clags_Error, "Option '%s' requires argument!", arg);
             config->error = Clags_Error_InvalidOption;
             return false;
         }
@@ -1993,7 +1993,7 @@ bool clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_
                     // value is next argument
                     value = clags__get_next_arg(found_config, parser);
                     if (value == NULL){
-                        clags_log(config, Clags_Error, "Option flag %s requires argument!", arg);
+                        clags_log(config, Clags_Error, "Option '%s' requires argument!", arg);
                         config->error = Clags_Error_InvalidOption;
                         return false;
                     }
