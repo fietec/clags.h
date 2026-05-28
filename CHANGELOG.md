@@ -1,6 +1,6 @@
 # Changelog
 
-## [v3.0.0] - 26.05.2026
+## [v3.0.0] - 28.05.2026
 
 ### Added
 - Argument inheritance:
