@@ -2056,7 +2056,7 @@ clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t 
     if (pos.value_type == Clags_Subcmd){
         *exit = true; // no more parsing after subcommand
         clags_subcmd_t *selected_subcmd = NULL; // catch the selected subcommand
-        if (!clags__verify_funcs[pos.value_type](config, pos.arg_name, arg, selected_subcmd, pos.subcmds)) return config;
+        if (!clags__verify_funcs[pos.value_type](config, pos.arg_name, arg, &selected_subcmd, pos.subcmds)) return config;
         if (pos.variable){
             *(clags_subcmd_t**) pos.variable = selected_subcmd;
         }
