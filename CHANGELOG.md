@@ -38,6 +38,10 @@
 - completely re-wrote the parser and validator to cover more cases and make the code more readable
 - removed dependency on `strings.h` and therefore no longer POSIX-dependent
 
+### Fixes
+- freeing duplicated strings now uses the correct size for custom allocators
+  - a config's `allocs` list now stores pairs of allocated data and its size in bytes
+
 ---
 
 ## [v2.3.0] - 12.03.2026

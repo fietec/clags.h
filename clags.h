@@ -648,7 +648,7 @@ struct clags_config_t{
                 (e.g. .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true, etc.),
                 see `clags_options_t` for all available fields.
 */
-#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(clags_options_t){__VA_ARGS__}}
+#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){0}, .options=(clags_options_t){__VA_ARGS__}}
 
 /*
   Construct a `clags_config_t` from an array of arguments and a pre-defined options struct.
@@ -658,7 +658,7 @@ struct clags_config_t{
     arguments : array of `clags_arg_t` defining positionals, options, and flags
     opts      : a fully initialized `clags_options_t` struct with custom config options
 */
-#define clags_config_with_options(arguments, opts) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){.item_size=sizeof(char*)}, .options=(opts)}
+#define clags_config_with_options(arguments, opts) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){0}, .options=(opts)}
 
 /* Core Functions */
 
@@ -888,13 +888,19 @@ static size_t clags__type_sizes[] = {
 };
 #undef X
 
-static inline char* clags__strdup(const char *string)
+typedef struct{
+    void *data;
+    size_t size;
+} clags__alloc_t;
+
+static inline clags__alloc_t clags__strdup(const char *string)
 {
-    if (!string) return NULL;
-    size_t length = strlen(string);
-    char *new_string = CLAGS_CALLOC(length+1, sizeof(char));
+    if (string == NULL) return (clags__alloc_t){NULL, 0};
+    size_t size = strlen(string) + 1;
+    char *new_string = CLAGS_CALLOC(size, sizeof(char));
     clags_assert(new_string != NULL, "Out of memory!");
-    return strcpy(new_string, string);
+    (void) strcpy(new_string, string);
+    return (clags__alloc_t) {new_string, size};
 }
 
 static inline char* clags__strchrnull(const char *string, char c)
@@ -1028,11 +1034,9 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
 {
     char *duplicate;
     if (config && config->options.duplicate_strings){
-        duplicate = clags__strdup(string);
-        clags_assert(duplicate != NULL, "Out of memory!");
-
+        clags__alloc_t alloc = clags__strdup(string);
         clags_list_t *allocs = &config->allocs;
-        if (allocs->item_size == 0) allocs->item_size = sizeof(char*);
+        if (allocs->item_size == 0) allocs->item_size = sizeof(clags__alloc_t);
         if (allocs->count >= allocs->capacity){
             size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
             size_t old_bytes = allocs->item_size*allocs->capacity;
@@ -1042,7 +1046,8 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
             allocs->capacity = new_capacity;
             (void) old_bytes;
         }
-        ((char**) allocs->items)[allocs->count++] = duplicate;
+        ((clags__alloc_t*) allocs->items)[allocs->count++] = alloc;
+        duplicate = (char*) alloc.data;
     } else{
         duplicate = (char*) string;
     }
@@ -2604,7 +2609,9 @@ void clags_config_free_allocs(clags_config_t *config)
     if (config == NULL) return;
     clags_list_t *allocs = &config->allocs;
     for (size_t i=0; i<allocs->count; ++i){
-        CLAGS_FREE(((char**) allocs->items)[i], allocs->item_size);
+        clags__alloc_t alloc = ((clags__alloc_t*) allocs->items)[i];
+        CLAGS_FREE(alloc.data, alloc.size);
+        (void) alloc; // to prevent `Wunused-variable` if freeing is disabled
     }
     CLAGS_FREE(allocs->items, allocs->capacity*allocs->item_size);
     allocs->items = NULL;
