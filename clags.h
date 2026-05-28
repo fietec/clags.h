@@ -1027,7 +1027,7 @@ void clags_log(clags_config_t *config, clags_log_level_t level, const char *form
 
 void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb)
 {
-    clags_log(config, level, "%s", sb->items);
+    clags_log(config, level, "%s", sb->items? sb->items : "");
 }
 
 char* clags_config_duplicate_string(clags_config_t *config, const char *string)
@@ -2055,11 +2055,13 @@ clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t 
     clags_positional_t pos = parser->args.positionals[parser->pos_count];
     if (pos.value_type == Clags_Subcmd){
         *exit = true; // no more parsing after subcommand
-        clags_subcmd_t **subcmd = pos.variable; // catch the variable
-        if (!clags__verify_funcs[pos.value_type](config, pos.arg_name, arg, subcmd, pos.subcmds)) return config;
-        if (subcmd == NULL) return NULL;
+        clags_subcmd_t *selected_subcmd = NULL; // catch the selected subcommand
+        if (!clags__verify_funcs[pos.value_type](config, pos.arg_name, arg, selected_subcmd, pos.subcmds)) return config;
+        if (pos.variable){
+            *(clags_subcmd_t**) pos.variable = selected_subcmd;
+        }
         // recursively parse the subcommand's config
-        return clags_parse((int) (parser->argc - parser->index), parser->argv + parser->index, (*subcmd)->config);
+        return clags_parse((int) (parser->argc - parser->index), parser->argv + parser->index, selected_subcmd->config);
     }
     if (pos.is_list){
         parser->in_list = true;
