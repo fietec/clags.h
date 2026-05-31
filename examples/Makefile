@@ -1,11 +1,6 @@
 # Makefile to compile each .c file into its own executable
 
-<<<<<<< Updated upstream
-CFLAGS = -Wall -Wextra -Werror --std=c99
-=======
-CFLAGS = -Wall -Wextra --std=c99 -g
->>>>>>> Stashed changes
-
+CFLAGS = -Wall -Wextra -Werror --std=c99 -g
 SRC = $(wildcard *.c)
 EXE = $(SRC:.c=)
 
