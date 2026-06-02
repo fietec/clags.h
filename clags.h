@@ -1328,7 +1328,7 @@ bool clags_verify_file(clags_config_t *config, const char *arg_name, const char 
             return true;
         }
         default:{
-            clags_log(config, Clags_Error, "Path for arguments '%s' is not a file: '%s'!", arg_name, arg);
+            clags_log(config, Clags_Error, "Path for argument '%s' is not a file: '%s'!", arg_name, arg);
             return false;
         }
     }
@@ -1885,7 +1885,8 @@ void clags__sort_args(clags__args_t *args, clags_config_t *config)
 clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *long_flag, clags_config_t **found_in)
 {
     clags_config_t *ancestor = config;
-     while (ancestor != NULL){
+    bool findable = true;
+    while (ancestor != NULL){
         for (size_t i=0; i<ancestor->args_count; ++i){
             clags_arg_t *arg = &ancestor->args[i];
             bool match = false;
@@ -1911,10 +1912,10 @@ clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *
             }
             if (match){
                 *found_in = ancestor;
-                if (config == ancestor || inherit) return arg;
+                if (findable && (config == ancestor || inherit)) return arg;
             }
         }
-        if (ancestor->options.no_inheritance) break;
+        if (ancestor->options.no_inheritance) findable = false;
         ancestor = ancestor->parent;
     }
     return NULL;
@@ -1923,24 +1924,25 @@ clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *
 clags_arg_t* clags__search_short_options_and_flags(clags_config_t *config, char short_flag, clags_config_t **found_in)
 {
     clags_config_t *ancestor = config;
+    bool findable = true;
     while (ancestor != NULL){
         for (size_t i=0; i<ancestor->args_count; ++i){
             clags_arg_t *arg = &ancestor->args[i];
-            bool global = false;
+            bool inherit = false;
             bool match = false;
             if (arg->type == Clags_Flag && arg->flag.short_flag == short_flag){
-                global = arg->flag.inherit;
+                inherit = arg->flag.inherit;
                 match = true;
             } else if (arg->type == Clags_Option && arg->opt.short_flag == short_flag){
-                global = arg->opt.inherit;
+                inherit = arg->opt.inherit;
                 match = true;
             }
             if (match){
                 *found_in = ancestor;
-                if (config == ancestor || global) return arg;
+                if (findable && (config == ancestor || inherit)) return arg;
             }
         }
-        if (ancestor->options.no_inheritance) break;
+        if (ancestor->options.no_inheritance) findable = false;
         ancestor = ancestor->parent;
     }
     return NULL;
