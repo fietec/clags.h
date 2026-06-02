@@ -1857,14 +1857,23 @@ void clags__sort_args(clags__args_t *args, clags_config_t *config)
         switch(config->args[i].type){
             case Clags_Positional:{
                 clags_positional_t pos = config->args[i].pos;
-                args->positionals[args->positional_count++] = pos;
-                if (!pos.optional) args->required_count++;
+                if (args->positionals != NULL){
+                    args->positionals[args->positional_count] = pos;
+                }
+                args->positional_count += 1;
+                if (!pos.optional) args->required_count += 1;
             } break;
             case Clags_Option:{
-                args->options[args->option_count++] = config->args[i].opt;
+                if (args->options != NULL){
+                    args->options[args->option_count] = config->args[i].opt;
+                }
+                args->option_count += 1;
             } break;
             case Clags_Flag:{
-                args->flags[args->flag_count++] = config->args[i].flag;
+                if (args->flags != NULL){
+                    args->flags[args->flag_count] = config->args[i].flag;
+                }
+                args->flag_count += 1;
             } break;
             default: {
                 clags_unreachable("Invalid clags_arg_type_t");
@@ -2113,12 +2122,10 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 
     // sort arguments by type
     clags_positional_t *positionals = CLAGS_CALLOC(config->args_count, sizeof(*positionals));
-    clags_option_t     *options     = CLAGS_CALLOC(config->args_count, sizeof(*options));
-    clags_flag_t       *flags       = CLAGS_CALLOC(config->args_count, sizeof(*flags));
-    clags_assert(positionals && options && flags, "Out of memory!");
+    clags_assert(positionals, "Out of memory!");
 
     clags__parser_t parser = {
-        .args={.positionals=positionals, .options=options, .flags=flags},
+        .args={.positionals=positionals, .options=NULL, .flags=NULL},
         .argc = (size_t) argc,
         .argv = argv,
         .args_ignored = false,
@@ -2243,8 +2250,6 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 defer:
     // cleanup memory of sorted args
     CLAGS_FREE(positionals, config->args_count*sizeof(*positionals));
-    CLAGS_FREE(options, config->args_count*sizeof(*options));
-    CLAGS_FREE(flags, config->args_count*sizeof(*flags));
     return result;
 }
 
