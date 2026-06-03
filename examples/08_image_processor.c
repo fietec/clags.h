@@ -16,7 +16,7 @@ clags_config_t *help = NULL;
 bool version = false;
 
 // the options used for all configs
-const clags_options_t options = {.ignore_prefix="!", .list_terminator="::"};
+const clags_options_t options = {.ignore_prefix="!", .list_terminator="::", .duplicate_strings=true};
 
 /* Convert subcommand config */
 
@@ -184,7 +184,8 @@ int main(int argc, char **argv)
     
 defer:
     // free all the memory that clags might have allocated during parsing
-    clags_list_free(&tag_images);
-    clags_list_free(&tag_values);
+    // Note: the difference to `clags_config_free` is that this function is recursive,
+    //       meaning all child configs are freed automatically
+    clags_free(&parent_config);
     return result;
 }

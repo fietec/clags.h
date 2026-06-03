@@ -102,7 +102,7 @@ defer:
     // the config stores all the duplicated strings. You can free them like this
     clags_config_free_allocs(&config);
 #else
-    // alternatively, all this can be done automatically
+    // alternatively, all this can be done automatically for a single config
     clags_config_free(&config);
 #endif
     return result;

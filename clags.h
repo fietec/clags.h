@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.0.1 - https://github.com/fietec/clags.h
+  clags.h - Version 3.1.0 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -773,6 +773,14 @@ void clags_config_free_allocs(clags_config_t *config);
     - config        : pointer to the config of which to free all strings and lists
 */
 void clags_config_free(clags_config_t *config);
+
+/*
+  Free all lists and allocated strings of a config and all its child configs.
+
+  Arguments:
+    - config        : pointer to the root config to free along with all its child configs
+*/
+void clags_free(clags_config_t *config);
 
 /*
   Free all memory associated with a `clags_list_t` instance.
@@ -2634,6 +2642,27 @@ void clags_config_free(clags_config_t *config)
         clags_arg_t arg = config->args[i];
         if (arg.type == Clags_Positional && arg.pos.is_list){
             clags_list_free(arg.pos.variable);
+        } else if (arg.type == Clags_Option && arg.opt.is_list){
+            clags_list_free(arg.opt.variable);
+        }
+    }
+    clags_list_free(config->options.ignored_args);
+    clags_config_free_allocs(config);
+}
+
+void clags_free(clags_config_t *config)
+{
+    if (config == NULL) return;
+    for (size_t i=0; i<config->args_count; ++i){
+        clags_arg_t arg = config->args[i];
+        if (arg.type == Clags_Positional){
+            if (arg.pos.value_type == Clags_Subcmd && arg.pos.subcmds != NULL){
+                clags_subcmds_t *subcmds = arg.pos.subcmds;
+                for (size_t i=0; i<subcmds->count; ++i){
+                    clags_free(subcmds->items[i].config);
+                }
+            }
+            if (arg.pos.is_list) clags_list_free(arg.pos.variable);
         } else if (arg.type == Clags_Option && arg.opt.is_list){
             clags_list_free(arg.opt.variable);
         }

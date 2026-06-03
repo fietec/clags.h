@@ -1,5 +1,14 @@
 # Changelog
 
+## [v3.1.0] - 03.06.2026
+
+### Added
+- new recursive version of `clags_config_free`: `clags_free`
+
+### Fixes
+- parent flag suggestion now also works when a child config has inheritance disabled
+- `clags_parse` no longer unnecessarily collects option and flags
+
 ## [v3.0.0] - 28.05.2026
 
 ### Added
