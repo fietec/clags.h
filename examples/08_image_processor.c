@@ -128,7 +128,7 @@ int main(int argc, char **argv)
     }
     if (help){
         // print help for the subcommand for which `--help` was provided
-        clags_usage(argv[0], help);
+        clags_usage(program_name, help);
         clags_return_defer(0);
     }
     if (version){

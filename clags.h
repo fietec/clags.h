@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.1.0 - https://github.com/fietec/clags.h
+  clags.h - Version 3.2.0 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -697,6 +697,20 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config);
     - config        : pointer to the config to print usage for
 */
 void clags_usage(const char *program_name, clags_config_t *config);
+
+/*
+  Print a detailed usage menu based on the provided config to a specified
+  output file stream.
+
+  This behaves identically to `clags_usage` but allows explicit redirection of
+  the menu output to streams such as `stdout`, `stderr`, or a custom file handle.
+
+  Arguments:
+    - file          : the target output file stream
+    - program_name  : the name of the program
+    - config        : pointer to the config to print usage for
+*/
+void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config);
 
 /*
   Manually initialize and validate a configuration tree.
@@ -2328,129 +2342,129 @@ static void clags__format_lhs(char *buffer, size_t buf_size, char short_flag, co
     if (lines_cut_off) *lines_cut_off = true;
 }
 
-void clags__choice_usage(clags_choices_t *choices, bool is_list, const char *default_value)
+void clags__choice_usage(FILE *file, clags_choices_t *choices, bool is_list, const char *default_value)
 {
     if (!choices->print_no_details || choices->count > CLAGS_MAX_INLINE_CHOICES){
-        printf(" (%s%s)", clags__type_names[Clags_Choice], is_list?"[]":"");
+        fprintf(file, " (%s%s)", clags__type_names[Clags_Choice], is_list?"[]":"");
         if (choices->case_insensitive || default_value) {
-            printf(" (%s%s%s",
+            fprintf(file, " (%s%s%s",
                    choices->case_insensitive ? "case-insensitive" : "",
                    (choices->case_insensitive && default_value) ? ", " : "",
                    default_value ? "default: " : "");
 
-            if (default_value) printf("%s", default_value);
-            printf(")");
+            if (default_value) fprintf(file, "%s", default_value);
+            fprintf(file, ")");
         }
-        printf("\n        Choices:");
+        fprintf(file, "\n        Choices:");
         for (size_t j=0; j<choices->count; ++j){
             clags_choice_t choice = choices->items[j];
-            printf("\n          - %*s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value);
-            if (choice.description) printf(" : %s", choice.description);
+            fprintf(file, "\n          - %*s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value);
+            if (choice.description) fprintf(file, " : %s", choice.description);
         }
     } else{
-        printf(" (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
+        fprintf(file, " (%s%s:", clags__type_names[Clags_Choice], is_list?"[]":"");
         for (size_t j=0; j<choices->count; ++j){
-            printf("%s%s", j>0?" | ":" ", choices->items[j].value);
+            fprintf(file, "%s%s", j>0?" | ":" ", choices->items[j].value);
         }
-        printf(")");
+        fprintf(file, ")");
         if (choices->case_insensitive || default_value) {
-            printf(" (%s%s%s",
+            fprintf(file, " (%s%s%s",
                    choices->case_insensitive ? "case-insensitive" : "",
                    (choices->case_insensitive && default_value) ? ", " : "",
                    default_value ? "default: " : "");
 
-            if (default_value) printf("%s", default_value);
-            printf(")");
+            if (default_value) fprintf(file, "%s", default_value);
+            fprintf(file, ")");
         }
     }
 }
 
-void clags__subcmd_usage(clags_subcmds_t *subcmds)
+void clags__subcmd_usage(FILE *file, clags_subcmds_t *subcmds)
 {
-    printf(" (%s)\n      Subcommands:", clags__type_names[Clags_Subcmd]);
+    fprintf(file, " (%s)\n      Subcommands:", clags__type_names[Clags_Subcmd]);
     for (size_t i=0; i<subcmds->count; ++i){
         clags_subcmd_t subcmd = subcmds->items[i];
-        printf("\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
+        fprintf(file, "\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
     }
 }
 
-void clags__type_usage(clags_value_type_t type, void *data, bool is_list, const char *default_value)
+void clags__type_usage(FILE *file, clags_value_type_t type, void *data, bool is_list, const char *default_value)
 {
     switch (type){
         case Clags_Choice:{
-            clags__choice_usage((clags_choices_t *)data, is_list, default_value);
+            clags__choice_usage(file, (clags_choices_t *)data, is_list, default_value);
         }return;
         case Clags_Subcmd:{
-            clags__subcmd_usage((clags_subcmds_t*) data);
+            clags__subcmd_usage(file, (clags_subcmds_t*) data);
         }return;
         case Clags_Int:{
-            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            fprintf(file, " (%s%s", clags__type_names[type], is_list?"[]":"");
             clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
-            printf(")");
+            if (range) fprintf(file, ", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
+            fprintf(file, ")");
         }break;
         case Clags_UInt:{
-            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            fprintf(file, " (%s%s", clags__type_names[type], is_list?"[]":"");
             clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %"PRIu64"-%"PRIu64, range->min.as_uint, range->max.as_uint);
-            printf(")");
+            if (range) fprintf(file, ", %"PRIu64"-%"PRIu64, range->min.as_uint, range->max.as_uint);
+            fprintf(file, ")");
         }break;
 
         case Clags_Real:{
-            printf(" (%s%s", clags__type_names[type], is_list?"[]":"");
+            fprintf(file, " (%s%s", clags__type_names[type], is_list?"[]":"");
             clags_range_t *range = (clags_range_t*) data;
-            if (range) printf(", %g-%g", range->min.as_double, range->max.as_double);
-            printf(")");
+            if (range) fprintf(file, ", %g-%g", range->min.as_double, range->max.as_double);
+            fprintf(file, ")");
         }break;
         case Clags_Custom:{
             clags_custom_t *custom = (clags_custom_t*) data;
-            printf(" (%s%s)", (custom && custom->name)? custom->name : "", is_list? "[]" : "");
+            fprintf(file, " (%s%s)", (custom && custom->name)? custom->name : "", is_list? "[]" : "");
         }break;
         case Clags_String:{
-            if (is_list) printf(" ([])");
+            if (is_list) fprintf(file, " ([])");
         }break;
         default:{
-            printf(" (%s%s)", clags__type_names[type], is_list?"[]":"");
+            fprintf(file, " (%s%s)", clags__type_names[type], is_list?"[]":"");
         }
     }
-    if (default_value) printf(" (default: %s)", default_value);
+    if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-void clags__subcommand_path_usage(const char *program_name, clags_config_t *config)
+void clags__subcommand_path_usage(FILE *file, const char *program_name, clags_config_t *config)
 {
     if (config->parent){
-        clags__subcommand_path_usage(program_name, config->parent);
-        printf(" %s", config->name);
+        clags__subcommand_path_usage(file, program_name, config->parent);
+        fprintf(file, " %s", config->name);
     } else{
-        printf("Usage: %s", program_name?program_name:config->name);
+        fprintf(file, "Usage: %s", program_name?program_name:config->name);
     }
 }
 
-static inline void clags__option_usage(clags_option_t opt, char *temp_buffer, bool *lines_cut_off)
+static inline void clags__option_usage(FILE *file, clags_option_t opt, char *temp_buffer, bool *lines_cut_off)
 {
     clags__format_lhs(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE, opt.short_flag, opt.long_flag, opt.arg_name, lines_cut_off);
-    printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, opt.description);
-    clags__type_usage(opt.value_type, opt._data, opt.is_list, opt.default_input);
-    printf("\n");
+    fprintf(file, "    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, opt.description);
+    clags__type_usage(file, opt.value_type, opt._data, opt.is_list, opt.default_input);
+    fprintf(file, "\n");
 }
 
-static inline void clags__flag_usage(clags_flag_t flag, char *temp_buffer, bool *lines_cut_off)
+static inline void clags__flag_usage(FILE *file, clags_flag_t flag, char *temp_buffer, bool *lines_cut_off)
 {
     clags__format_lhs(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE, flag.short_flag, flag.long_flag, NULL, lines_cut_off);
-    printf("    %*s : %s%s\n", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, flag.description, flag.exit?" and exit":"");
+    fprintf(file, "    %*s : %s%s\n", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, flag.description, flag.exit?" and exit":"");
 }
 
-void clags__inherited_options_usage(clags_config_t *config, char *temp_buffer, bool *lines_cut_off)
+void clags__inherited_options_usage(FILE *file, clags_config_t *config, char *temp_buffer, bool *lines_cut_off)
 {
     if (config->options.no_inheritance) return;
     clags_config_t *ancestor = config->parent;
     while (ancestor != NULL){
         if (ancestor->inherit_options_count > 0){
-            printf("  Inherited Options (from '%s'):\n", ancestor->name);
+            fprintf(file, "  Inherited Options (from '%s'):\n", ancestor->name);
             for (size_t i=0; i<ancestor->args_count; ++i){
                 clags_arg_t arg = ancestor->args[i];
                 if (arg.type == Clags_Option && arg.opt.inherit){
-                    clags__option_usage(arg.opt, temp_buffer, lines_cut_off);
+                    clags__option_usage(file, arg.opt, temp_buffer, lines_cut_off);
                 }
             }
         }
@@ -2459,17 +2473,17 @@ void clags__inherited_options_usage(clags_config_t *config, char *temp_buffer, b
     }
 }
 
-void clags__inherited_flags_usage(clags_config_t *config, char *temp_buffer, bool *lines_cut_off)
+void clags__inherited_flags_usage(FILE *file, clags_config_t *config, char *temp_buffer, bool *lines_cut_off)
 {
     if (config->options.no_inheritance) return;
     clags_config_t *ancestor = config->parent;
     while (ancestor != NULL){
         if (ancestor->inherit_flags_count > 0){
-            printf("  Inherited Flags (from '%s'):\n", ancestor->name);
+            fprintf(file, "  Inherited Flags (from '%s'):\n", ancestor->name);
             for (size_t i=0; i<ancestor->args_count; ++i){
                 clags_arg_t arg = ancestor->args[i];
                 if (arg.type == Clags_Flag && arg.flag.inherit){
-                    clags__flag_usage(arg.flag, temp_buffer, lines_cut_off);
+                    clags__flag_usage(file, arg.flag, temp_buffer, lines_cut_off);
                 }
             }
         }
@@ -2478,9 +2492,9 @@ void clags__inherited_flags_usage(clags_config_t *config, char *temp_buffer, boo
     }
 }
 
-void clags_usage(const char *program_name, clags_config_t *config)
+void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config)
 {
-    if (config == NULL || config->args == NULL) return;
+    if (file == NULL || config == NULL || config->args == NULL) return;
 
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
@@ -2502,86 +2516,86 @@ void clags_usage(const char *program_name, clags_config_t *config)
 
     bool lines_cut_off = false;
 
-    clags__subcommand_path_usage(program_name, config);
+    clags__subcommand_path_usage(file, program_name, config);
 
-    if (args.option_count) printf(" [OPTIONS]");
-    if (args.flag_count) printf(" [FLAGS]");
+    if (args.option_count) fprintf(file, " [OPTIONS]");
+    if (args.flag_count) fprintf(file, " [FLAGS]");
 
     bool last_was_list = false;
     for (size_t i = 0; i < args.positional_count; ++i) {
         if (last_was_list) {
-            printf(" %s", config->options.list_terminator);
+            fprintf(file, " %s", config->options.list_terminator);
             last_was_list = false;
         }
         clags_positional_t pos = args.positionals[i];
-        printf(" ");
-        printf("%c", pos.optional? '[':'<');
+        fprintf(file, " ");
+        fprintf(file, "%c", pos.optional? '[':'<');
         if (pos.is_list) {
-            printf("%s..", pos.arg_name);
+            fprintf(file, "%s..", pos.arg_name);
             last_was_list = true;
         } else {
-            printf("%s", pos.arg_name);
+            fprintf(file, "%s", pos.arg_name);
         }
-        printf("%c", pos.optional? ']':'>');
+        fprintf(file, "%c", pos.optional? ']':'>');
     }
-    printf("\n");
+    fprintf(file, "\n");
 
     if (config->options.description) {
         const char *line = config->options.description;
         while (line && *line) {
             char *line_end = clags__strchrnull(line, '\n');
             int len = (int)(line_end - line);
-            printf("%.*s\n", len, line);
+            fprintf(file, "%.*s\n", len, line);
             if (*line_end == '\0') break;
             line = line_end + 1;
         }
-        printf("\n");
+        fprintf(file, "\n");
     }
 
     if (args.positional_count) {
-        printf("  Arguments:\n");
+        fprintf(file, "  Arguments:\n");
         for (size_t i = 0; i < args.positional_count; ++i) {
             clags_positional_t pos = args.positionals[i];
             char optional_hint[32] = {0};
             if (pos.optional) snprintf(optional_hint, sizeof(optional_hint), "(optional)");
             snprintf(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE, "%s %s", pos.arg_name, optional_hint);
-            printf("    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, pos.description);
-            clags__type_usage(pos.value_type, pos._data, pos.is_list, pos.default_input);
-            printf("\n");
+            fprintf(file, "    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, temp_buffer, pos.description);
+            clags__type_usage(file, pos.value_type, pos._data, pos.is_list, pos.default_input);
+            fprintf(file, "\n");
         }
     }
 
     if (args.option_count) {
-        printf("  Options:\n");
+        fprintf(file, "  Options:\n");
         for (size_t i = 0; i < args.option_count; ++i) {
             clags_option_t opt = args.options[i];
-            clags__option_usage(opt, temp_buffer, &lines_cut_off);
+            clags__option_usage(file, opt, temp_buffer, &lines_cut_off);
         }
     }
 
-    clags__inherited_options_usage(config, temp_buffer, &lines_cut_off);
+    clags__inherited_options_usage(file, config, temp_buffer, &lines_cut_off);
 
     if (args.flag_count) {
-        printf("  Flags:\n");
+        fprintf(file, "  Flags:\n");
         for (size_t i = 0; i < args.flag_count; ++i) {
             clags_flag_t flag = args.flags[i];
-            clags__flag_usage(flag, temp_buffer, &lines_cut_off);
+            clags__flag_usage(file, flag, temp_buffer, &lines_cut_off);
         }
     }
 
-    clags__inherited_flags_usage(config, temp_buffer, &lines_cut_off);
+    clags__inherited_flags_usage(file, config, temp_buffer, &lines_cut_off);
 
     if (!config->options.print_no_notes &&
         (config->options.list_terminator || config->options.ignore_prefix || config->options.allow_option_parsing_toggle)) {
-        printf("\n  Notes:\n");
+        fprintf(file, "\n  Notes:\n");
         if (config->options.allow_option_parsing_toggle){
-            printf("    '--' toggles option and flag parsing and can re-enable parsing when provided again.\n");
+            fprintf(file, "    '--' toggles option and flag parsing and can re-enable parsing when provided again.\n");
         }
         if (config->options.list_terminator){
-            printf("    '%s' terminates a list argument.\n", config->options.list_terminator);
+            fprintf(file, "    '%s' terminates a list argument.\n", config->options.list_terminator);
         }
         if (config->options.ignore_prefix){
-            printf("    Arguments prefixed with '%s' are ignored.\n", config->options.ignore_prefix);
+            fprintf(file, "    Arguments prefixed with '%s' are ignored.\n", config->options.ignore_prefix);
         }
     }
 
@@ -2593,6 +2607,11 @@ void clags_usage(const char *program_name, clags_config_t *config)
     CLAGS_FREE(option, config->args_count*sizeof(*option));
     CLAGS_FREE(flags, config->args_count*sizeof(*flags));
     CLAGS_FREE(temp_buffer, CLAGS__USAGE_TEMP_BUFFER_SIZE*sizeof(*temp_buffer));
+}
+
+void clags_usage(const char *program_name, clags_config_t *config)
+{
+    return clags_usage_to_file(stdout, program_name, config);
 }
 
 int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)

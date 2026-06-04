@@ -1,5 +1,13 @@
 # Changelog
 
+## [v3.2.0] - 04.06.2026
+
+### Added
+- new `clags_usage_to_file` function
+  - identical behavior to `clags_usage` but with a specifiable output file stream
+
+---
+
 ## [v3.1.0] - 03.06.2026
 
 ### Added
@@ -8,6 +16,8 @@
 ### Fixes
 - parent flag suggestion now also works when a child config has inheritance disabled
 - `clags_parse` no longer unnecessarily collects option and flags
+
+---
 
 ## [v3.0.0] - 28.05.2026
 
