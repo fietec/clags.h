@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.2.0 - https://github.com/fietec/clags.h
+  clags.h - Version 3.2.1 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
