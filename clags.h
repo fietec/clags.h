@@ -2677,8 +2677,8 @@ void clags_free(clags_config_t *config)
         if (arg.type == Clags_Positional){
             if (arg.pos.value_type == Clags_Subcmd && arg.pos.subcmds != NULL){
                 clags_subcmds_t *subcmds = arg.pos.subcmds;
-                for (size_t i=0; i<subcmds->count; ++i){
-                    clags_free(subcmds->items[i].config);
+                for (size_t j=0; j<subcmds->count; ++j){
+                    clags_free(subcmds->items[j].config);
                 }
             }
             if (arg.pos.is_list) clags_list_free(arg.pos.variable);
