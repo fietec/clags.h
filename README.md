@@ -31,9 +31,9 @@ Parsing arguments with clags.h follows a predictable 5-step sequence:
 
 2. Populate an array of `clags_arg_t` structures using provided convenience macros (`clags_positional`, `clags_option`, `clags_flag`).
 
-3. Wrap the schema array in a clags_config_t structure along with global parser parameters.
+3. Wrap the schema array in a `clags_config_t` structure along with global parser parameters.
 
-4. Pass argc and argv to clags_parse. This checks for user syntax errors and populates the bound variables.
+4. Pass argc and argv to `clags_parse`. This checks for user syntax errors and populates the bound variables.
 
 5. Handle any execution errors or help intents, consume the populated data, and free internal allocations.
 

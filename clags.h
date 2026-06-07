@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.2.1 - https://github.com/fietec/clags.h
+  clags.h - Version 3.3.0 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -756,6 +756,23 @@ int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
 int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
+  Duplicate some sized data if string duplication is enabled in the config,
+  otherwise return the original data. Usually these should still be string slices,
+  but it will work with any data type.
+
+  Arguments:
+    - config  : pointer to the clags configuration
+    - data    : the data to duplicate
+    - size    : the size in bytes of the data
+
+  Returns:
+    void*     : pointer to the duplicated data if duplication is enabled,
+                otherwise the original data. Memory allocated for duplicates
+                is tracked internally within the config and will be freed when the config is cleaned up.
+*/
+void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size);
+
+/*
   Duplicate a string if string duplication is enabled in the config,
   otherwise return the original string.
 
@@ -915,14 +932,13 @@ typedef struct{
     size_t size;
 } clags__alloc_t;
 
-static inline clags__alloc_t clags__strdup(const char *string)
+static inline clags__alloc_t clags__memdup(const void *data, size_t size)
 {
-    if (string == NULL) return (clags__alloc_t){NULL, 0};
-    size_t size = strlen(string) + 1;
-    char *new_string = CLAGS_CALLOC(size, sizeof(char));
-    clags_assert(new_string != NULL, "Out of memory!");
-    (void) strcpy(new_string, string);
-    return (clags__alloc_t) {new_string, size};
+    if (data == NULL || size == 0) return (clags__alloc_t){NULL, 0};
+    void *new_data = CLAGS_CALLOC(size, 1);
+    clags_assert(new_data != NULL, "Out of memory!");
+    (void) memcpy(new_data, data, size);
+    return (clags__alloc_t) {new_data, size};
 }
 
 static inline char* clags__strchrnull(const char *string, char c)
@@ -1052,11 +1068,11 @@ void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *s
     clags_log(config, level, "%s", sb->items? sb->items : "");
 }
 
-char* clags_config_duplicate_string(clags_config_t *config, const char *string)
+void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size)
 {
-    char *duplicate;
+    void *duplicate;
     if (config && config->options.duplicate_strings){
-        clags__alloc_t alloc = clags__strdup(string);
+        clags__alloc_t alloc = clags__memdup(data, size);
         clags_list_t *allocs = &config->allocs;
         if (allocs->item_size == 0) allocs->item_size = sizeof(clags__alloc_t);
         if (allocs->count >= allocs->capacity){
@@ -1069,11 +1085,17 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
             (void) old_bytes;
         }
         ((clags__alloc_t*) allocs->items)[allocs->count++] = alloc;
-        duplicate = (char*) alloc.data;
+        duplicate = (void*) alloc.data;
     } else{
-        duplicate = (char*) string;
+        duplicate = (void*) data;
     }
     return duplicate;
+}
+
+char* clags_config_duplicate_string(clags_config_t *config, const char *string)
+{
+    if (string == NULL) return (char*) string;
+    return clags_config_duplicate(config, string, strlen(string) + 1);
 }
 
 clags_path_type_t clags_path_type(const char *path)
