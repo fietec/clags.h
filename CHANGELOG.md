@@ -1,5 +1,11 @@
 # Changelog
 
+## [v3.3.1] - 11.06.2026
+### Changes
+- `Clags_TimeS` and `Clags_TimeNS` values now support compound time strings like `1h2m17s`
+
+---
+
 ## [v3.3.0] - 07.06.2026
 ### Added
 - new `clags_config_duplicate` function
