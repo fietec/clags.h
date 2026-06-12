@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.3.1 - https://github.com/fietec/clags.h
+  clags.h - Version 3.3.2 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -147,8 +147,8 @@
   file          | /etc/passwd, myfile.txt     | Must be a regular file.
   dir           | /tmp, C:\Users              | Must be a directory.
   size          | 1024, 10KiB, 2MB            | Supports decimal and binary suffixes. Case-insensitive.
-  time_s        | 10s, 5m, 2h                 | Time in seconds; supports s/m/h/d suffixes. Case-insensitive.
-  time_ns       | 100ns, 1us, 5ms, 2s         | Time in nanoseconds; supports ns/us/ms/s/m/h/d suffixes. Case-insensitive.
+  time_s        | 10s, 5m, 2h2s4m             | Time in seconds; supports s/m/h/d suffixes. Case-insensitive.
+  time_ns       | 100ns, 1us, 5ms, 2s20ms     | Time in nanoseconds; supports ns/us/ms/s/m/h/d suffixes. Case-insensitive.
   custom        | depends on user function    | Validation done via a custom function pointer.
 */
 
@@ -301,7 +301,7 @@ typedef uint64_t clags_time_t;
     X(Clags_File,   clags_verify_file,    "file",    char*           ) /* path to a regular file                                            */ \
     X(Clags_Dir,    clags_verify_dir,     "dir",     char*           ) /* path to a directory                                               */ \
     X(Clags_Size,   clags_verify_size,    "size",    clags_fsize_t   ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
-    X(Clags_TimeS,  clags_verify_time_s,  "time_s",  clags_time_t    ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
+    X(Clags_TimeS,  clags_verify_time_s,  "time",    clags_time_t    ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
     X(Clags_TimeNS, clags_verify_time_ns, "time_ns", clags_time_t    ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
     X(Clags_Subcmd, clags_verify_subcmd,  "subcmd",  clags_subcmd_t* ) /* subcommand                                                        */ \
 
@@ -1130,29 +1130,29 @@ clags_path_type_t clags_path_type(const char *path)
     return Clags_Path_Other;
 }
 
-bool clags_verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     (void) arg_name;
-    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
+    if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
     return true;
 }
 
-bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     if (clags__strcasecmp(arg, "true") == 0 || clags__strcasecmp(arg, "yes") == 0 || clags__strcasecmp(arg, "y") == 0){
-        if (pvalue) *(bool*)pvalue = true;
+        if (variable) *(bool*)variable = true;
         return true;
     } else if (clags__strcasecmp(arg, "false") == 0 || clags__strcasecmp(arg, "no") == 0 || clags__strcasecmp(arg, "n") == 0){
-        if (pvalue) *(bool*)pvalue = false;
+        if (variable) *(bool*)variable = false;
         return true;
     }
     clags_log(config, Clags_Error, "Invalid boolean value for argument '%s': '%s'!", arg_name, arg);
     return false;
 }
 
-bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
+bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *variable)
 {
     int64_t min, max;
     if (range != NULL){
@@ -1176,56 +1176,56 @@ bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, c
         return false;
     }
 
-    if (pvalue) *(int64_t*)pvalue = (int64_t)value;
+    if (variable) *(int64_t*)variable = (int64_t)value;
     return true;
 }
 
-bool clags_verify_int(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
-    return clags__verify_signed_int(config, Clags_Int, data, arg_name, arg, pvalue);
+    return clags__verify_signed_int(config, Clags_Int, data, arg_name, arg, variable);
 }
 
-bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT8_MIN, INT8_MAX);
     bool result = clags__verify_signed_int(config, Clags_Int8, &range, arg_name, arg, &var);
-    if (result && pvalue) *(int8_t*)pvalue = (int8_t)var;
+    if (result && variable) *(int8_t*)variable = (int8_t)var;
     return result;
 }
 
-bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT16_MIN, INT16_MAX);
     bool result = clags__verify_signed_int(config, Clags_Int16, &range, arg_name, arg, &var);
-    if (result && pvalue) *(int16_t*)pvalue = (int16_t)var;
+    if (result && variable) *(int16_t*)variable = (int16_t)var;
     return result;
 }
 
-bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT32_MIN, INT32_MAX);
     bool result = clags__verify_signed_int(config, Clags_Int32, &range, arg_name, arg, &var);
-    if (result && pvalue) *(int32_t*)pvalue = (int32_t)var;
+    if (result && variable) *(int32_t*)variable = (int32_t)var;
     return result;
 }
 
-bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
     clags_range_t range = clags_int_range(INT64_MIN, INT64_MAX);
     bool result = clags__verify_signed_int(config, Clags_Int64, &range, arg_name, arg, &var);
-    if (result && pvalue) *(int64_t*)pvalue = (int64_t)var;
+    if (result && variable) *(int64_t*)variable = (int64_t)var;
     return result;
 }
 
-bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
+bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *variable)
 {
     uint64_t min, max;
     if (range){
@@ -1253,56 +1253,56 @@ bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type,
         return false;
     }
 
-    if (pvalue) *(uint64_t*)pvalue = (uint64_t)value;
+    if (variable) *(uint64_t*)variable = (uint64_t)value;
     return true;
 }
 
-bool clags_verify_uint(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
-    return clags__verify_unsigned_int(config, Clags_UInt, data, arg_name, arg, pvalue);
+    return clags__verify_unsigned_int(config, Clags_UInt, data, arg_name, arg, variable);
 }
 
-bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
     clags_range_t range = clags_uint_range(0, UINT8_MAX);
     bool result = clags__verify_unsigned_int(config, Clags_UInt8, &range, arg_name, arg, &var);
-    if (result && pvalue) *(uint8_t*)pvalue = (uint8_t) var;
+    if (result && variable) *(uint8_t*)variable = (uint8_t) var;
     return result;
 }
 
-bool clags_verify_uint16(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint16(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
     clags_range_t range = clags_uint_range(0, UINT16_MAX);
     bool result = clags__verify_unsigned_int(config, Clags_UInt16, &range, arg_name, arg, &var);
-    if (result && pvalue) *(uint16_t*)pvalue = (uint16_t) var;
+    if (result && variable) *(uint16_t*)variable = (uint16_t) var;
     return result;
 }
 
-bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
     clags_range_t range = clags_uint_range(0, UINT32_MAX);
     bool result = clags__verify_unsigned_int(config, Clags_UInt32, &range, arg_name, arg, &var);
-    if (result && pvalue) *(uint32_t*)pvalue = (uint32_t) var;
+    if (result && variable) *(uint32_t*)variable = (uint32_t) var;
     return result;
 }
 
-bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
     clags_range_t range = clags_uint_range(0, UINT64_MAX);
     bool result = clags__verify_unsigned_int(config, Clags_UInt64, &range, arg_name, arg, &var);
-    if (result && pvalue) *(uint64_t*)pvalue = (uint64_t) var;
+    if (result && variable) *(uint64_t*)variable = (uint64_t) var;
     return result;
 }
 
-bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *pvalue)
+bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *variable)
 {
     double min, max;
     if (range != NULL){
@@ -1326,42 +1326,42 @@ bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_r
         return false;
     }
 
-    if (pvalue) *(double*)pvalue = value;
+    if (variable) *(double*)variable = value;
     return true;
 }
 
-bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
-    return clags__verify_real(config, Clags_Real, data, arg_name, arg, pvalue);
+    return clags__verify_real(config, Clags_Real, data, arg_name, arg, variable);
 }
 
-bool clags_verify_float(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_float(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     double var;
     clags_range_t range = clags_real_range(-FLT_MAX, FLT_MAX);
     bool result = clags__verify_real(config, Clags_Float, &range, arg_name, arg, &var);
-    if (result && pvalue) *(float*)pvalue = (float) var;
+    if (result && variable) *(float*)variable = (float) var;
     return result;
 }
 
-bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     double var;
     clags_range_t range = clags_real_range(-DBL_MAX, DBL_MAX);
     bool result = clags__verify_real(config, Clags_Double, &range, arg_name, arg, &var);
-    if (result && pvalue) *(double*)pvalue = var;
+    if (result && variable) *(double*)variable = var;
     return result;
 }
 
-bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
         if ((choices->case_insensitive && clags__strcasecmp(choice->value, arg) == 0) || (!choices->case_insensitive && strcmp(choice->value, arg) == 0)){
-            if (pvalue) *(clags_choice_t**)pvalue = choice;
+            if (variable) *(clags_choice_t**)variable = choice;
             return true;
         }
     }
@@ -1369,7 +1369,7 @@ bool clags_verify_choice(clags_config_t *config, const char *arg_name, const cha
     return false;
 }
 
-bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1377,11 +1377,11 @@ bool clags_verify_path(clags_config_t *config, const char *arg_name, const char 
         clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
-    if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
+    if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
     return true;
 }
 
-bool clags_verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1391,7 +1391,7 @@ bool clags_verify_file(clags_config_t *config, const char *arg_name, const char 
             return false;
         } break;
         case Clags_Path_Reg:{
-            if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
+            if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
             return true;
         }
         default:{
@@ -1401,7 +1401,7 @@ bool clags_verify_file(clags_config_t *config, const char *arg_name, const char 
     }
 }
 
-bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1411,7 +1411,7 @@ bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *
             return false;
         } break;
         case Clags_Path_Dir:{
-            if (pvalue) *(char**)pvalue = clags_config_duplicate_string(config, arg);
+            if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
             return true;
         }
         default:{
@@ -1421,7 +1421,7 @@ bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *
     }
 }
 
-bool clags_verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     char *endptr;
@@ -1454,7 +1454,7 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
         clags_log(config, Clags_Error, "clags_fsize_t value out of range (0 to %"PRIu64") for argument '%s': '%s'!", UINT64_MAX, arg_name, arg);
         return false;
     }
-    if (pvalue) *(clags_fsize_t*)pvalue = (clags_fsize_t)value * factor;
+    if (variable) *(clags_fsize_t*)variable = (clags_fsize_t)value * factor;
     return true;
 }
 
@@ -1539,7 +1539,7 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
         }
         clags_time_t value_in_s = (clags_time_t)(value * factor);
         if (result > UINT64_MAX - value_in_s){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument part '%s': '%.*s'ns!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument '%s': '%.*s'ns!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
             return false;
         }
         result += value_in_s;
@@ -1551,13 +1551,13 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
     return true;
 }
 
-bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     for (size_t i=0; i<subcmds->count; ++i){
         clags_subcmd_t subcmd = subcmds->items[i];
         if (strcmp(subcmd.name, arg) == 0){
-            if (pvalue) *(clags_subcmd_t**) pvalue = &subcmds->items[i];
+            if (variable) *(clags_subcmd_t**) variable = &subcmds->items[i];
             return true;
         }
     }
@@ -1565,11 +1565,11 @@ bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const cha
     return false;
 }
 
-bool clags_verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *pvalue, void *data)
+bool clags_verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_custom_t *custom = (clags_custom_t*) data;
     if (custom && custom->func){
-        return custom->func(config, arg_name, arg, pvalue, custom->data);
+        return custom->func(config, arg_name, arg, variable, custom->data);
     }
     return false;
 }

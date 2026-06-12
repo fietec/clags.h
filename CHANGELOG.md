@@ -1,5 +1,17 @@
 # Changelog
 
+## [v3.3.2] - 12.06.2026
+### Added
+- new example `06_time` to demonstrate the the `Clags_TimeS` and `Clags_TimeNS` types
+
+### Changes
+- renamed all examples starting with `06_1_custom` to `07_1_custom` and so on to make room for the time example
+- changed the display type name of `Clags_TimeS` from `time_s` to `time` to hide this implementation detail from the user of the application
+- updated documentation about the time value types to include the new compound time string support
+- renamed some internal parameters to make the code more readable
+
+---
+
 ## [v3.3.1] - 11.06.2026
 ### Changes
 - `Clags_TimeS` and `Clags_TimeNS` values now support compound time strings like `1h2m17s`
