@@ -18,8 +18,8 @@ clags.h allows you to define a CLI schema statically using C99 designated initia
   - Schema Validation: Inspects the developer's configuration array before input processing to detect structural errors (e.g., duplicate flags, required positional arguments placed after optional ones, etc.).
   - Input Verification: Performs runtime checks on user input, ensuring values conform to type boundaries, enum choices, or physical criteria.
 	- Extensive Primitive & Derived Types: Integrated parsing for standard types (`int`, `uint`, `float`, `double`, `bool`, etc.)
-    - Size units (e.g., 10KiB, 4GB).
-    - Time units (e.g., 50ms, 2s, 1h).
+    - Size units (e.g., `10KiB`, `4GB`).
+    - Time units (e.g., `50ms`, `2s`, `1d4h15s`).
     - Filesystem Paths: `Clags_File` and `Clags_Dir` types physically verify existence and attribute types via system stat checks.
 	- Custom Types: support for parameterized custom type implementations that can also extend already existing ones
 - Hierarchical Subcommands: Native support for deeply nested subcommands with optional flag and option inheritance down the command tree.
