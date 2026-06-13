@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 bool help = false;
 
@@ -47,15 +47,15 @@ int main(int argc, char **argv)
     for (size_t i=0; i<list.count; ++i){
         // Since lists are "generic" it is not possible to directly access the list.items
 #if 1
-        // This is the manual way
-        char *item = ((char**)list.items)[i];
-#else
-        // Or you can directly use this convenient macro
+        // You can use this convenient macro
         // Arguments:
         //   - the list to index (not a pointer)
         //   - the type of the stored value
         //   - the index to read
         char *item = clags_list_element(list, char*, i);
+#else
+        // Alternatively, this is the manual way
+        char *item = ((char**)list.items)[i];
 #endif
         printf("String %zu: '%s'\n", i+1, item);
     }

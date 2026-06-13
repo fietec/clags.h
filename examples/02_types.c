@@ -8,7 +8,10 @@
 #include <inttypes.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
+
+// Here all declarations are done statically and global
+// This improves the readability of the `main` function but is matter of taste.
 
 char *input_file = NULL;
 uint64_t compression = 0;
@@ -70,6 +73,6 @@ int main(int argc, char **argv)
         printf("02_types: v1.0.0\n");
         return 0;
     }
-    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Compression Level: %"PRId64", Scaling: %f, Warnings: %d\n", input_file, output_file, quality, compression, scaling, warnings);
+    printf("Reading: '%s', Writing: '%s', Quality: %"PRIu8", Compression Level: %"PRIu64", Scaling: %f, Warnings: %d\n", input_file, output_file, quality, compression, scaling, warnings);
     return 0;
 }

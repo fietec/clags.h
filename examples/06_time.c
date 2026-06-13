@@ -7,7 +7,7 @@
 #include <inttypes.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 int main(int argc, char *argv[])
 {

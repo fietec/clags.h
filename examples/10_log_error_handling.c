@@ -11,7 +11,7 @@
 #include <inttypes.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 /*
   A custom log handler, called by `clags_log` internally

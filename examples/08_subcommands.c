@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 // Global help flag
 // since the help flag can be set from multiple subcommands, we can track the corresponding config here

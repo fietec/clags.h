@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 /* Global arguments*/
 clags_config_t *help = NULL;

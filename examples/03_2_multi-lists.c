@@ -8,7 +8,7 @@
 #include <inttypes.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 clags_list_t string_list = clags_list(Clags_String);
 clags_list_t int_list = clags_list(Clags_Int32);
@@ -92,6 +92,10 @@ int main(int argc, char **argv)
 
 defer:
 #if 1
+    // free all allocated memory by this config
+    clags_config_free(&config);
+#else
+    // alternatively, this is the manual way
     // manually free each list explicitly
     clags_list_free(&string_list);
     clags_list_free(&int_list);
@@ -101,9 +105,6 @@ defer:
 
     // the config stores all the duplicated strings. You can free them like this
     clags_config_free_allocs(&config);
-#else
-    // alternatively, all this can be done automatically for a single config
-    clags_config_free(&config);
 #endif
     return result;
 }

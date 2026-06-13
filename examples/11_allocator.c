@@ -19,7 +19,7 @@ static Arena arena = {0};
 // The arena implementation used here does not have support of indiviual deallocation
 #define CLAGS_FREE(ptr, sz)
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 clags_list_t strings = clags_list(Clags_String);
 clags_list_t nums    = clags_list(Clags_UInt32);

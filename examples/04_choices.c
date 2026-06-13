@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 char *input = NULL;
 char *algorithm = NULL;
@@ -30,7 +30,7 @@ clags_choice_t choice_values[] = {
 // Create a wrapper for the choices
 // Choices are case-sensitive by default, with `.case_insensitive=true` you can disable that behaviour
 clags_choices_t choices = clags_choices(choice_values, .case_insensitive=true);
-// Create variable to hold the pointer to the chosen `clags_choice_t`
+// Create variable to hold the pointer to the chosen `clags_choice_t` from the `choice_values` array
 clags_choice_t *choice = NULL;
 
 clags_arg_t args[] = {
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     }
     printf("input: %s\n", input);
     printf("algorithm: %s or choice no. %d\n", choice->value, clags_choice_index(&choices, choice));
-    printf("quality: %"PRId8"\n", quality);
+    printf("quality: %"PRIu8"\n", quality);
     printf("output: %s\n", output);
     return 0;
 }

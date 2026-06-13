@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #define CLAGS_IMPLEMENTATION
-#include "../clags.h"
+#include <clags.h>
 
 // A custom verification function of type `clags_verify_func_t`
 // Arguments provided by the parser:
@@ -20,17 +20,20 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
 {
     (void) data;
     // Only accept lower case strings
-    if (arg && islower(*arg)){
-        // Set the variable to the current arg since we are operating on strings here
-        // Note: `clags_config_duplicate_string` does not duplicate the string in this example, since the `duplicate_strings` option in the config is not set.
-        //       But using the function nethertheless makes it easy to change this behaviour without having to edit all your custom verifiers.
-        if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
-        // `arg` matches criteria, return success
-        return true;
+    for (const char *c=arg; *c != '\0'; ++c){
+        if (!islower((unsigned char) *c)){
+            // Log an error using the current config's rules
+            clags_log(config, Clags_Error, "String is not lower case for argument '%s': '%s'!", arg_name, arg);
+            // 'arg' does not match criteria, return failure
+            return false;
+        }
     }
-    // `arg` does not match criteria, return failure which will also fail the parser
-    clags_log(config, Clags_Error, "String is not lower case for argument '%s': '%s'!", arg_name, arg);
-    return false;
+    // Set the variable to the current arg since we are operating on strings here
+    // Note: `clags_config_duplicate_string` does not duplicate the string in this example, since the `duplicate_strings` option in the config is not set.
+    //       But using the function nethertheless makes it easy to change this behaviour without having to edit all your custom verifiers.
+    if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
+    // `arg` matches criteria, return success
+    return true;
 }
 
 // The definition of a custom type
