@@ -254,34 +254,67 @@ void test_missing_required() {
     clags_config_free(&config);
 }
 
-int main() {
-    test_int_option();
-    printf("- Test 'int option' passed!\n");
-    test_float_option();
-    printf("- Test 'float option' passed!\n");
-    test_bool_option();
-    printf("- Test 'bool option' passed!\n");
-    test_short_flag();
-    printf("- Test 'short flag' passed!\n");
-    test_positional();
-    printf("- Test 'positional' passed!\n");
-    test_positional_list();
-    printf("- Test 'positional list' passed!\n");
-    test_invalid_value();
-    printf("- Test 'invalid value' passed!\n");
-    test_subcommand();
-    printf("- Test 'subcommand' passed!\n");
-    test_int_range();
-    printf("- Test 'int range' passed!\n");
-    test_choices();
-    printf("- Test 'choices' passed!\n");
-    test_combined_flags();
-    printf("- Test 'combined flags' passed!\n");
-    test_list_terminator();
-    printf("- Test 'list terminator' passed!\n");
-    test_missing_required();
-    printf("- Test 'missing required' passed!\n");
+void test_inheritance()
+{
+    char *pos;
+    clags_arg_t child_args[] = {
+        clags_positional(&pos, "pos", ""),
+    };
+    clags_config_t child_config = clags_config_with_options(child_args, global_options);
 
+    clags_subcmd_t *subcmd;
+    char *value = NULL;
+
+    clags_subcmd_t commands[] = {
+        {"cmd", "", &child_config},
+    };
+    clags_subcmds_t subcmds = clags_subcmds(commands);
+
+    clags_arg_t parent_args[] = {
+        clags_positional(&subcmd, "command", "", .value_type=Clags_Subcmd, .subcmds=&subcmds),
+        clags_option('v', "value", &value, "VAL", "", .inherit=true),
+    };
+    clags_config_t parent_config = clags_config_with_options(parent_args, global_options);
+
+    char *argv[] = {"prog", "cmd", "--value=inputs", "pos"};
+    clags_parse(clags_arr_len(argv), argv, &parent_config);
+
+    assert(subcmd == &commands[0]);
+    assert(strcmp(value, "input") == 0);
+    assert(strcmp(pos, "pos") == 0);
+}
+
+typedef struct{
+    const char *name;
+    void (*func)(void);
+} Test;
+
+static Test tests[] = {
+    {"int-option", test_int_option},
+    {"float-option", test_float_option},
+    {"bool-option", test_bool_option},
+    {"short-flag", test_short_flag},
+    {"positional", test_positional},
+    {"positional-list", test_positional_list},
+    {"invalid-value", test_invalid_value},
+    {"int-range", test_int_range},
+    {"choices", test_choices},
+    {"combined-flags", test_combined_flags},
+    {"list-terminator", test_list_terminator},
+    {"missing-required", test_missing_required},
+    {"subcommand", test_subcommand},
+    {"inheritance", test_inheritance}
+};
+
+static size_t test_count = sizeof(tests)/sizeof(Test);
+
+int main(void)
+{
+    for (size_t i=0; i<test_count; ++i){
+        Test test = tests[i];
+        test.func();
+        printf("- Test '%s' passed!\n", test.name);
+    }
     printf("\nAll tests passed successfully!\n");
     return 0;
 }
