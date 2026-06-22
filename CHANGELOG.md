@@ -1,5 +1,13 @@
 # Changelog
 
+## [v3.4.0] - 23.06.2026
+### Added
+- new redefinable macros `CLAGS_STRTOLL`, `CLAGS_STRTOULL` and `CLAGS_STRTOD`
+### Changes
+- with the above macros, clags can now be configured to not depend on `stdlib.h`
+
+---
+
 ## [v3.3.2] - 12.06.2026
 ### Added
 - new example `06_time` to demonstrate the the `Clags_TimeS` and `Clags_TimeNS` types

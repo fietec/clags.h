@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.3.2 - https://github.com/fietec/clags.h
+  clags.h - Version 3.4.0 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -156,7 +156,6 @@
 #define CLAGS_H
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -194,6 +193,7 @@
         count - the number of elements to allocate
         size  - the size in bytes of one element
 */
+#include <stdlib.h>
 #define CLAGS_CALLOC(count, size) calloc(count, size)
 #endif
 
@@ -205,6 +205,7 @@
         oldsz - previous size of the allocation in bytes (default realloc ignores this)
         newsz - new requested size in bytes
 */
+#include <stdlib.h>
 #define CLAGS_REALLOC(ptr, oldsz, newsz) realloc(ptr, newsz)
 #endif
 
@@ -215,12 +216,44 @@
         ptr - pointer to memory to free
         sz  - size of the allocation in bytes (default free ignores this)
 */
+#include <stdlib.h>
 #define CLAGS_FREE(ptr, sz) free(ptr)
 #endif
 
+#ifndef CLAGS_STRTOLL
+/*
+    CLAGS_STRTOLL: Convert a string to a signed long long integer.
+    The macro must expand to an expression or function matching the signature:
+        long long int CLAGS_STRTOLL(const char *nptr, char **endptr, int base);
+*/
+#include <stdlib.h>
+#define CLAGS_STRTOLL strtoll
+#endif // CLAGS_STRTOLL
+
+#ifndef CLAGS_STRTOULL
+/*
+    CLAGS_STRTOULL: Convert a string to an unsigned long long integer.
+    The macro must expand to an expression or function matching the signature:
+        unsigned long long int CLAGS_STRTOULL(const char *nptr, char **endptr, int base);
+*/
+#include <stdlib.h>
+#define CLAGS_STRTOULL strtoull
+#endif // CLAGS_STRTOULL
+
+#ifndef CLAGS_STRTOD
+/*
+    CLAGS_STRTOD: Convert a string to a double-precision floating-point number.
+    The macro must expand to a function matching the signature:
+        double CLAGS_STRTOD(const char *nptr, char **endptr);
+*/
+#include <stdlib.h>
+#define CLAGS_STRTOD strtod
+#endif // CLAGS_STRTOD
+    
 // terminates the program due to a unrecoverable fatal error.
 // can be redefined for custom behavior (e.g., `#define CLAGS_PANIC exit(1)`).
 #ifndef CLAGS_PANIC
+#include <stdlib.h>
 #define CLAGS_PANIC abort()
 #endif // CLAGS_PANIC
 
@@ -1165,7 +1198,7 @@ bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, c
 
     char *endptr;
     errno = 0;
-    long long value = strtoll(arg, &endptr, 0);
+    long long value = CLAGS_STRTOLL(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
@@ -1238,7 +1271,7 @@ bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type,
 
     char *endptr;
     errno = 0;
-    unsigned long long value = strtoull(arg, &endptr, 0);
+    unsigned long long value = CLAGS_STRTOULL(arg, &endptr, 0);
 
     if (*endptr != '\0') {
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
@@ -1315,7 +1348,7 @@ bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_r
 
     char *endptr;
     errno = 0;
-    double value = strtod(arg, &endptr);
+    double value = CLAGS_STRTOD(arg, &endptr);
 
     if (*endptr != '\0') {
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__type_names[type], arg_name, arg);
@@ -1426,7 +1459,7 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
     (void) data;
     char *endptr;
     errno = 0;
-    unsigned long long value = strtoull(arg, &endptr, 10);
+    unsigned long long value = CLAGS_STRTOULL(arg, &endptr, 10);
 
     if (endptr == arg){
         clags_log(config, Clags_Error, "No leading number in size argument '%s': '%s'!", arg_name, arg);
@@ -1468,7 +1501,7 @@ bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const cha
     while (isspace((unsigned char)*start)) start++;
     do{
         errno = 0;
-        double value = strtod(start, &endptr);
+        double value = CLAGS_STRTOD(start, &endptr);
         if (endptr == start){
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
             return false;
@@ -1513,7 +1546,7 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
     while (isspace((unsigned char)*start)) start++;
     do{
         errno = 0;
-        double value = strtod(start, &endptr);
+        double value = CLAGS_STRTOD(start, &endptr);
         if (endptr == start){
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
             return false;
