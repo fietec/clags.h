@@ -1,5 +1,11 @@
 # Changelog
 
+## [v3.4.1] - 23.06.2026
+### Changes
+- added compiler format checks to `clags_sb_appendf`
+
+---
+
 ## [v3.4.0] - 23.06.2026
 ### Added
 - new redefinable macros `CLAGS_STRTOLL`, `CLAGS_STRTOULL` and `CLAGS_STRTOD`

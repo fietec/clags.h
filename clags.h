@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.4.0 - https://github.com/fietec/clags.h
+  clags.h - Version 3.4.1 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -903,7 +903,7 @@ void clags_log(clags_config_t *config, clags_log_level_t level, const char *form
 void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
 
 /* String Builder Functionality */
-void clags_sb_appendf(clags_sb_t *sb, const char *format, ...);
+void clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
 void clags_sb_append_null(clags_sb_t *sb);
 void clags_sb_free(clags_sb_t *sb);
 
