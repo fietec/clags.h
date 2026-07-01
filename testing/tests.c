@@ -276,7 +276,7 @@ void test_inheritance()
     };
     clags_config_t parent_config = clags_config_with_options(parent_args, global_options);
 
-    char *argv[] = {"prog", "cmd", "--value=inputs", "pos"};
+    char *argv[] = {"prog", "cmd", "--value=input", "pos"};
     clags_parse(clags_arr_len(argv), argv, &parent_config);
 
     assert(subcmd == &commands[0]);
