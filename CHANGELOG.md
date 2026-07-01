@@ -1,5 +1,21 @@
 # Changelog
 
+## [v3.5.0] - 01.07.2026
+### Added
+- new custom strtoint api
+  - `strtol`-like functions for all fixed-size integer types with two variants each
+	- `strto(u)int<size>`: standard `strtol` behavior, uses `errno` for error propagation
+	- `strto(u)int<size>_s`: safe/structured variant populating a result struct instead of just and `endptr`
+  - `clags_strtoint_res_t`: the new result struct populated by the `_s` functions
+	- conversion information: `endptr`, `negative`, `leading_spaces`
+	- error flags: `invalid_base`, `no_digits`, `out_of_range`
+### Changes
+- all internal verifiers now use the new `clags_strtoint..` functions instead of `strtoll` and `strtoull`
+- improved integer verfication error messages
+- deprecated `CLAGS_STRTOLL` and `CLAGS_STRTOULL` redefinable macros since they are obsolete now
+
+---
+
 ## [v3.4.1] - 23.06.2026
 ### Changes
 - added compiler format checks to `clags_sb_appendf`
