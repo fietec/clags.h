@@ -1,5 +1,5 @@
 /*
-  Example 7.1: Inherited Custom Verifiers
+  Example 7.2: Inherited Custom Verifiers
       This example shows how to create more complex custom types.
 */
 
