@@ -1,5 +1,12 @@
 # Changelog
 
+## [v3.5.1] - 04.07.2026
+### Changes
+- improved duplicates validation: shadowing of reachable ancestor arguments is no longer allowed
+- improved comments in implementation section
+
+---
+
 ## [v3.5.0] - 01.07.2026
 ### Added
 - new custom strtoint api
