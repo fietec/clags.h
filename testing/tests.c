@@ -107,7 +107,6 @@ void test_positional_list() {
     assert(strcmp(clags_list_element(files, char*, 2), "c.txt") == 0);
     assert(config.error == Clags_Error_Ok);
 
-    clags_list_free(&files);
     clags_config_free(&config);
 }
 
@@ -234,8 +233,6 @@ void test_list_terminator() {
     assert(tags.count == 2);
     assert(strcmp(clags_list_element(tags, char*, 0), "tag1") == 0);
 
-    clags_list_free(&files);
-    clags_list_free(&tags);
     clags_config_free(&config);
 }
 
