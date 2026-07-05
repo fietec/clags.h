@@ -1,9 +1,19 @@
 # Changelog
 
+## [v3.5.2] - 05.07.2026
+### Changes
+- use O(1) address comparison for `clags_choice_index`
+
+### Fixes
+- check for pointer misallignment in `clags_subcmd_index` and `clags_choice_index`
+
+---
+
 ## [v3.5.1] - 04.07.2026
 ### Changes
 - improved duplicates validation: shadowing of reachable ancestor arguments is no longer allowed
 - improved comments in implementation section
+- use O(1) address comparison for `clags_subcmd_index`
 
 ---
 

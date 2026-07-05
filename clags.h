@@ -1,5 +1,5 @@
 /*
-  clags.h - Version 3.5.1 - https://github.com/fietec/clags.h
+  clags.h - Version 3.5.2 - https://github.com/fietec/clags.h
 
   A simple declarative command line arguments parser for C99
 
@@ -1248,7 +1248,9 @@ int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
     uintptr_t items_addr = (uintptr_t) subcmds->items;
     uintptr_t subcmd_addr = (uintptr_t) subcmd;
     if (items_addr <= subcmd_addr && subcmd_addr < items_addr + subcmds->count * sizeof(*subcmds->items)){
-        return subcmd - subcmds->items;
+        if ((subcmd_addr - items_addr) % sizeof(*subcmds->items) == 0) {
+            return subcmd - subcmds->items;
+        }
     }
     return -1;
 }
@@ -1256,9 +1258,12 @@ int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
 int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 {
     if (!choices || !choice) return -1;
-    // TODO: maybe do this in O(1) with pointer subtraction
-    for (size_t i=0; i<choices->count; ++i){
-        if (&choices->items[i] == choice) return (int) i;
+    uintptr_t items_addr = (uintptr_t) choices->items;
+    uintptr_t choice_addr = (uintptr_t) choice;
+    if (items_addr <= choice_addr && choice_addr < items_addr + choices->count * sizeof(*choices->items)){
+        if ((choice_addr - items_addr) % sizeof(*choices->items) == 0) {
+            return choice - choices->items;
+        }
     }
     return -1;
 }
