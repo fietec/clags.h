@@ -73,6 +73,8 @@
 ### Fixes
 - `clags_free` had a critical bug where a wrong index was used for array indexing
 
+---
+
 ## [v3.2.0] - 04.06.2026
 
 ### Added
