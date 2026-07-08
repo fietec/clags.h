@@ -1,5 +1,16 @@
 # Changelog
 
+## [v3.6.0] - 08.07.2026
+### Added
+- added modular feature-gating macros (`CLAGS_NO_INT_TYPES`, `CLAGS_NO_REAL_TYPES`, `CLAGS_NO_PATH_TYPES`, `CLAGS_NO_SIZE_TYPES`, `CLAGS_NO_TIME_TYPES`) to completely strip specific types and their verifiers from the binary
+- added umbrella configuration macro `CLAGS_NO_COMPLEX_TYPES` to quickly disable all non-basic types at once
+- added additional feature-gate macro `CLAGS_NO_STRTOINT` to remove the custom string-to-int converter if possible
+
+### Changes
+- isolated `<sys/stat.h>` header inclusion and cross-platform `stat`/`_stat64` wrapper definitions behind `CLAGS_NO_PATH_TYPES` to guarantee bare-metal and embedded environment compatibility
+
+---
+
 ## [v3.5.2] - 05.07.2026
 ### Changes
 - use O(1) address comparison for `clags_choice_index`

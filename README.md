@@ -32,6 +32,10 @@ A single-header C99 library for parsing and validating command-line arguments.
     - Filesystem paths with existence and type checks
     - Parameterized custom types, with possible extension of existing types
 
+- **Modular compile-time configuration**
+  - Fine-grained feature-gating macros (`CLAGS_NO_INT_TYPES`, `CLAGS_NO_PATH_TYPES`, etc.) to completely strip unneeded parsing engines from the binary
+  - Eliminates external platform dependencies (like `<sys/stat.h>` for path types) if not needed
+
 - **Hierarchical subcommands**
   - Supports deeply nested subcommands
   - Optional inheritance of flags and options throughout the command tree
@@ -39,7 +43,7 @@ A single-header C99 library for parsing and validating command-line arguments.
 - **Automatic memory tracking**
   - Tracks dynamically allocated lists and duplicated strings
   - Releases all internally managed allocations with a single cleanup call (see the [Memory Model](#memory-model))
-  
+
 ## Integration
 
 clags.h uses the [stb-style](https://github.com/nothings/stb#how-do-i-use-these-libraries) single-header implementation pattern. Include the header normally to access types and function declarations. In exactly one C source file, define `CLAGS_IMPLEMENTATION` before including the file to compile the function implementations.
