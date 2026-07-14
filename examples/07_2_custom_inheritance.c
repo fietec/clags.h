@@ -29,8 +29,8 @@ bool multiple_of(clags_config_t *config, const char *arg_name, const char *arg, 
 }
 
 // The definition of two custom types with that share the same verification function, but differ in the type argument, here the `base`
-clags_custom_t multiple_10 = {"multiple of 10", multiple_of, (void*) 10};
-clags_custom_t multiple_2 = {"multiple of 2", multiple_of, (void*) 2};
+clags_custom_t multiple_10 = clags_custom("multiple of 10", multiple_of, .data=(void*) 10);
+clags_custom_t multiple_2 = clags_custom("multiple of 2", multiple_of, .data=(void*) 2);
 
 int64_t mten = 0;
 int64_t mtwo = 0;

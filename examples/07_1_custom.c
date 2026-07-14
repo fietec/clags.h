@@ -41,7 +41,7 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
 //   - `name` : the display name of the type
 //   - `func` : the verification function to call
 //   - `data` : additional argument for the verification function. See Example 7.2 for more details.
-clags_custom_t custom_lower_case_type = {"lowercase", verify_lower_case, NULL};
+clags_custom_t custom_lower_case_type = clags_custom("lowercase", verify_lower_case);
 
 // For custom types, use `clags_custom_list(SIZE)` instead of `clags_list(Clags_Custom)` and provide the size of the stored values
 clags_list_t list = clags_custom_list(sizeof(char*));
