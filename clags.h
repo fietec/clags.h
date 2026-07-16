@@ -253,24 +253,38 @@
 #define CLAGS_LIST_INIT_CAPACITY 8
 #endif // CLAGS_LIST_INIT_CAPACITY
 
-// the character column at which ':' appears in `clags_usage` output
-// you can adjust this value to control the alignment of argument descriptions
-#ifndef CLAGS_USAGE_ALIGNMENT
-#define CLAGS_USAGE_ALIGNMENT 36
-#endif // CLAGS_USAGE_ALIGNMENT
+/* Usage Alignment */
 
-#if CLAGS_USAGE_ALIGNMENT < 19
-#error "CLAGS_USAGE_ALIGNMENT may not be smaller than 19!"
+// the default minimum character column at which ':' appears in `clags_usage` output
+// used when no `.min_usage_alignment` config option is specified
+#ifndef CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT
+#define CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT 32
+#endif // CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT
+
+// the default maxiumum character column at which ':' appears in `clags_usage` output
+// used when no `.max_usage_alignment` config option is specified
+#ifndef CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT
+#define CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT 96
+#endif // CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT
+
+#define CLAGS__MIN_USAGE_ALIGNMENT 20
+#if CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT < CLAGS__MIN_USAGE_ALIGNMENT
+#error CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT may not be smaller than CLAGS__MIN_USAGE_ALIGNMENT!
 #endif
+
+#if CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT > CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT
+#error CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT may not be greater than CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT!
+#endif
+
+#define CLAGS__USAGE_PRINTF_ALIGNMENT(alignment) (int)-((alignment)-5)
+#define CLAGS__USAGE_TEMP_BUFFER_SIZE(alignment) ((alignment)-4)
+#define CLAGS__USAGE_ALIGNMENT_FROM_BUFFER_SIZE(size) ((size)+4)
 
 // the maximum amount of choices to print in the inline format, when `.print_no_details=true`
 // if there are more than the defined maximum of choices the detailed output will be printed nevertheless
 #ifndef CLAGS_MAX_INLINE_CHOICES
 #define CLAGS_MAX_INLINE_CHOICES 5
 #endif // CLAGS_MAX_INLINE_CHOICES
-
-#define CLAGS__USAGE_PRINTF_ALIGNMENT -(CLAGS_USAGE_ALIGNMENT-4)
-#define CLAGS__USAGE_TEMP_BUFFER_SIZE (CLAGS_USAGE_ALIGNMENT-3)
 
 // macro for enabling printf-like format checks in `clags_sb_appendf`
 #if defined(__GNUC__) || defined(__clang__)
@@ -342,10 +356,10 @@ typedef clags_validate_func_def_t *clags_validate_func_t; // the function pointe
    - default_value : the default value to print (can be NULL)
    - data          : addtional data belonging to the type
 */
-typedef void (clags_usage_func_def_t)(FILE *file, bool is_list, const char *default_value, void *data);
+typedef void (clags_usage_func_def_t)(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data);
 typedef clags_usage_func_def_t *clags_usage_func_t; // the function pointer type of usage printers
 
-typedef void (*clags_log_handler_t)(clags_log_level_t level, const char *format, va_list args); // the function type of custom log handlers
+typedef void (*clags_log_handler_t)(clags_config_t *config, clags_log_level_t level, const char *format, va_list args); // the function type of custom log handlers
 typedef void (*clags_callback_func_t)(clags_config_t *config);                                  // the function type of callback functions
 
 typedef uint64_t clags_fsize_t;
@@ -616,6 +630,8 @@ typedef struct{
     clags_log_level_t min_log_level;  // the minimal log level for which to print logs
     const char *description;          // a description of the current (sub)command
     bool no_inheritance;              // do not inherit any option or flags from parent configs
+    size_t min_usage_alignment;       // the minimum column in which ':' appears in a usage line in this config
+    size_t max_usage_alignment;       // the maximum column in which ':' apperas in a usage line in this config
 } clags_options_t;
 
 // the definition of config states
@@ -640,12 +656,13 @@ struct clags_config_t{
     clags_error_t error;              // the last error detected while parsing this config
     size_t inherit_options_count;     // the number of options that can be inherited by child configs
     size_t inherit_flags_count;       // the number of flags that can be inherited by child configs
+    size_t usage_alignment;           // the column in which ':' appears in a usage line
 };
 
 // helper macros
 #define clags_arr_len(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define clags_return_defer(value) do{result = (value); goto defer;}while(0) // set the `result` variable and jump to the `defer` label
-#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); CLAGS_PANIC;}}while(0)
+#define clags_assert(expr, msg) do{if(!(expr)){fprintf(stderr, "%s:%d: in %s: [FATAL] Assertion failed [%s] : %s\n", __FILE__, __LINE__, __func__, #expr, (msg)); fflush(stderr); CLAGS_PANIC;}}while(0)
 #define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [FATAL] Unreachable: %s\n", __FILE__, __LINE__, __func__, (msg)); fflush(stderr); CLAGS_PANIC;}while(0)
 
 /* Custom Variable Types */
@@ -1170,7 +1187,7 @@ void clags_sb_free(clags_sb_t *sb)
 
 /* Logging */
 
-void clags__default_log_handler(clags_log_level_t level, const char *format, va_list args)
+void clags__default_log_handler(clags_config_t *config, clags_log_level_t level, const char *format, va_list args)
 {
     switch(level){
         case Clags_Info:{
@@ -1186,10 +1203,10 @@ void clags__default_log_handler(clags_log_level_t level, const char *format, va_
             fprintf(stderr, "[ERROR] ");
         }break;
         case Clags_ConfigWarning:{
-            fprintf(stderr, "[CONFIG_WARNING] ");
+            fprintf(stderr, "[CONFIG_WARNING] in '%s': ", config->name);
         }break;
         case Clags_ConfigError:{
-            fprintf(stderr, "[CONFIG_ERROR] ");
+            fprintf(stderr, "[CONFIG_ERROR] in '%s': ", config->name);
         }break;
         case Clags_NoLogs: return;
         default:{
@@ -1206,7 +1223,7 @@ void clags_log(clags_config_t *config, clags_log_level_t level, const char *form
     va_list args;
     va_start(args, format);
     clags_log_handler_t handler = (config && config->options.log_handler)? config->options.log_handler : clags__default_log_handler;
-    handler(level, format, args);
+    handler(config, level, format, args);
     va_end(args);
 }
 
@@ -1982,7 +1999,7 @@ bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const cha
             return false;
         }
         // range check for the temporary result
-        clags_time_t value_in_s = (clags_time_t)(value * factor);
+        clags_time_t value_in_s = (clags_time_t)(value * factor + 0.5);
         if (result > UINT64_MAX - value_in_s){
             clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s's!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
             return false;
@@ -2042,7 +2059,7 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
             return false;
         }
         // range check for the temporary result
-        clags_time_t value_in_s = (clags_time_t)(value * factor);
+        clags_time_t value_in_s = (clags_time_t)(value * factor + 0.5);
         if (result > UINT64_MAX - value_in_s){
             clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument '%s': '%.*s'ns!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
             return false;
@@ -2173,7 +2190,7 @@ bool clags__validate_default(clags_config_t *config, clags_value_type_t value_ty
     }
     // verify but do not write to the variable
     if (!clags__set_arg(config, value_type, arg_name, value, NULL, data, false)){
-        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s' in config '%s': '%s'", arg_name, config->name, value);
+        clags_log(config, Clags_ConfigError, "invalid default value for argument '%s': '%s'", arg_name, value);
         return false;
     }
     return true;
@@ -2213,18 +2230,18 @@ clags_config_t* clags__validate_subcmd(clags_config_t *config, const char *arg_n
 {
     // a subcommand argument should be provided with a valid `clags_subcmds_t` 
     if (data == NULL){
-        clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s' in config '%s'! Define `.subcmds` for subcommand verification!", arg_name, config->name);
+        clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", arg_name);
         return config;
     }
 
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     if (subcmds->count == 0){
-        clags_log(config, Clags_ConfigWarning, "subcommand definition should contain at least one subcommand for argument '%s' in config '%s'!", arg_name, config->name);
+        clags_log(config, Clags_ConfigWarning, "subcommand definition should contain at least one subcommand for argument '%s'!", arg_name);
     }
     for (size_t i=0; i<subcmds->count; ++i){
         clags_config_t *child_config = subcmds->items[i].config;
         if (child_config == NULL){
-            clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s' in config '%s'! Subcommand '%s' has no config assigned!", arg_name, config->name, subcmds->items[i].name);
+            clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand '%s' has no config assigned!", arg_name, subcmds->items[i].name);
             return config;
         }
         child_config->parent = config;
@@ -2238,11 +2255,11 @@ clags_config_t* clags__validate_choice(clags_config_t *config, const char *arg_n
 {
     // a choice argument should be provided with a valid `clags_choices_t`
     if (data == NULL){
-        clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s' in config '%s'! Define `.choices` for choice verification!", arg_name, config->name);
+        clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", arg_name);
         return config;
     }
     if (((clags_choices_t*) data)->count == 0){
-        clags_log(config, Clags_ConfigWarning, "choice definition must contain at least one choice for argument '%s' in config '%s'!", arg_name, config->name);
+        clags_log(config, Clags_ConfigWarning, "choice definition must contain at least one choice for argument '%s'!", arg_name);
     }
     return NULL;
 }
@@ -2252,7 +2269,7 @@ clags_config_t* clags__validate_custom(clags_config_t *config, const char *arg_n
     // a custom argument should be provided with a valid `clags_custom_t`
     clags_custom_t *custom = (clags_custom_t*) data;
     if (custom == NULL){
-        clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s' in config '%s'! Define `.custom` for custom verification!", arg_name, config->name);
+        clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.custom` for custom verification!", arg_name);
         return config;
     }
     // call the custom validator if specified
@@ -2267,7 +2284,7 @@ clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t
     // check whether the provided range contraint is of the correct type
     clags_range_t *range = (clags_range_t*)data;
     if (range && range->type != type){
-        clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s' in config '%s': expected range type '%s', but got '%s'!", arg_name, config->name, clags__types[type].name, clags__types[range->type].name);
+        clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s': expected range type '%s', but got '%s'!", arg_name, clags__types[type].name, clags__types[range->type].name);
         return config;
     }
     return NULL;
@@ -2308,17 +2325,9 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
     // validate the default input, if defined
     if (pos.default_input){
         if (!pos.optional){
-            clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s' in config '%s'! This value will always be overwritten and never used.", pos.arg_name, config->name);
+            clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
         }
         if (!clags__validate_default(config, pos.value_type, pos.arg_name, pos.default_input, pos._data, pos.is_list)) return config;
-    }
-
-    // check if this argument's usage line fits into `CLAGS_USAGE_ALIGNMENT`
-    int bytes_needed = clags__print_lhs(NULL, 0, 0, NULL, pos.arg_name, pos.optional, false, 0);
-    int bytes_too_many = bytes_needed - CLAGS__USAGE_TEMP_BUFFER_SIZE + 1;
-    if (bytes_too_many > 0){
-        size_t arg_name_len = strlen(pos.arg_name);
-        clags_log(config, Clags_ConfigWarning, "name for positional argument '%s' in config '%s' is too long (%zu/%zu) to fit into the usage line. The output will be truncated. Try increasing 'CLAGS_USAGE_ALIGNMENT'.", pos.arg_name, config->name, arg_name_len, arg_name_len - (size_t) bytes_too_many);
     }
 
     return NULL;
@@ -2333,7 +2342,7 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
 
     // validate reachability and format
     if (opt.short_flag == '\0' && opt.long_flag == NULL){
-        clags_log(config, Clags_ConfigWarning, "unreachable option in config '%s'. Define at least one of `short_flag` and `long_flag`.", config->name);
+        clags_log(config, Clags_ConfigWarning, "unreachable option! Define at least one of `short_flag` and `long_flag`.");
     }
     if (opt.long_flag && strncmp(opt.long_flag, "--", 2) == 0){
         clags_log(config, Clags_ConfigWarning,
@@ -2357,13 +2366,6 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
         if (!clags__validate_default(config, opt.value_type, name, opt.default_input, opt._data, opt.is_list)) return config;
     }
 
-    // check if this argument's usage line fits into `CLAGS_USAGE_ALIGNMENT`
-    int bytes_needed = clags__print_lhs(NULL, 0, opt.short_flag, opt.long_flag, opt.arg_name, false, false, 0);
-    int bytes_too_many = bytes_needed - CLAGS__USAGE_TEMP_BUFFER_SIZE + 1;
-    if (bytes_too_many > 0){
-        clags_log(config, Clags_ConfigWarning, "usage line for option argument '%s' in config '%s' is too long (%d/%d). The output will be truncated. Try increasing 'CLAGS_USAGE_ALIGNMENT'.", name, config->name, bytes_needed, CLAGS__USAGE_TEMP_BUFFER_SIZE - 1);
-    }
-    
     return NULL;
 }
 
@@ -2380,10 +2382,10 @@ clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
     }
     if (flag.long_flag && strncmp(flag.long_flag, "--", 2) == 0){
         clags_log(config, Clags_ConfigWarning,
-                  "long flag '%s' in config '%s' should not start with '--'. "
+                  "long flag '%s' should not start with '--'. "
                   "The parser automatically handles leading '--' for long flags, "
                   "so including it in the config may cause incorrect parsing.",
-                  flag.long_flag, config->name);
+                  flag.long_flag);
     }
     switch (flag.type){
         case Clags_BoolFlag:
@@ -2391,15 +2393,9 @@ clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
         case Clags_CountFlag:
         case Clags_CallbackFlag:break;
         default:{
-            clags_log(config, Clags_ConfigError, "invalid flag type for flag '%s' in config '%s': %d!", name, config->name, flag.type);
+            clags_log(config, Clags_ConfigError, "invalid flag type for flag '%s': %d!", name, flag.type);
             return config;
         }
-    }
-    // check if this argument's usage line fits into `CLAGS_USAGE_ALIGNMENT`
-    int bytes_needed = clags__print_lhs(NULL, 0, flag.short_flag, flag.long_flag, NULL, false, false, 0);
-    int bytes_too_many = bytes_needed - CLAGS__USAGE_TEMP_BUFFER_SIZE + 1;
-    if (bytes_too_many > 0){
-        clags_log(config, Clags_ConfigWarning, "usage line for flag argument '%s' in config '%s' is too long (%d/%d). The output will be truncated. Try increasing 'CLAGS_USAGE_ALIGNMENT'.", name, config->name, bytes_needed, CLAGS__USAGE_TEMP_BUFFER_SIZE - 1);
     }
 
     return NULL;
@@ -2431,12 +2427,12 @@ bool clags__validate_duplicates(clags_config_t *config, char short_flag, const c
                 if (is_self || is_inheritable){
                     // argument comes from the same config or can be inherited
                     // flags are conflicting, report an error
-                    clags_log(config, Clags_ConfigError, "Duplicate short flag '-%c' in config '%s' is already defined in config '%s'.", short_flag, config->name, ancestor->name);
+                    clags_log(config, Clags_ConfigError, "Duplicate short flag '-%c' is already defined in config '%s'.", short_flag, ancestor->name);
                     return false;
                 } else{
                     // argument is not inheritable but still has the same flags
                     // report a warning
-                    clags_log(config, Clags_ConfigWarning, "Local short flag '-%c' in config '%s' shadows a flag from ancestor config '%s'.", short_flag, config->name, ancestor->name);
+                    clags_log(config, Clags_ConfigWarning, "Local short flag '-%c' shadows a flag from ancestor config '%s'.", short_flag, ancestor->name);
                 }
             }
             // check for long flag match
@@ -2444,12 +2440,12 @@ bool clags__validate_duplicates(clags_config_t *config, char short_flag, const c
                 if (is_self || is_inheritable){
                     // argument comes from the same config or can be inherited
                     // flags are conflicting, report an error
-                    clags_log(config, Clags_ConfigError, "Duplicate long flag '--%s' in config '%s' is already defined in config '%s'.", long_flag, config->name, ancestor->name);
+                    clags_log(config, Clags_ConfigError, "Duplicate long flag '--%s' is already defined in config '%s'.", long_flag, ancestor->name);
                     return false;
                 } else{
                     // argument is not inheritable but still has the same flags
                     // report a warning
-                    clags_log(config, Clags_ConfigWarning, "Local long flag '--%s' in config '%s' shadows a flag from ancestor config '%s'.", long_flag, config->name, ancestor->name);
+                    clags_log(config, Clags_ConfigWarning, "Local long flag '--%s' shadows a flag from ancestor config '%s'.", long_flag, ancestor->name);
                 }
             }
         }
@@ -2458,6 +2454,21 @@ bool clags__validate_duplicates(clags_config_t *config, char short_flag, const c
         ancestor = ancestor->parent;
     }
     return true;
+}
+
+static inline void clags__update_alignment(clags_config_t *config, size_t *buff_size, int needed, const char *arg_name)
+{
+    if (needed < 0) return;
+    size_t bytes_needed = (size_t) needed + 1;
+    size_t max_bytes = CLAGS__USAGE_TEMP_BUFFER_SIZE(config->options.max_usage_alignment);
+    if (bytes_needed > *buff_size){
+        if (bytes_needed > max_bytes){
+            clags_log(config, Clags_ConfigWarning, "usage line for argument '%s' is too long (%zu/%zu). The output will be trucated. Try increasing `.max_usage_alignment`.", arg_name, config->options.max_usage_alignment + (bytes_needed - max_bytes), config->options.max_usage_alignment);
+            *buff_size = max_bytes;
+        } else{
+            *buff_size = bytes_needed;
+        }
+    }
 }
 
 clags_config_t* clags_validate(const char *name, clags_config_t *config)
@@ -2487,6 +2498,24 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
             clags_return_defer(config);
         }
     }
+    // min usage alignment
+    if (config->options.min_usage_alignment == 0){
+        config->options.min_usage_alignment = CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT;
+    }
+    if (config->options.min_usage_alignment < CLAGS__MIN_USAGE_ALIGNMENT){
+        clags_log(config, Clags_ConfigError, "'.min_usage_alignment' of config '%s' is smaller than minimum of %d: %zu!", config->name, CLAGS__MIN_USAGE_ALIGNMENT, config->options.min_usage_alignment);
+        clags_return_defer(config);
+    }
+
+    // max usage alignment
+    if (config->options.max_usage_alignment == 0){
+        config->options.max_usage_alignment = CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT;
+    }
+
+    if (config->options.min_usage_alignment > config->options.max_usage_alignment){
+        clags_log(config, Clags_ConfigError, "'.min_usage_alignment' (%zu) is greater than '.max_usage_alignment' (%zu)!", config->options.min_usage_alignment, config->options.max_usage_alignment);
+        clags_return_defer(config);
+    }
 
     // validate args
 
@@ -2494,6 +2523,8 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
     bool subcmd_found = false;
     bool optional_found = false;
     const char *last_pos_name = NULL;
+    size_t alignment_buffer_size = CLAGS__USAGE_TEMP_BUFFER_SIZE(config->options.min_usage_alignment);
+
     for (size_t i=0; i<config->args_count; ++i){
         switch (config->args[i].type){
             case Clags_Positional:{
@@ -2505,7 +2536,7 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
                 // validate positional argument ordering
                 // 1. positional arguments may not follow optional ones
                 if (optional_found && !pos.optional){
-                    clags_log(config, Clags_ConfigError, "invalid positional argument order in config '%s': required argument '%s' appears after optional argument '%s'", config->name, pos.arg_name, last_pos_name);
+                    clags_log(config, Clags_ConfigError, "invalid positional argument order: required argument '%s' appears after optional argument '%s'", pos.arg_name, last_pos_name);
                     clags_return_defer(config);
                 }
                 optional_found = pos.optional;
@@ -2514,18 +2545,18 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
                 if (pos.value_type == Clags_Subcmd){
                     subcmd_found = true;
                     if (last_pos_name != NULL){
-                        clags_log(config, Clags_ConfigError, "subcommand '%s' must be the only positional argument in config '%s'!", pos.arg_name, config->name);
+                        clags_log(config, Clags_ConfigError, "subcommand '%s' must be the only positional argument!", pos.arg_name);
                         clags_return_defer(config);
                     }
                 } else if (subcmd_found){
-                    clags_log(config, Clags_ConfigError, "trailing positional argument after subcommand in config '%s': '%s'!", config->name, pos.arg_name);
+                    clags_log(config, Clags_ConfigError, "trailing positional argument after subcommand: '%s'!", pos.arg_name);
                     clags_return_defer(config);
                 }
 
                 // 3. if a positional argument follows a list, a list terminator must be defined
                 if (last_was_list && config->options.list_terminator == NULL){
                     clags_sb_t sb = {0};
-                    clags_sb_appendf(&sb, "positional argument '%s' is unreachable after list '%s' in config '%s'! Define '.list_terminator' in 'clags_config' to separate them", pos.arg_name, last_pos_name, config->name);
+                    clags_sb_appendf(&sb, "positional argument '%s' is unreachable after list '%s'! Define '.list_terminator' in 'clags_config' to separate them", pos.arg_name, last_pos_name);
                     if (!pos.is_list){
                         clags_sb_appendf(&sb, " or make '%s' option", pos.arg_name);
                     }
@@ -2536,6 +2567,10 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
                 }
                 last_was_list = pos.is_list;
                 last_pos_name = pos.arg_name;
+
+                // update alignment
+                int needed = clags__print_lhs(NULL, 0, 0, NULL, pos.arg_name, pos.optional, false, 0);
+                clags__update_alignment(config, &alignment_buffer_size, needed, pos.arg_name);
             } break;
             case Clags_Option:{
                 last_was_list = false;
@@ -2546,6 +2581,14 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
                 if (failed_config != NULL) clags_return_defer(failed_config);
                 // check if the option's flags already exist in the config tree
                 if (!clags__validate_duplicates(config, opt.short_flag, opt.long_flag, i)) clags_return_defer(config);
+
+                // update alignment
+                char buf[3] = {'-', '\0', '\0'};
+                const char *opt_name = opt.long_flag ? opt.long_flag
+                    : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
+
+                int needed = clags__print_lhs(NULL, 0, opt.short_flag, opt.long_flag, opt.arg_name, false, false, 0);
+                clags__update_alignment(config, &alignment_buffer_size, needed, opt_name);
             } break;
             case Clags_Flag:{
                 last_was_list = false;
@@ -2556,6 +2599,13 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
                 if (failed_config != NULL) clags_return_defer(failed_config);
                 // check if the flag's flags already exist in the config tree
                 if (!clags__validate_duplicates(config, flag.short_flag, flag.long_flag, i)) clags_return_defer(config);
+
+                // update alignment
+                char buf[3] = {'-', '\0', '\0'};
+                const char *flag_name = flag.long_flag ? flag.long_flag
+                    : (flag.short_flag ? (buf[1] = flag.short_flag, buf) : "(unnamed)");
+                int needed = clags__print_lhs(NULL, 0, flag.short_flag, flag.long_flag, NULL, false, false, 0);
+                clags__update_alignment(config, &alignment_buffer_size, needed, flag_name);
             } break;
         }
     }
@@ -2565,6 +2615,7 @@ defer:
         result->error = Clags_Error_InvalidConfig;
         result->state = Clags_Config_Invalid;
     } else{
+        config->usage_alignment = CLAGS__USAGE_ALIGNMENT_FROM_BUFFER_SIZE(alignment_buffer_size);
         config->state = Clags_Config_Valid;
     }
     return result;
@@ -3070,7 +3121,7 @@ static int clags__print_lhs(char *buffer, size_t buffer_size, char short_flag, c
 }
 
 // write the lhs of a usage line into a buffer
-// truncate the format where possible if the format would exceed the `CLAGS_USAGE_ALIGNMENT`
+// truncate the format where possible if the format would exceed the config's usage alignment
 static void clags__format_lhs(char *buffer, size_t buffer_size, char short_flag, const char *long_flag, const char *arg_name, bool optional)
 {
     buffer[0] = '\0';
@@ -3089,12 +3140,14 @@ static void clags__format_lhs(char *buffer, size_t buffer_size, char short_flag,
         return;
     }
     
-    // format is too long, try to trim `long_flag` for options and flags or `arg_name` for positionals
+    // format is too long, try to truncate `long_flag` for options and flags or `arg_name` for positionals
 
     // the number of characters before the name to truncate
     size_t prefix_len;
-    if (short_flag){
+    if (short_flag && long_flag){
         prefix_len = strlen("-o, --");
+    } else if (short_flag){
+        prefix_len = arg_name? strlen("-o ") : strlen("-o");
     } else if (long_flag){
         prefix_len = strlen("--");
     } else{
@@ -3122,7 +3175,7 @@ static void clags__format_lhs(char *buffer, size_t buffer_size, char short_flag,
     (void) clags__print_lhs(buffer, buffer_size, short_flag, long_flag, arg_name, optional, true, remaining);
 }
 
-void clags__choice_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__choice_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
     clags_choices_t *choices = (clags_choices_t*) data;
     if (!choices->print_no_details || choices->count > CLAGS_MAX_INLINE_CHOICES){
@@ -3138,16 +3191,16 @@ void clags__choice_usage(FILE *file, bool is_list, const char *default_value, vo
             fprintf(file, ")");
         }
         fprintf(file, "\n        Choices:");
-        for (size_t j=0; j<choices->count; ++j){
-            clags_choice_t choice = choices->items[j];
-            fprintf(file, "\n          - %*s", CLAGS__USAGE_PRINTF_ALIGNMENT+8, choice.value);
+        for (size_t i=0; i<choices->count; ++i){
+            clags_choice_t choice = choices->items[i];
+            fprintf(file, "\n          - %*s", CLAGS__USAGE_PRINTF_ALIGNMENT(config->usage_alignment)+8, choice.value);
             if (choice.description) fprintf(file, " : %s", choice.description);
         }
     } else{
         // print inline usage
         fprintf(file, " (%s%s:", clags__types[Clags_Choice].name, is_list?"[]":"");
-        for (size_t j=0; j<choices->count; ++j){
-            fprintf(file, "%s%s", j>0?" | ":" ", choices->items[j].value);
+        for (size_t i=0; i<choices->count; ++i){
+            fprintf(file, "%s%s", i>0?" | ":" ", choices->items[i].value);
         }
         fprintf(file, ")");
         if (choices->case_insensitive || default_value) {
@@ -3162,8 +3215,9 @@ void clags__choice_usage(FILE *file, bool is_list, const char *default_value, vo
     }
 }
 
-void clags__subcmd_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__subcmd_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
+    (void) config;
     (void) is_list;
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     fprintf(file, " (%s)", clags__types[Clags_Subcmd].name);
@@ -3171,16 +3225,17 @@ void clags__subcmd_usage(FILE *file, bool is_list, const char *default_value, vo
     fprintf(file, "\n      Subcommands:");
     for (size_t i=0; i<subcmds->count; ++i){
         clags_subcmd_t subcmd = subcmds->items[i];
-        fprintf(file, "\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT+6, subcmd.name, subcmd.description);
+        fprintf(file, "\n        - %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT(config->usage_alignment)+6, subcmd.name, subcmd.description);
     }
 }
 
-void clags__custom_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__custom_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
+    (void) config;
     clags_custom_t *custom = (clags_custom_t*) data;
     clags_usage_func_t func = custom->usage;
     if (func != NULL){
-        func(file, is_list, default_value, custom->data);
+        func(config, file, is_list, default_value, custom->data);
     } else{
         fprintf(file, " (%s%s)", custom->name, is_list?"[]":"");
         if (default_value) fprintf(file, " (default: %s)", default_value);
@@ -3189,8 +3244,9 @@ void clags__custom_usage(FILE *file, bool is_list, const char *default_value, vo
 
 #ifndef CLAGS_NO_INT_TYPES
 
-void clags__int_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__int_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
+    (void) config;
     clags_range_t *range = (clags_range_t*) data;
     fprintf(file, " (%s%s", clags__types[Clags_Int].name, is_list?"[]":"");
     if (range) fprintf(file, ", %"PRId64"-%"PRId64, range->min.as_int, range->max.as_int);
@@ -3198,8 +3254,9 @@ void clags__int_usage(FILE *file, bool is_list, const char *default_value, void 
     if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-void clags__uint_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__uint_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
+    (void) config;
     clags_range_t *range = (clags_range_t*) data;
     fprintf(file, " (%s%s", clags__types[Clags_UInt].name, is_list?"[]":"");
     if (range) fprintf(file, ", %"PRIu64"-%"PRIu64, range->min.as_uint, range->max.as_uint);
@@ -3211,8 +3268,9 @@ void clags__uint_usage(FILE *file, bool is_list, const char *default_value, void
 
 #ifndef CLAGS_NO_REAL_TYPES
 
-void clags__real_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__real_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
+    (void) config;
     clags_range_t *range = (clags_range_t*) data;
     fprintf(file, " (%s%s", clags__types[Clags_Real].name, is_list?"[]":"");
     if (range) fprintf(file, ", %g-%g", range->min.as_double, range->max.as_double);
@@ -3222,22 +3280,23 @@ void clags__real_usage(FILE *file, bool is_list, const char *default_value, void
 
 #endif // !CLAGS_NO_REAL_TYPES
 
-void clags__default_usage(FILE *file, bool is_list, const char *default_value, void *data)
+void clags__default_usage(clags_config_t *config, FILE *file, bool is_list, const char *default_value, void *data)
 {
+    (void) config;
     clags_value_type_t type = (intptr_t) data;
     fprintf(file, " (%s%s)", clags__types[type].name, is_list?"[]":"");
     if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-void clags__type_usage(FILE *file, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+void clags__type_usage(clags_config_t *config, FILE *file, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     // generally, the type usage is: (<type-name> [constraints]) [(default: <default-input>]
     // some types however add more information, e.g. choices or subcommands
     clags_usage_func_t func = clags__types[type].usage;
     if (func == clags__default_usage){
-        func(file, is_list, default_value, (void*) type);
+        func(config, file, is_list, default_value, (void*) type);
     } else {
-        func(file, is_list, default_value, data);
+        func(config, file, is_list, default_value, data);
     }
 }
 
@@ -3251,29 +3310,29 @@ void clags__subcommand_path_usage(FILE *file, const char *program_name, clags_co
     }
 }
 
-static inline void clags__positional_usage(FILE *file, clags_positional_t pos, char *buffer, size_t buffer_size)
+static inline void clags__positional_usage(clags_config_t *config, FILE *file, clags_positional_t pos, char *buffer, size_t buffer_size)
 {
     // positional usage is : <name> [(optional)]
     clags__format_lhs(buffer, buffer_size, 0, NULL, pos.arg_name, pos.optional);
-    fprintf(file, "    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buffer, pos.description);
-    clags__type_usage(file, pos.value_type, pos.is_list, pos.default_input, pos._data);
+    fprintf(file, "    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT(config->usage_alignment), buffer, pos.description);
+    clags__type_usage(config, file, pos.value_type, pos.is_list, pos.default_input, pos._data);
     fprintf(file, "\n");
 }
 
-static inline void clags__option_usage(FILE *file, clags_option_t opt, char *buffer, size_t buffer_size)
+static inline void clags__option_usage(clags_config_t *config, FILE *file, clags_option_t opt, char *buffer, size_t buffer_size)
 {
     // option usage is : <flags> : <description> <type-specific-usage>
     clags__format_lhs(buffer, buffer_size, opt.short_flag, opt.long_flag, opt.arg_name, false);
-    fprintf(file, "    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT, buffer, opt.description);
-    clags__type_usage(file, opt.value_type, opt.is_list, opt.default_input, opt._data);
+    fprintf(file, "    %*s : %s", CLAGS__USAGE_PRINTF_ALIGNMENT(config->usage_alignment), buffer, opt.description);
+    clags__type_usage(config, file, opt.value_type, opt.is_list, opt.default_input, opt._data);
     fprintf(file, "\n");
 }
 
-static inline void clags__flag_usage(FILE *file, clags_flag_t flag, char *buffer, size_t buffer_size)
+static inline void clags__flag_usage(clags_config_t *config, FILE *file, clags_flag_t flag, char *buffer, size_t buffer_size)
 {
     // flag usage is : <flags> : <description>
     clags__format_lhs(buffer, buffer_size, flag.short_flag, flag.long_flag, NULL, false);
-    fprintf(file, "    %*s : %s%s\n", CLAGS__USAGE_PRINTF_ALIGNMENT, buffer, flag.description, flag.exit?" and exit":"");
+    fprintf(file, "    %*s : %s%s\n", CLAGS__USAGE_PRINTF_ALIGNMENT(config->usage_alignment), buffer, flag.description, flag.exit?" and exit":"");
 }
 
 void clags__inherited_options_usage(FILE *file, clags_config_t *config, char *buffer, size_t buffer_size)
@@ -3287,7 +3346,7 @@ void clags__inherited_options_usage(FILE *file, clags_config_t *config, char *bu
             for (size_t i=0; i<ancestor->args_count; ++i){
                 clags_arg_t arg = ancestor->args[i];
                 if (arg.type == Clags_Option && arg.opt.inherit){
-                    clags__option_usage(file, arg.opt, buffer, buffer_size);
+                    clags__option_usage(config, file, arg.opt, buffer, buffer_size);
                 }
             }
         }
@@ -3307,7 +3366,7 @@ void clags__inherited_flags_usage(FILE *file, clags_config_t *config, char *buff
             for (size_t i=0; i<ancestor->args_count; ++i){
                 clags_arg_t arg = ancestor->args[i];
                 if (arg.type == Clags_Flag && arg.flag.inherit){
-                    clags__flag_usage(file, arg.flag, buffer, buffer_size);
+                    clags__flag_usage(config, file, arg.flag, buffer, buffer_size);
                 }
             }
         }
@@ -3337,7 +3396,8 @@ void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *c
     clags__sort_args(&args, config);
 
     // a temporary buffer for prefix printing
-    char temp_buffer[CLAGS__USAGE_TEMP_BUFFER_SIZE] = {0};
+    size_t temp_buffer_size = CLAGS__USAGE_TEMP_BUFFER_SIZE(config->usage_alignment);
+    char *temp_buffer = CLAGS_CALLOC(temp_buffer_size, 1);
     
     // usage line printing
     {
@@ -3374,7 +3434,7 @@ void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *c
         fprintf(file, "  Arguments:\n");
         for (size_t i = 0; i < args.positional_count; ++i) {
             clags_positional_t pos = args.positionals[i];
-            clags__positional_usage(file, pos, temp_buffer, sizeof(temp_buffer));
+            clags__positional_usage(config, file, pos, temp_buffer, temp_buffer_size);
         }
     }
 
@@ -3383,24 +3443,24 @@ void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *c
         fprintf(file, "  Options:\n");
         for (size_t i = 0; i < args.option_count; ++i) {
             clags_option_t opt = args.options[i];
-            clags__option_usage(file, opt, temp_buffer, sizeof(temp_buffer));
+            clags__option_usage(config, file, opt, temp_buffer, temp_buffer_size);
         }
     }
 
     // inherited option arguments
-    clags__inherited_options_usage(file, config, temp_buffer, sizeof(temp_buffer));
+    clags__inherited_options_usage(file, config, temp_buffer, temp_buffer_size);
 
     // flag arguments
     if (args.flag_count) {
         fprintf(file, "  Flags:\n");
         for (size_t i = 0; i < args.flag_count; ++i) {
             clags_flag_t flag = args.flags[i];
-            clags__flag_usage(file, flag, temp_buffer, sizeof(temp_buffer));
+            clags__flag_usage(config, file, flag, temp_buffer, temp_buffer_size);
         }
     }
 
     // inherited flag arguments
-    clags__inherited_flags_usage(file, config, temp_buffer, sizeof(temp_buffer));
+    clags__inherited_flags_usage(file, config, temp_buffer, temp_buffer_size);
 
     // print 'Notes' section if not disabled
     if (!config->options.print_no_notes &&
@@ -3421,6 +3481,7 @@ void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *c
     CLAGS_FREE(positional, config->args_count*sizeof(*positional));
     CLAGS_FREE(option, config->args_count*sizeof(*option));
     CLAGS_FREE(flags, config->args_count*sizeof(*flags));
+    CLAGS_FREE(temp_buffer, temp_buffer_size);
 }
 
 void clags_usage(const char *program_name, clags_config_t *config)
