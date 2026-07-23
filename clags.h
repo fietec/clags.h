@@ -701,7 +701,7 @@ struct clags_config_t{
 #endif // !CLAGS_NO_REAL_TYPES
 
 
-#define clags_custom(type_name, verifier, ...) (clags_custom_t){.name=(type_name), .verify=(verifier), ##__VA_ARGS__}
+#define clags_custom(type_name, verifier, ...) (clags_custom_t){.name=(type_name), .verify=(verifier), __VA_ARGS__}
 
 /* Argument Constructors */
 
@@ -718,8 +718,8 @@ struct clags_config_t{
   is configured via designated initializers in the variadic arguments.
   See `clags_positional_t` for all available fields.
 */
-#define clags_positional(var, name, desc, ...) (clags_arg_t){.type=Clags_Positional, .pos=(clags_positional_t){.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
+#define clags_positional(var, name, desc, ...) (clags_arg_t){.type=Clags_Positional, .pos={.variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 /*
   Define an option argument.
 
@@ -735,7 +735,7 @@ struct clags_config_t{
   is configured via designated initializers in the variadic arguments.
   See `clags_option_t` for all available fields.
 */
-#define clags_option(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Option, .opt=(clags_option_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
+#define clags_option(sflag, lflag, var, name, desc, ...) (clags_arg_t){.type=Clags_Option, .opt={.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .arg_name=(name), .description=(desc), __VA_ARGS__}}
 
 /*
   Define a flag argument.
@@ -750,7 +750,7 @@ struct clags_config_t{
   is configured via designated initializers in the variadic arguments.
   See `clags_flag_t` for all available fields.
 */
-#define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag=(clags_flag_t){.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
+#define clags_flag(sflag, lflag, var, desc, ...) (clags_arg_t) {.type=Clags_Flag, .flag={.short_flag=(sflag), .long_flag=(lflag), .variable=(var), .description=(desc), __VA_ARGS__}}
 
 // simple helpers for the common help flags
 #define clags_flag_help(val)        clags_flag('h', "help", val, "print this help dialog", .exit=true, .inherit=true)
@@ -767,17 +767,7 @@ struct clags_config_t{
                 (e.g. .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true, etc.),
                 see `clags_options_t` for all available fields.
 */
-#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){0}, .options=(clags_options_t){__VA_ARGS__}}
-
-/*
-  Construct a `clags_config_t` from an array of arguments and a pre-defined options struct.
-  Useful when sharing options over mutiple configs.
-
-  Parameters:
-    arguments : array of `clags_arg_t` defining positionals, options, and flags
-    opts      : a fully initialized `clags_options_t` struct with custom config options
-*/
-#define clags_config_with_options(arguments, opts) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs=(clags_list_t){0}, .options=(opts)}
+#define clags_config(arguments, ...) (clags_config_t){.args=(arguments), .args_count=clags_arr_len(arguments), .allocs={0}, .options={__VA_ARGS__}}
 
 /* Core Functions */
 
@@ -1354,7 +1344,7 @@ int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 }
 
 /* String-to-Integer Conversion */
-#ifndef CLAGS_NO_STRTOINT
+#if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
 
 static inline int clags__strtoint_digit_value(char c, int base)
 {
@@ -2865,14 +2855,14 @@ bool clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_
         } else if (found_config != NULL){
             // flag matches unreachable argument definition
             if (flag_len > 1){
-                clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '-%s'! Did you mean to use it with the '%s' subcommand?", *c, arg, found_config->name);
+                clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '%s'! Did you mean to use it with the '%s' subcommand?", *c, arg, found_config->name);
             } else{
                 clags_log(config, Clags_Error, "Unknown short flag '-%c'! Did you mean to use it with the '%s' subcommand?", *c, found_config->name);
             }
         } else {
             // could not find a matching argument definition
             if (flag_len > 1){
-                clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '-%s'!", *c, arg);
+                clags_log(config, Clags_Error, "Unknown short flag '-%c' in combination '%s'!", *c, arg);
             } else{
                 clags_log(config, Clags_Error, "Unknown short flag '-%c'!", *c);
             }
