@@ -2277,9 +2277,20 @@ clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t
 {
     // check whether the provided range contraint is of the correct type
     clags_range_t *range = (clags_range_t*)data;
-    if (range && range->type != type){
-        clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s': expected range type '%s', but got '%s'!", arg_name, clags__types[type].name, clags__types[range->type].name);
-        return config;
+    if (range != NULL){
+        if (range->type != type){
+            clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s': expected range type '%s', but got '%s'!", arg_name, clags__types[type].name, clags__types[range->type].name);
+            return config;
+        }
+        switch (range->type){
+            case Clags_Int:
+            case Clags_UInt:
+            case Clags_Real: break;
+            default:{
+                clags_log(config, Clags_ConfigError, "invalid range type for argument '%s': '%s'!", arg_name, clags__types[range->type].name);
+                return config;
+            }
+        }
     }
     return NULL;
 }
@@ -2317,7 +2328,7 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
     // validate the default input, if defined
     if (pos.default_input){
         if (!pos.optional){
-            clags_log(config, Clags_ConfigWarning, "default value set for requried argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
+            clags_log(config, Clags_ConfigWarning, "default value set for required argument '%s'! This value will always be overwritten and never used.", pos.arg_name);
         }
         if (!clags__validate_default(config, pos.value_type, pos.arg_name, pos.default_input, pos._data, pos.is_list)) return config;
     }
