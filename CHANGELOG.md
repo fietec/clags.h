@@ -1,5 +1,49 @@
 # Changelog
 
+## [v4.0.0] - 
+### Added
+- automatic usage alignment calculation
+  - the usage alignment for each config is now calculated in the validation stage
+  - new customizability with minimum and maximum alignment:
+	- new `min_usage_alignment` and `max_usage_alignment` config options
+	- new `CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT` and `CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT` macros for redefinable default values for the respective config options
+- more customization of custom types
+  - added new fields to `clags_custom_t`
+	- `.usage`: a custom usage printing function of type `clags_usage_func_t`
+	- `.validate`: a custom validation function of type `clags_validate_func_t`
+  - added `clags_custom(name, verify, ...)` macro for easier creation of `clags_custom_t`
+- new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
+
+### Breaking Changes
+- added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
+  - this was required for full ISO-C99 compatibility, as unnamed members are not supported by the standard
+  - type-specific data must now be accessed through `.using`, for example:
+    - `.using.choices = &my_choices`
+    - `.using.range = &my_range`
+- removed `clags_config_with_options` due to reliance on non-standard static-scope variable assignments. Predefined option macros are now recommended, offering greater flexibility and future-proofing
+- removed all explicit list initializer macros `clags_<type>_list` apart from `clags_custom_list`. This is to allow easier automatic addition and grouping of new types and to separate `Clags_Custom` lists from others syntactically
+- removed `CLAGS_STRTOLL` and `CLAGS_STRTOULL` macros
+- removed `CLAGS_USAGE_ALIGNMENT` macro
+
+### Changes
+- clags is now fully ISO-C99 compatible
+- `CLAGS__TYPES` replaces `clags__types`
+  - now with fields for validation and usage functions for each type
+- modularised type validation and usage printing
+- increased default value of `CLAGS_LIST_INIT_CAPACITY` from `8` to `16`
+- `clags_sb_appendf` now returns `int` instead of `void` to report the number of characters that (would) have been written, similarly to functions of the `printf`-family
+- config-level logs using the default log handler now print the name of the config
+- rewrote usage alignment handling and argument truncation
+
+### Fixes
+- removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version
+- fixed immediate assignment of failed reallocations
+- fixed implementation guard of `strtoint`-functions to match the declarations'
+- better rounding in time conversions
+- fixed multiple typos in error messages
+
+---
+
 ## [v3.6.0] - 08.07.2026
 ### Added
 - added modular feature-gating macros (`CLAGS_NO_INT_TYPES`, `CLAGS_NO_REAL_TYPES`, `CLAGS_NO_PATH_TYPES`, `CLAGS_NO_SIZE_TYPES`, `CLAGS_NO_TIME_TYPES`) to completely strip specific types and their verifiers from the binary
