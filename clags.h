@@ -1016,14 +1016,14 @@ void clags_sb_free(clags_sb_t *sb);
 
 // the definition of the result struct of integer parsing
 typedef struct{
-    char *endptr;        // pointer to the first unparsed character
+    const char *endptr;  // pointer to the first unparsed character
     bool negative;       // input had a leading '-' sign
     bool leading_spaces; // input had leading whitespaces
 
     // error flags
-    bool invalid_base;   // supplied base was invalid
     bool no_digits;      // no valid digits were found
     bool out_of_range;   // value exceeded the representable range of target type
+    bool invalid_params; // the supplied parameters were invalid (e.g. base not 0 or 2-36, min > max etc.)
 } clags_strtoint_res_t;
 
 // legacy functions: sets `errno` similar to `strtol` family functions
@@ -1031,22 +1031,26 @@ int8_t  clags_strtoint8 (const char *str, char **endptr, int base);
 int16_t clags_strtoint16(const char *str, char **endptr, int base);
 int32_t clags_strtoint32(const char *str, char **endptr, int base);
 int64_t clags_strtoint64(const char *str, char **endptr, int base);
+int64_t strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max);
 
 uint8_t  clags_strtouint8 (const char *str, char **endptr, int base);
 uint16_t clags_strtouint16(const char *str, char **endptr, int base);
 uint32_t clags_strtouint32(const char *str, char **endptr, int base);
 uint64_t clags_strtouint64(const char *str, char **endptr, int base);
+uint64_t strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max);
 
 // safe/structured functions: returns the parsing result via a `clags_strtoint_res_t` struct
 int8_t  clags_strtoint8_s (const char *str, clags_strtoint_res_t *res, int base);
 int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base);
 int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base);
 int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base);
+int64_t strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
 
 uint8_t  clags_strtouint8_s (const char *str, clags_strtoint_res_t *res, int base);
 uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base);
 uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base);
 uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base);
+uint64_t strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
 
 #endif // !CLAGS_NO_STRTOINT
 
@@ -1414,23 +1418,48 @@ int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 /* String-to-Integer Conversion */
 #if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
 
-static inline int clags__strtoint_digit_value(char c, int base)
+static inline int clags_strtoint__digit_value(char c, int base)
 {
     int value = -1;
     if ('0' <= c && c <= '9') value = c - '0';
-    if ('A' <= c && c <= 'Z') value = c - 'A' + 10;
-    if ('a' <= c && c <= 'z') value = c - 'a' + 10;
-    if (value < base || base == 0) return value;
+    else if ('A' <= c && c <= 'Z') value = c - 'A' + 10;
+    else if ('a' <= c && c <= 'z') value = c - 'a' + 10;
+    if (0 <= value && value < base) return value;
     return -1;
 }
 
-int64_t clags__strtoint_parse_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
+static inline int clags_strtoint__handle_base(const char **str, int base)
 {
-    if (res) *res = (clags_strtoint_res_t){0};
-    if (base < 0 || base == 1 || base > 36){
+    const char *s = *str;
+    if ((base == 0 || base == 2) && s[0] == '0' && (s[1] == 'B' || s[1] == 'b')){
+        if (clags_strtoint__digit_value(s[2], 2) != -1) {
+            base = 2;
+            *str += 2;
+        } else if (base == 0) {
+            base = 8;
+        }
+    } else if ((base == 0 || base == 16) && s[0] == '0' && (s[1] == 'X' || s[1] == 'x')){
+        if (clags_strtoint__digit_value(s[2], 16) != -1) {
+            base = 16;
+            *str += 2;
+        } else if (base == 0) {
+            base = 8;
+        }
+    } else if ((base == 0 || base == 8) && s[0] == '0'){
+        base = 8;
+    } else if (base == 0){
+        base = 10;
+    }
+    return base;
+}
+
+int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
+{
+    if (res) memset(res, 0, sizeof(*res));
+    if (!str || min > max || base < 0 || base == 1 || base > 36){
         if (res){
-            res->invalid_base = true;
-            res->endptr = (char*)str;
+            res->invalid_params = true;
+            res->endptr = str;
         }
         return 0;
     }
@@ -1446,123 +1475,121 @@ int64_t clags__strtoint_parse_s(const char *str, clags_strtoint_res_t *res, int 
     } else if (*start == '+'){
         start++;
     }
-    if ((base == 0 || base == 2) && clags__strslice_casecmp(start, 2, "0b") == 0){
-        if (clags__strtoint_digit_value(start[2], 2) != -1) {
-            base = 2;
-            start += 2;
-        } else if (base == 0) {
-            base = 8;
-        }
-    } else if ((base == 0 || base == 16) && clags__strslice_casecmp(start, 2, "0x") == 0){
-        if (clags__strtoint_digit_value(start[2], 16) != -1) {
-            base = 16;
-            start += 2;
-        } else if (base == 0) {
-            base = 8;
-        }
-    } else if ((base == 0 || base == 8) && *start == '0'){
-        base = 8;
-    } else if (base == 0){
-        base = 10;
-    }
+
+    base = clags_strtoint__handle_base(&start, base);
 
     const char *end = start;
-    while (clags__strtoint_digit_value(*end, base) != -1) end++;
+    while (clags_strtoint__digit_value(*end, base) != -1) end++;
 
     if (end == start){
         if (res){
-            res->endptr = (char*) str;
+            res->endptr = str;
             res->no_digits = true;
+            res->leading_spaces = leading_spaces;
         }
         return 0;
     }
 
+    bool out_of_range = false;
+
     const char *pdigit = start;
+    int64_t cutoff = INT64_MIN / base;
+    int64_t cutoff_digit = -(INT64_MIN % base);
     while (pdigit < end){
-        int64_t digit = clags__strtoint_digit_value(*pdigit++, base);
-        if (result < (INT64_MIN + digit)/base) goto range_error;
+        int64_t digit = clags_strtoint__digit_value(*pdigit++, base);
+        if (result < cutoff || (result == cutoff && digit > cutoff_digit)){
+            result = negative? min : max;
+            out_of_range = true;
+            goto end;
+        }
         result = result * base - digit;
     }
 
     if (!negative){
-        if (max < 0 || result < -max) goto range_error;
+        if (result < -INT64_MAX){
+            result = max;
+            out_of_range = true;
+            goto end;
+        }
         result = -result;
-    } else if (result < min) goto range_error;
+    }
 
+    if (result > max){
+        result = max;
+        out_of_range = true;
+    }
+    if (result < min){
+        result = min;
+        out_of_range = true;
+    }
+
+end:
     if (res){
-        res->endptr = (char*)end;
+        res->endptr = end;
         res->negative = negative;
         res->leading_spaces = leading_spaces;
+        res->out_of_range = out_of_range;
     }
     return result;
-
-range_error:
-    if (res){
-        res->out_of_range = true;
-        res->endptr = (char*) end;
-        res->negative = negative;
-        res->leading_spaces = leading_spaces;
-    }
-    return (negative ? min : max);
 }
 
-int64_t clags__strtoint_parse(const char *str, char **endptr, int base, int64_t min, int64_t max)
+int64_t clags_strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max)
 {
     clags_strtoint_res_t res;
-    int64_t result = clags__strtoint_parse_s(str, &res, base, min, max);
-    if (res.invalid_base) errno = EINVAL;
-    if (res.out_of_range) errno = ERANGE;
-    if (endptr) *endptr = res.endptr;
+    int64_t result = clags_strtoint_range_s(str, &res, base, min, max);
+    if (res.invalid_params) errno = EINVAL;
+    else if (res.out_of_range) errno = ERANGE;
+    if (endptr) *endptr = (char*) res.endptr;
     return result;
 }
 
 int8_t clags_strtoint8(const char *str, char **endptr, int base)
 {
-    return clags__strtoint_parse(str, endptr, base, INT8_MIN, INT8_MAX);
+    return (int8_t)clags_strtoint_range(str, endptr, base, INT8_MIN, INT8_MAX);
 }
 
 int8_t clags_strtoint8_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtoint_parse_s(str, res, base, INT8_MIN, INT8_MAX);
+    return (int8_t)clags_strtoint_range_s(str, res, base, INT8_MIN, INT8_MAX);
 }
 
 int16_t clags_strtoint16(const char *str, char **endptr, int base)
 {
-    return clags__strtoint_parse(str, endptr, base,INT16_MIN, INT16_MAX);
+    return (int16_t)clags_strtoint_range(str, endptr, base,INT16_MIN, INT16_MAX);
 }
 
 int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtoint_parse_s(str, res, base, INT16_MIN, INT16_MAX);
+    return (int16_t)clags_strtoint_range_s(str, res, base, INT16_MIN, INT16_MAX);
 }
 
 int32_t clags_strtoint32(const char *str, char **endptr, int base)
 {
-    return clags__strtoint_parse(str, endptr, base, INT32_MIN, INT32_MAX);
+    return (int32_t)clags_strtoint_range(str, endptr, base, INT32_MIN, INT32_MAX);
 }
 
 int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtoint_parse_s(str, res, base, INT32_MIN, INT32_MAX);
+    return (int32_t)clags_strtoint_range_s(str, res, base, INT32_MIN, INT32_MAX);
 }
 
 int64_t clags_strtoint64(const char *str, char **endptr, int base)
 {
-    return clags__strtoint_parse(str, endptr, base, INT64_MIN, INT64_MAX);
+    return clags_strtoint_range(str, endptr, base, INT64_MIN, INT64_MAX);
 }
 
 int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtoint_parse_s(str, res, base, INT64_MIN, INT64_MAX);
+    return clags_strtoint_range_s(str, res, base, INT64_MIN, INT64_MAX);
 }
 
-uint64_t clags__strtouint_parse_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t max)
+uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max)
 {
-    if (res) *res = (clags_strtoint_res_t){0};
-    if (base < 0 || base == 1 || base > 36){
+    if (res) memset(res, 0, sizeof(*res));
+    if (!str || min > max || base < 0 || base == 1 || base > 36){
         if (res){
-            res->endptr = (char*) str;
-            res->invalid_base = true;
+            res->endptr = str;
+            res->invalid_params = true;
         }
         return 0;
     }
@@ -1578,114 +1605,98 @@ uint64_t clags__strtouint_parse_s(const char *str, clags_strtoint_res_t *res, in
     } else if (*start == '+'){
         start++;
     }
-    if ((base == 0 || base == 2) && clags__strslice_casecmp(start, 2, "0b") == 0){
-        if (clags__strtoint_digit_value(start[2], 2) != -1) {
-            base = 2;
-            start += 2;
-        } else if (base == 0) {
-            base = 8;
-        }
-    } else if ((base == 0 || base == 16) && clags__strslice_casecmp(start, 2, "0x") == 0){
-        if (clags__strtoint_digit_value(start[2], 16) != -1) {
-            base = 16;
-            start += 2;
-        } else if (base == 0) {
-            base = 8;
-        }
-    } else if ((base == 0 || base == 8) && *start == '0'){
-        base = 8;
-    } else if (base == 0){
-        base = 10;
-    }
+
+    base = clags_strtoint__handle_base(&start, base);
 
     const char *end = start;
-    while (clags__strtoint_digit_value(*end, base) != -1) end++;
+    while (clags_strtoint__digit_value(*end, base) != -1) end++;
 
     if (end == start){
         if (res){
-            res->endptr = (char*) str;
+            res->endptr = str;
             res->no_digits = true;
+            res->leading_spaces = leading_spaces;
         }
         return 0;
     }
 
+    bool out_of_range = false;
     const char *pdigit = start;
     while (pdigit < end){
-        uint64_t digit = clags__strtoint_digit_value(*pdigit++, base);
-        if (result > (UINT64_MAX - digit) / base) goto range_error;
+        uint64_t digit = clags_strtoint__digit_value(*pdigit++, base);
+        if (digit > max || result > (max - digit) / base){
+            result = max;
+            out_of_range = true;
+            goto end;
+        }
         result = result * base + digit;
     }
 
-    if (result > max) goto range_error;
-    if (negative) {
-        result = -result;
+    if (negative && result > 0) {
+        result = max - result + 1;
     }
-
+    if (result < min){
+        out_of_range = true;
+        result = min;
+    }
+end:
     if (res){
-        res->endptr = (char*)end;
+        res->endptr = end;
         res->negative = negative;
         res->leading_spaces = leading_spaces;
+        res->out_of_range = out_of_range;
     }
     return result;
-
-range_error:
-    if (res){
-        res->endptr = (char*) end;
-        res->out_of_range = true;
-        res->negative = negative;
-        res->leading_spaces = leading_spaces;
-    }
-    return max;
 }
 
-uint64_t clags__strtouint_parse(const char *str, char **endptr, int base, uint64_t max)
+uint64_t clags_strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max)
 {
     clags_strtoint_res_t res;
-    uint64_t result = clags__strtouint_parse_s(str, &res, base, max);
-    if (res.invalid_base) errno = EINVAL;
-    if (res.out_of_range) errno = ERANGE;
-    if (endptr) *endptr = res.endptr;
+    uint64_t result = clags_strtouint_range_s(str, &res, base, min, max);
+    if (res.invalid_params) errno = EINVAL;
+    else if (res.out_of_range) errno = ERANGE;
+    if (endptr) *endptr = (char*) res.endptr;
     return result;
 }
 
 uint8_t clags_strtouint8(const char *str, char **endptr, int base)
 {
-    return clags__strtouint_parse(str, endptr, base, UINT8_MAX);
+    return (uint8_t)clags_strtouint_range(str, endptr, base, 0, UINT8_MAX);
 }
 
 uint8_t clags_strtouint8_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtouint_parse_s(str, res, base, UINT8_MAX);
+    return (uint8_t)clags_strtouint_range_s(str, res, base, 0, UINT8_MAX);
 }
 
 uint16_t clags_strtouint16(const char *str, char **endptr, int base)
 {
-    return clags__strtouint_parse(str, endptr, base, UINT16_MAX);
+    return (uint16_t)clags_strtouint_range(str, endptr, base, 0, UINT16_MAX);
 }
 
 uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtouint_parse_s(str, res, base, UINT16_MAX);
+    return (uint16_t)clags_strtouint_range_s(str, res, base, 0, UINT16_MAX);
 }
 
 uint32_t clags_strtouint32(const char *str, char **endptr, int base)
 {
-    return clags__strtouint_parse(str, endptr, base, UINT32_MAX);
+    return (uint32_t)clags_strtouint_range(str, endptr, base, 0, UINT32_MAX);
 }
 
 uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtouint_parse_s(str, res, base, UINT32_MAX);
+    return (uint32_t)clags_strtouint_range_s(str, res, base, 0, UINT32_MAX);
 }
 
 uint64_t clags_strtouint64(const char *str, char **endptr, int base)
 {
-    return clags__strtouint_parse(str, endptr, base, UINT64_MAX);
+    return clags_strtouint_range(str, endptr, base, 0, UINT64_MAX);
 }
 
 uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags__strtouint_parse_s(str, res, base, UINT64_MAX);
+    return clags_strtouint_range_s(str, res, base, 0, UINT64_MAX);
 }
 
 #endif // !CLAGS_NO_STRTOINT
@@ -1728,7 +1739,7 @@ bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, c
     }
 
     clags_strtoint_res_t res;
-    int64_t value = clags__strtoint_parse_s(arg, &res, 0, min, max);
+    int64_t value = clags_strtoint_range_s(arg, &res, 0, min, max);
     if (res.no_digits){
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__types[type].name, arg_name, arg);
         return false;
@@ -1802,7 +1813,7 @@ bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type,
     }
 
     clags_strtoint_res_t res;
-    uint64_t value = clags__strtouint_parse_s(arg, &res, 0, max);
+    uint64_t value = clags_strtouint_range_s(arg, &res, 0, min, max);
 
     if (res.no_digits) {
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__types[type].name, arg_name, arg);
