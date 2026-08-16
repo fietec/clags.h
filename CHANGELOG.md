@@ -24,6 +24,8 @@
 - removed all explicit list initializer macros `clags_<type>_list` apart from `clags_custom_list`. This is to allow easier automatic addition and grouping of new types and to separate `Clags_Custom` lists from others syntactically
 - removed `CLAGS_STRTOLL` and `CLAGS_STRTOULL` macros
 - removed `CLAGS_USAGE_ALIGNMENT` macro
+- removed floating point time parsing
+  - this was done to remove conversion inconsistencies between `double` and `clags_time_t` and because it has had been a bit out-of-scope from the start
 
 ### Changes
 - clags is now fully ISO-C99 compatible
@@ -41,6 +43,14 @@
 - fixed implementation guard of `strtoint`-functions to match the declarations'
 - better rounding in time conversions
 - fixed multiple typos in error messages
+- fixed capacity overflows in list reallocations
+- disallowed `NaN` input for all verifiers using `CLAGS_STRTOD`
+- fixed overflow check in time verfiers
+- added validation check to prevent an `item_size` of a custom list from being `0`
+- added validation check to prevent a range minimum to be greater than the maximum
+- fixed usage of wrong config to handle ignored arguments in `clags__parse_short_options_and_flags`
+- `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occured
+- fixed `clags_log_sb` to work with not yet zero-terminated strings
 
 ---
 

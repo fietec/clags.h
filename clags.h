@@ -1,7 +1,7 @@
 /*
   clags.h - Version 4.0.0 - https://github.com/fietec/clags.h
 
-  A single-header ISO-C99 library for parsing and validating command-line arguments.
+  A declarative single-header C99 library for parsing and validating command-line arguments.
 
   MIT License
 
@@ -206,7 +206,7 @@
 */
 #include <stdlib.h>
 #define CLAGS_CALLOC(count, size) calloc(count, size)
-#endif
+#endif // CLAGS_CALLOC
 
 #ifndef CLAGS_REALLOC
 /*
@@ -218,7 +218,7 @@
 */
 #include <stdlib.h>
 #define CLAGS_REALLOC(ptr, oldsz, newsz) realloc(ptr, newsz)
-#endif
+#endif // CLAGS_REALLOC
 
 #ifndef CLAGS_FREE
 /*
@@ -229,9 +229,9 @@
 */
 #include <stdlib.h>
 #define CLAGS_FREE(ptr, sz) free(ptr)
-#endif
+#endif // CLAGS_FREE
 
-#if (!defined(CLAGS_NO_REAL_TYPES) || !defined(CLAGS_NO_TIME_TYPES)) && !defined(CLAGS_STRTOD)
+#if !defined(CLAGS_NO_REAL_TYPES) && !defined(CLAGS_STRTOD)
 /*
     CLAGS_STRTOD: Convert a string to a double-precision floating-point number.
     The macro must expand to a function matching the signature:
@@ -266,7 +266,7 @@
 #define CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT 32
 #endif // CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT
 
-// the default maxiumum character column at which ':' appears in `clags_usage` output
+// the default maximum character column at which ':' appears in `clags_usage` output
 // used when no `.max_usage_alignment` config option is specified
 #ifndef CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT
 #define CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT 96
@@ -430,10 +430,10 @@ typedef uint64_t clags_time_t;
    - arg_name : the name of the argument currently being parsed, useful for logging
    - arg      : the argument currently being parsed
    - variable : the pointer of the variable to set
-   - data     : addtional custom data
+   - data     : additional custom data
 
  Returns:
-   - bool     : success of the verfication (even if no value could be written)
+   - bool     : success of the verification (even if no value could be written)
 */
 typedef bool (clags_verify_func_def_t)(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data);
 typedef clags_verify_func_def_t *clags_verify_func_t; // the function pointer type of verifiers
@@ -445,7 +445,7 @@ typedef clags_verify_func_def_t *clags_verify_func_t; // the function pointer ty
  Arguments:
    - config          : the config of the argument, mostly useful for logging
    - arg_name        : the name of the argument, useful for logging
-   - data            : addtional data belonging to the type to validate
+   - data            : additional data belonging to the type to validate
 
  Returns:
    - clags_config_t* : NULL on success, the pointer to the invalid argument's config on error
@@ -465,7 +465,7 @@ typedef clags_validate_func_def_t *clags_validate_func_t; // the function pointe
    - type          : the type of the current argument
    - is_list       : `true` if the current argument write to a list
    - default_value : the default value to print (can be NULL)
-   - data          : addtional data belonging to the type
+   - data          : additional data belonging to the type
 */
 typedef void (clags_usage_func_def_t)(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data);
 typedef clags_usage_func_def_t *clags_usage_func_t; // the function pointer type of usage printers
@@ -636,7 +636,7 @@ typedef struct{
     const char *description;          // a description of the current (sub)command
     bool no_inheritance;              // do not inherit any option or flags from parent configs
     size_t min_usage_alignment;       // the minimum column in which ':' appears in a usage line for this config, if not specified use `CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT`
-    size_t max_usage_alignment;       // the maximum column in which ':' apperas in a usage line for this config, if not specified use `CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT`
+    size_t max_usage_alignment;       // the maximum column in which ':' appears in a usage line for this config, if not specified use `CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT`
     void *_reserved;
 } clags_options_t;
 
@@ -1011,7 +1011,7 @@ void clags_sb_free(clags_sb_t *sb);
 #if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
 // These are the functions used internally to convert strings to integers.
 // You can use these functions when the existing verifiers
-// are to strict (e.g. forcing '\0' at the end) or too verbose since they
+// are too strict (e.g. forcing '\0' at the end) or too verbose since they
 // use `clags_log` to log errors
 
 // the definition of the result struct of integer parsing
@@ -1148,21 +1148,31 @@ int clags__strslice_casecmp(const char *slice, size_t slice_len, const char *exa
 
 /* String Builder Functionality */
 
-static inline void clags__sb_reserve(clags_sb_t *sb, size_t capacity)
+static inline size_t clags__sb_reserve(clags_sb_t *sb, size_t nbytes)
 {
-    if (sb->capacity >= capacity) return;
-    size_t old_capacity = sb->capacity;
-    if (sb->capacity == 0) sb->capacity = CLAGS_SB_INIT_CAPACITY;
-    while (capacity > sb->capacity){
-        sb->capacity *= 2;
+    if (sb->count > SIZE_MAX - nbytes){
+        nbytes = SIZE_MAX - sb->count;
     }
-    size_t old_bytes = old_capacity * sizeof(*sb->items);
-    size_t new_bytes = sb->capacity * sizeof(*sb->items);
-    char *new_items = CLAGS_REALLOC(sb->items, old_bytes, new_bytes);
+    size_t required_capacity = sb->count + nbytes;
+    if (sb->capacity >= required_capacity) return nbytes;
+
+    size_t old_capacity = sb->capacity;
+    size_t new_capacity = (sb->capacity > 0)? sb->capacity : CLAGS_SB_INIT_CAPACITY;
+    while (new_capacity < required_capacity){
+        if (new_capacity > SIZE_MAX / 2){
+            new_capacity = required_capacity;
+            break;
+        }
+        new_capacity *= 2;
+    }
+
+    char *new_items = CLAGS_REALLOC(sb->items, old_capacity, new_capacity);
     clags_assert(new_items != NULL, "Out of memory!");
+
     sb->items = new_items;
-    (void) old_bytes;
-    (void) old_capacity;
+    sb->capacity = new_capacity;
+    (void) old_capacity; // to prevent `Wunused-variable`
+    return nbytes;
 }
 
 int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
@@ -1175,12 +1185,15 @@ int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
     int n = vsnprintf(NULL, 0, format, args_copy);
     va_end(args_copy);
 
-    if (sb != NULL){
-        clags__sb_reserve(sb, sb->count + n + 1);
-        char *start = sb->items + sb->count;
-
-        vsnprintf(start, n+1, format, args);
-        sb->count += n;
+    if (sb != NULL && n >= 0){
+        size_t reserved = clags__sb_reserve(sb, n + 1);
+        if (reserved > 0){
+            char *start = sb->items + sb->count;
+            int w = vsnprintf(start, reserved, format, args);
+            if (w > 0){
+                sb->count += reserved - 1;
+            }
+        }
     }
     va_end(args);
     return n;
@@ -1189,7 +1202,8 @@ int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
 void clags_sb_append_null(clags_sb_t *sb)
 {
     if (sb == NULL) return;
-    clags__sb_reserve(sb, sb->count+1);
+    if (sb->count > 0 && sb->items[sb->count - 1] == '\0') return;
+    clags__sb_reserve(sb, 1);
     sb->items[sb->count++] = '\0';
 }
 
@@ -1245,7 +1259,9 @@ void clags_log(clags_config_t *config, clags_log_level_t level, const char *form
 
 void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb)
 {
-    clags_log(config, level, "%s", sb->items? sb->items : "");
+    if (sb != NULL && sb->items != NULL){
+        clags_log(config, level, "%.*s", (int) sb->count, sb->items);
+    }
 }
 
 /* Allocation Handling */
@@ -1264,6 +1280,45 @@ static inline clags__alloc_t clags__memdup(const void *data, size_t size)
     return (clags__alloc_t) {new_data, size};
 }
 
+static inline bool clags__handle_list_resizing(clags_config_t *config, clags_list_t *list)
+{
+    if (list->count < list->capacity) return true;
+    size_t item_size;
+    if (list->value_type == Clags_Custom){
+        item_size = list->item_size;
+    } else{
+        item_size = clags__types[list->value_type].value_size;
+    }
+    clags_assert(item_size > 0, "list with an item_size of 0");
+    size_t max_capacity = SIZE_MAX / item_size;
+    if (list->capacity >= max_capacity){
+        clags_log(config, Clags_Error, "maximum list capacity %zu already reached. Unable to add further argumentsto the list!", max_capacity);
+        return false;
+    }
+
+    size_t new_capacity;
+    if (list->capacity > 0){
+        if (list->capacity > max_capacity / 2){
+            new_capacity = max_capacity;
+        } else{
+            new_capacity = list->capacity * 2;
+        }
+    } else{
+        new_capacity = CLAGS_LIST_INIT_CAPACITY;
+        if (new_capacity > max_capacity) new_capacity = max_capacity;
+    }
+
+    size_t old_bytes = list->capacity*item_size;
+    size_t new_bytes = new_capacity*item_size;
+    void *new_items = CLAGS_REALLOC(list->items, old_bytes, new_bytes);
+    clags_assert(new_items != NULL, "Out of memory!");
+
+    list->items = new_items;
+    list->capacity = new_capacity;
+    (void) old_bytes;
+    return true;
+}
+
 void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size)
 {
     void *duplicate;
@@ -1273,18 +1328,12 @@ void* clags_config_duplicate(clags_config_t *config, const void *data, size_t si
 
         // register the allocation in the config's allocation list
         clags_list_t *allocs = &config->allocs;
+        allocs->value_type = Clags_Custom;
         if (allocs->item_size == 0) allocs->item_size = sizeof(clags__alloc_t);
-        if (allocs->count >= allocs->capacity){
-            // handle list resizing
-            size_t new_capacity = allocs->capacity ? allocs->capacity*2 : CLAGS_LIST_INIT_CAPACITY;
-            size_t old_bytes = allocs->item_size*allocs->capacity;
-            size_t new_bytes = allocs->item_size*new_capacity;
-            void *new_items = CLAGS_REALLOC(allocs->items, old_bytes, new_bytes);
-            clags_assert(new_items != NULL, "Out of memory!");
-            allocs->items = new_items;
-            allocs->capacity = new_capacity;
-            (void) old_bytes;
-        }
+
+        // TODO: handle this more smoothly?
+        clags_assert(clags__handle_list_resizing(config, allocs), "allocation context overflown!");
+
         ((clags__alloc_t*) allocs->items)[allocs->count++] = alloc;
         // return the duplicated data instead
         duplicate = (void*) alloc.data;
@@ -1840,7 +1889,8 @@ bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_r
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__types[type].name, arg_name, arg);
         return false;
     }
-    if (errno == ERANGE || value > max || value < min) {
+
+    if (errno == ERANGE || value > max || value < min || value != value) {
         clags_log(config, Clags_Error, "%s value out of range [%g-%g] for argument '%s': '%s'!", clags__types[type].name, min, max, arg_name, arg);
         return false;
     }
@@ -1940,8 +1990,7 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
 
     // parse the leading number string
     clags_strtoint_res_t res;
-    clags_fsize_t value = clags__strtouint_parse_s(arg, &res, 10, UINT64_MAX);
-
+    clags_fsize_t value = clags_strtouint64_s(arg, &res, 10);
     if (res.no_digits){
         clags_log(config, Clags_Error, "No leading number in size argument '%s': '%s'!", arg_name, arg);
         return false;
@@ -1979,7 +2028,7 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
 bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
-    char *endptr;
+    clags_strtoint_res_t res;
     const char *start = arg;
 
     // skip spaces
@@ -1989,35 +2038,35 @@ bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const cha
     do{
         // convert leading number string to a double
         errno = 0;
-        double value = CLAGS_STRTOD(start, &endptr);
-        if (endptr == start){
+        clags_time_t value = clags_strtouint64_s(start, &res, 10);
+        if (res.no_digits){
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
             return false;
         }
         // find end of unit string
-        const char *unit_end = endptr;
+        const char *unit_end = res.endptr;
         while (isalpha((unsigned char) *unit_end)) unit_end++;
 
         // convert unit string to a factor
         clags_time_t factor;
-        size_t unit_len = unit_end - endptr;
-        if (unit_len == 0 || clags__strslice_casecmp(endptr, unit_len, "s") == 0) factor =       1;
-        else if (clags__strslice_casecmp(endptr, unit_len, "m")  == 0)            factor =      60;
-        else if (clags__strslice_casecmp(endptr, unit_len, "h")  == 0)            factor =    3600;
-        else if (clags__strslice_casecmp(endptr, unit_len, "d")  == 0)            factor = 24*3600;
+        size_t unit_len = unit_end - res.endptr;
+        if (unit_len == 0 || clags__strslice_casecmp(res.endptr, unit_len, "s") == 0) factor =       1;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "m")  == 0)            factor =      60;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "h")  == 0)            factor =    3600;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "d")  == 0)            factor = 24*3600;
         else {
-            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, endptr);
+            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, res.endptr);
             return false;
         }
         // range check for the factor
-        if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s's!", UINT64_MAX, arg_name, (int)(unit_end-start), start);
+        if (res.out_of_range || value > UINT64_MAX/factor || res.negative){
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-start), start);
             return false;
         }
         // range check for the temporary result
-        clags_time_t value_in_s = (clags_time_t)(value * factor + 0.5);
+        clags_time_t value_in_s = value * factor;
         if (result > UINT64_MAX - value_in_s){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s's!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
             return false;
         }
 
@@ -2036,7 +2085,7 @@ bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const cha
 bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
-    char *endptr;
+    clags_strtoint_res_t res;
     const char *start = arg;
 
     // skip spaces
@@ -2046,38 +2095,38 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
     do{
         // convert leading number string to a double
         errno = 0;
-        double value = CLAGS_STRTOD(start, &endptr);
-        if (endptr == start){
+        clags_time_t value = clags_strtouint64_s(start, &res, 10);
+        if (res.no_digits){
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
             return false;
         }
         // find end of unit string
-        const char *unit_end = endptr;
+        const char *unit_end = res.endptr;
         while (isalpha((unsigned char) *unit_end)) unit_end++;
 
         // convert unit string to a factor
         clags_time_t factor;
-        size_t unit_len = unit_end - endptr;
-        if (unit_len == 0 || clags__strslice_casecmp(endptr, unit_len, "ns") == 0)   factor = 1;
-        else if (clags__strslice_casecmp(endptr, unit_len, "us") == 0)               factor = 1000ULL;
-        else if (clags__strslice_casecmp(endptr, unit_len, "ms") == 0)               factor = 1000000ULL;
-        else if (clags__strslice_casecmp(endptr, unit_len, "s") == 0)                factor = 1000000000ULL;
-        else if (clags__strslice_casecmp(endptr, unit_len, "m") == 0)                factor = 60ULL * 1000000000ULL;
-        else if (clags__strslice_casecmp(endptr, unit_len, "h") == 0)                factor = 3600ULL * 1000000000ULL;
-        else if (clags__strslice_casecmp(endptr, unit_len, "d") == 0)                factor = 24ULL * 3600ULL * 1000000000ULL;
+        size_t unit_len = unit_end - res.endptr;
+        if (unit_len == 0 || clags__strslice_casecmp(res.endptr, unit_len, "ns") == 0)   factor = 1;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "us") == 0)               factor = 1000ULL;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "ms") == 0)               factor = 1000000ULL;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "s") == 0)                factor = 1000000000ULL;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "m") == 0)                factor = 60ULL * 1000000000ULL;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "h") == 0)                factor = 3600ULL * 1000000000ULL;
+        else if (clags__strslice_casecmp(res.endptr, unit_len, "d") == 0)                factor = 24ULL * 3600ULL * 1000000000ULL;
         else {
-            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, endptr);
+            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, res.endptr);
             return false;
         }
         // range check for the factor
-        if (errno == ERANGE || value > UINT64_MAX/factor || value < 0){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument part '%s': '%.*s'ns!", UINT64_MAX, arg_name, (int)(unit_end-start), start);
+        if (res.out_of_range || value > UINT64_MAX/factor || res.negative){
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument part '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-start), start);
             return false;
         }
         // range check for the temporary result
-        clags_time_t value_in_s = (clags_time_t)(value * factor + 0.5);
+        clags_time_t value_in_s = value * factor;
         if (result > UINT64_MAX - value_in_s){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument '%s': '%.*s'ns!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
             return false;
         }
 
@@ -2137,24 +2186,15 @@ bool clags_verify_custom(clags_config_t *config, const char *arg_name, const cha
 static inline bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_list_t *list = (clags_list_t*) variable;
-    size_t item_size = list->item_size;
-    clags_assert(item_size > 0, "list item size may not be 0!");
-    if (list->count >= list->capacity){
-        // handle resizing
-        size_t new_capacity = list->capacity==0? CLAGS_LIST_INIT_CAPACITY:list->capacity*2;
-        size_t old_bytes = list->capacity*item_size;
-        size_t new_bytes = new_capacity*item_size;
-        void *new_items = CLAGS_REALLOC(list->items, old_bytes, new_bytes);
-        clags_assert(new_items != NULL, "Out of memory!");
-        list->items = new_items;
-        list->capacity = new_capacity;
-        (void) old_bytes;
+    char *ptr = NULL;
+    if (list != NULL){
+        if (!clags__handle_list_resizing(config, list)) return false;
+        // calculate the pointer to write to based on the stored items' size
+        ptr = ((char*) list->items) + list->item_size * list->count;
     }
-    // calculate the pointer to write to based on the stored items' size
-    char *ptr = ((char*) list->items) + item_size * list->count;
     // dispatch to the correct verifier based on the provided value type
     if (clags__types[value_type].verify(config, arg_name, arg, ptr, data)){
-        list->count++;
+        if (list != NULL) list->count++;
         return true;
     }
     return false;
@@ -2218,10 +2258,16 @@ bool clags__validate_list(clags_config_t *config, void *variable, clags_value_ty
             clags_log(config, Clags_ConfigError, "list argument '%s' expects type '%s', but list was created as '%s'!", arg_name, clags__types[value_type].name, clags__types[list->value_type].name);
             return false;
         }
-        // custom lists must be initialized with a item size to store
-        if (list->value_type == Clags_Custom && !list->custom_size_set){
-            clags_log(config, Clags_ConfigError, "`clags_list` must not be used with type `Clags_Custom` for argument '%s'! Instead, use `clags_custom_list` and provide the size of the stored value!", arg_name);
-            return false;
+        if (list->value_type == Clags_Custom){
+            // custom lists must be initialized with a item size to store
+            if (!list->custom_size_set){
+                clags_log(config, Clags_ConfigError, "`clags_list` must not be used with type `Clags_Custom` for argument '%s'! Instead, use `clags_custom_list` and provide the size of the stored value!", arg_name);
+                return false;
+            }
+            if (list->item_size == 0){
+                clags_log(config, Clags_ConfigError, "`item_size` of custom list for argument '%s' must notbe zero!", arg_name);
+                return false;
+            }
         }
         if (list->item_size == 0){
             // set item size if not initialized yet
@@ -2302,9 +2348,28 @@ clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t
             return config;
         }
         switch (range->type){
-            case Clags_Int:
-            case Clags_UInt:
-            case Clags_Real: break;
+#ifndef CLAGS_NO_INT_TYPES            
+            case Clags_Int:{
+                if (range->min.as_int > range->max.as_int){
+                    clags_log(config, Clags_ConfigError, "invalid range definition for argument '%s': expected a maximum bound greater than or equal to the minimum bound, but got [%"PRId64"-%"PRId64"]!", arg_name, range->min.as_int, range->max.as_int);
+                    return config;
+                }
+            } break;
+            case Clags_UInt:{
+                if (range->min.as_uint > range->max.as_uint){
+                    clags_log(config, Clags_ConfigError, "invalid range definition for argument '%s': expected a maximum bound greater than or equal to the minimum bound, but got [%"PRIu64"-%"PRIu64"]!", arg_name, range->min.as_uint, range->max.as_uint);
+                    return config;
+                }
+            } break;
+#endif // !CLAGS_NO_INT_TYPES
+#ifndef CLAGS_NO_REAL_TYPES
+            case Clags_Real:{
+                if (range->min.as_double > range->max.as_double){
+                    clags_log(config, Clags_ConfigError, "invalid range definition for argument '%s': expected a maximum bound greater than or equal to the minimum bound, but got [%g-%g]!", arg_name, range->min.as_double, range->max.as_double);
+                    return config;
+                }
+            } break;
+#endif // !CLAGS_NO_REAL_TYPES
             default:{
                 clags_log(config, Clags_ConfigError, "invalid range type for argument '%s': '%s'!", arg_name, clags__types[range->type].name);
                 return config;
@@ -2504,6 +2569,7 @@ static inline void clags__validate_alignment(clags_config_t *config, size_t *buf
 
 clags_config_t* clags_validate(const char *name, clags_config_t *config)
 {
+    if (config == NULL) return NULL;
     if (config->state != Clags_Config_Unvalidated) return NULL;
     clags_config_t *result = NULL;
     // set the config name
@@ -2818,6 +2884,7 @@ bool clags__parse_long_option(clags_config_t *config, clags__parser_t *parser, c
         // argument used designated option assignment
         if (*value == '\0'){
             clags_log(config, Clags_Error, "Designated option assignment may not have an empty value: '%s'!", arg);
+            config->error = Clags_Error_InvalidOption;
             return false;
         }
     } else {
@@ -2858,7 +2925,7 @@ bool clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_
                 const char *value = c + 1; // the rest of the argument to be consumed as the value for the option
                 if (*value == '\0'){
                     // value is next argument
-                    value = clags__get_next_arg(found_config, parser);
+                    value = clags__get_next_arg(config, parser);
                     if (value == NULL){
                         clags_log(config, Clags_Error, "Option '%s' requires argument!", arg);
                         config->error = Clags_Error_InvalidOption;
@@ -2971,6 +3038,7 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 
     clags_assert(clags__set_defaults(config) == true, "failed to set default values for valid config");
 
+    config->error = Clags_Error_Ok;
     clags_config_t *result = NULL;
 
     // sort arguments by type
@@ -3065,7 +3133,7 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
             } else {
                 clags_unreachable("arg type has changed");
             }
-        } else if (parser.accept_options && *arg == '-' && !isdigit((unsigned char)arg[1])){
+        } else if (parser.accept_options && *arg == '-' && !isdigit((unsigned char)arg[1])){ // TODO: this doesn't detect e.g. '-.5' as a number
             // parse short options or flags
             bool exit = false;
             if (clags__parse_short_options_and_flags(config, &parser, &exit)){
