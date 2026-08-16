@@ -49,6 +49,7 @@
 - added validation check to prevent an `item_size` of a custom list from being `0`
 - added validation check to prevent a range minimum to be greater than the maximum
 - added validation checks to prevent invalid `clags_value_type_t`s and `clags_arg_type_t`s
+- added more thorough validation checks to choice and subcmd arguments
 - fixed usage of wrong config to handle ignored arguments in `clags__parse_short_options_and_flags`
 - `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occured
 - fixed `clags_log_sb` to work with not yet zero-terminated strings

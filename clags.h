@@ -2160,6 +2160,7 @@ bool clags_verify_choice(clags_config_t *config, const char *arg_name, const cha
     clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
         clags_choice_t *choice = choices->items + i;
+        if (choice->value == NULL) continue;
         if ((choices->case_insensitive && clags__strcasecmp(choice->value, arg) == 0) || (!choices->case_insensitive && strcmp(choice->value, arg) == 0)){
             if (variable) *(clags_choice_t**)variable = choice;
             return true;
@@ -2174,6 +2175,7 @@ bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const cha
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     for (size_t i=0; i<subcmds->count; ++i){
         clags_subcmd_t subcmd = subcmds->items[i];
+        if (subcmd.name == NULL) continue;
         if (strcmp(subcmd.name, arg) == 0){
             if (variable) *(clags_subcmd_t**) variable = &subcmds->items[i];
             return true;
@@ -2306,16 +2308,25 @@ clags_config_t* clags__validate_subcmd(clags_config_t *config, const char *arg_n
 
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     if (subcmds->count == 0){
-        clags_log(config, Clags_ConfigWarning, "subcommand definition should contain at least one subcommand for argument '%s'!", arg_name);
+        clags_log(config, Clags_ConfigWarning, "`clags_subcmds_t` definition should contain at least one subcommand for argument '%s'!", arg_name);
+    } else if (subcmds->items == NULL){
+        clags_log(config, Clags_ConfigError, "invalid `clags_subcmds_t` definition for argument '%s'! `items` must not be NULL when `count` is non-zero!", arg_name);
+        return config;
     }
     for (size_t i=0; i<subcmds->count; ++i){
-        clags_config_t *child_config = subcmds->items[i].config;
-        if (child_config == NULL){
-            clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand '%s' has no config assigned!", arg_name, subcmds->items[i].name);
+        clags_subcmd_t subcmd = subcmds->items[i];
+        clags_config_t *child_config = subcmd.config;
+        if (subcmd.name){
+            clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand %zu has no name assigned!", arg_name, i);
             return config;
         }
+        if (child_config == NULL){
+            clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand '%s' has no config assigned!", arg_name, subcmd.name);
+            return config;
+        }
+
         child_config->parent = config;
-        clags_config_t *failed_config = clags_validate(subcmds->items[i].name, child_config);
+        clags_config_t *failed_config = clags_validate(subcmd.name, child_config);
         if (failed_config != NULL) return failed_config;
     }
     return NULL;
@@ -2324,12 +2335,22 @@ clags_config_t* clags__validate_subcmd(clags_config_t *config, const char *arg_n
 clags_config_t* clags__validate_choice(clags_config_t *config, const char *arg_name, void *data)
 {
     // a choice argument should be provided with a valid `clags_choices_t`
-    if (data == NULL){
+    clags_choices_t* choices = (clags_choices_t*) data;
+    if (choices == NULL){
         clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", arg_name);
         return config;
     }
-    if (((clags_choices_t*) data)->count == 0){
-        clags_log(config, Clags_ConfigWarning, "choice definition must contain at least one choice for argument '%s'!", arg_name);
+    if (choices->count == 0){
+        clags_log(config, Clags_ConfigWarning, "`clags_choices_t` definition should contain at least one choice for argument '%s'!", arg_name);
+    } else if (choices->items == NULL){
+        clags_log(config, Clags_ConfigError, "invalid `clags_choices_t` definition for argument '%s'! `items` must not be NULL when `count` is non-zero!", arg_name);
+        return config;
+    }
+    for (size_t i=0; i<choices->count; ++i){
+        if (choices->items[i].value == NULL){
+            clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Choice %zu has no value assigned!", arg_name, i);
+            return config;
+        }
     }
     return NULL;
 }
