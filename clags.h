@@ -165,6 +165,16 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
+// public api linkage / visibility
+#ifndef CLAGS_API
+#define CLAGS_API
+#endif // CLAGS_API
+
+// private implementation linkage
+#ifndef CLAGS_PRIV
+#define CLAGS_PRIV static
+#endif // CLAGS_PRIV
+
 #ifdef CLAGS_NO_COMPLEX_TYPES
   #define CLAGS_NO_INT_TYPES
   #define CLAGS_NO_REAL_TYPES
@@ -806,7 +816,7 @@ struct clags_config_t{
     clags_config_t* : pointer to the failed config or `NULL` on success. If parsing
                       fails, the `.error` field will indicate the type.
 */
-clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config);
+CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config);
 
 /*
   Print a detailed usage menu based on the provided config.
@@ -824,7 +834,7 @@ clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config);
     - program_name  : the name of the program
     - config        : pointer to the config to print usage for
 */
-void clags_usage(const char *program_name, clags_config_t *config);
+CLAGS_API void clags_usage(const char *program_name, clags_config_t *config);
 
 /*
   Print a detailed usage menu based on the provided config to a specified
@@ -838,7 +848,7 @@ void clags_usage(const char *program_name, clags_config_t *config);
     - program_name  : the name of the program
     - config        : pointer to the config to print usage for
 */
-void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config);
+CLAGS_API void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config);
 
 /*
   Manually initialize and validate a configuration tree.
@@ -855,7 +865,7 @@ void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *c
   Returns:
     clags_config_t* : pointer to the failed config or `NULL` on success.
 */
-clags_config_t* clags_validate(const char *program_name, clags_config_t *config);
+CLAGS_API clags_config_t* clags_validate(const char *program_name, clags_config_t *config);
 
 /*
   Get the index of a selected subcommand in the provided subcommand array.
@@ -868,7 +878,7 @@ clags_config_t* clags_validate(const char *program_name, clags_config_t *config)
     int             : the index of the selected subcommand in the array,
                       or -1 if the subcommand was not found or either argument is NULL
 */
-int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
+CLAGS_API int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
 
 /*
   Get the index of a selected choice in the provided choice array.
@@ -881,7 +891,7 @@ int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd);
     int             : the index of the selected choice in the array,
                       or -1 if the choice was not found or either argument is NULL
 */
-int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
+CLAGS_API int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
   Duplicate some sized data if string duplication is enabled in the config,
@@ -898,7 +908,7 @@ int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
                 otherwise the original data. Memory allocated for duplicates
                 is tracked internally within the config and will be freed when the config is cleaned up.
 */
-void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size);
+CLAGS_API void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size);
 
 /*
   Duplicate a string if string duplication is enabled in the config,
@@ -913,7 +923,7 @@ void* clags_config_duplicate(clags_config_t *config, const void *data, size_t si
                 otherwise the original string. Memory allocated for duplicates
                 is tracked internally within the config and will be freed when the config is cleaned up.
 */
-char* clags_config_duplicate_string(clags_config_t *config, const char *string);
+CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char *string);
 
 /*
   Free all memory associated with a `clags_list_t` instance.
@@ -921,7 +931,7 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string);
   Arguments:
     - list          : a pointer to the list to free
 */
-void clags_list_free(clags_list_t *list);
+CLAGS_API void clags_list_free(clags_list_t *list);
 
 /*
   Free all memory allocated for strings duplicated during parsing.
@@ -930,7 +940,7 @@ void clags_list_free(clags_list_t *list);
   Arguments:
     - config        : pointer to the clags_config_t whose duplicated strings should be freed
 */
-void clags_config_free_allocs(clags_config_t *config);
+CLAGS_API void clags_config_free_allocs(clags_config_t *config);
 
 /*
   Free all lists and allocated strings of a config.
@@ -939,7 +949,7 @@ void clags_config_free_allocs(clags_config_t *config);
   Arguments:
     - config        : pointer to the config of which to free all strings and lists
 */
-void clags_config_free(clags_config_t *config);
+CLAGS_API void clags_config_free(clags_config_t *config);
 
 /*
   Free all lists and allocated strings of a config and all its child configs.
@@ -947,7 +957,7 @@ void clags_config_free(clags_config_t *config);
   Arguments:
     - config        : pointer to the root config to free along with all its child configs
 */
-void clags_free(clags_config_t *config);
+CLAGS_API void clags_free(clags_config_t *config);
 
 /*
   Return a description of the provided error type.
@@ -958,7 +968,7 @@ void clags_free(clags_config_t *config);
   Returns:
     const char*     : a string description of the provided error type
 */
-const char* clags_error_description(clags_error_t error);
+CLAGS_API const char* clags_error_description(clags_error_t error);
 
 #ifndef CLAGS_NO_PATH_TYPES
 
@@ -971,7 +981,7 @@ const char* clags_error_description(clags_error_t error);
   Returns:
     clags_path_type_t : the type of the provided path. See `clags__path_types` for a list of all available types.
 */
-clags_path_type_t clags_path_type(const char *path);
+CLAGS_API clags_path_type_t clags_path_type(const char *path);
 
 #endif // CLAGS_NO_PATH_TYPES
 
@@ -984,7 +994,7 @@ clags_path_type_t clags_path_type(const char *path);
   Returns:
     const char*     : the name of the provided type
 */
-const char* clags_path_type_name(clags_path_type_t type);
+CLAGS_API const char* clags_path_type_name(clags_path_type_t type);
 
 /* Logging */
 
@@ -997,14 +1007,14 @@ const char* clags_path_type_name(clags_path_type_t type);
     - format        : the printf-style format of the message
     - ...           : the variadic format arguments
 */
-void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
+CLAGS_API void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
 // log the content of a string builder instead of a formatted message
-void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
+CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
 
 /* String Builder Functionality */
-int clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
-void clags_sb_append_null(clags_sb_t *sb);
-void clags_sb_free(clags_sb_t *sb);
+CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
+CLAGS_API void clags_sb_append_null(clags_sb_t *sb);
+CLAGS_API void clags_sb_free(clags_sb_t *sb);
 
 /* String-to-Integer Conversion */
 
@@ -1027,30 +1037,30 @@ typedef struct{
 } clags_strtoint_res_t;
 
 // legacy functions: sets `errno` similar to `strtol` family functions
-int8_t  clags_strtoint8 (const char *str, char **endptr, int base);
-int16_t clags_strtoint16(const char *str, char **endptr, int base);
-int32_t clags_strtoint32(const char *str, char **endptr, int base);
-int64_t clags_strtoint64(const char *str, char **endptr, int base);
-int64_t strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max);
+CLAGS_API int8_t  clags_strtoint8 (const char *str, char **endptr, int base);
+CLAGS_API int16_t clags_strtoint16(const char *str, char **endptr, int base);
+CLAGS_API int32_t clags_strtoint32(const char *str, char **endptr, int base);
+CLAGS_API int64_t clags_strtoint64(const char *str, char **endptr, int base);
+CLAGS_API int64_t strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max);
 
-uint8_t  clags_strtouint8 (const char *str, char **endptr, int base);
-uint16_t clags_strtouint16(const char *str, char **endptr, int base);
-uint32_t clags_strtouint32(const char *str, char **endptr, int base);
-uint64_t clags_strtouint64(const char *str, char **endptr, int base);
-uint64_t strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max);
+CLAGS_API uint8_t  clags_strtouint8 (const char *str, char **endptr, int base);
+CLAGS_API uint16_t clags_strtouint16(const char *str, char **endptr, int base);
+CLAGS_API uint32_t clags_strtouint32(const char *str, char **endptr, int base);
+CLAGS_API uint64_t clags_strtouint64(const char *str, char **endptr, int base);
+CLAGS_API uint64_t strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max);
 
 // safe/structured functions: returns the parsing result via a `clags_strtoint_res_t` struct
-int8_t  clags_strtoint8_s (const char *str, clags_strtoint_res_t *res, int base);
-int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base);
-int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base);
-int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base);
-int64_t strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
+CLAGS_API int8_t  clags_strtoint8_s (const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API int64_t strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
 
-uint8_t  clags_strtouint8_s (const char *str, clags_strtoint_res_t *res, int base);
-uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base);
-uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base);
-uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base);
-uint64_t strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
+CLAGS_API uint8_t  clags_strtouint8_s (const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base);
+CLAGS_API uint64_t strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
 
 #endif // !CLAGS_NO_STRTOINT
 
@@ -1071,17 +1081,17 @@ typedef struct{
 } clags__type_t;
 
 // Automatically generated declarations of all verifiers
-#define X(type, verify_func, name, vtype, validate_func, usage_func) clags_verify_func_def_t verify_func;
+#define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_API clags_verify_func_def_t verify_func;
 CLAGS__TYPES
 #undef X
 
 // Automatically generated declarations of all validators
-#define X(type, verify_func, name, vtype, validate_func, usage_func) clags_validate_func_def_t validate_func;
+#define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_PRIV clags_validate_func_def_t validate_func;
 CLAGS__TYPES
 #undef X
 
 // Automatically generated declarations of all usage printers
-#define X(type, verify_func, name, vtype, validate_func, usage_func) clags_usage_func_def_t usage_func;
+#define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_PRIV clags_usage_func_def_t usage_func;
 CLAGS__TYPES
 #undef X
 
@@ -1094,23 +1104,12 @@ static clags__type_t clags__types[] = {
 
 /* String Utilities */
 
-static inline char* clags__strchrnull(const char *string, char c)
-{
-    if (!string) return NULL;
-    char *s = (char*) string;
-    while (*s != '\0'){
-        if (*s == c) return s;
-        s++;
-    }
-    return s;
-}
-
-static inline int clags__tolower(int c)
+CLAGS_PRIV int clags__tolower(int c)
 {
     return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
 }
 
-int clags__strcasecmp(const char *s1, const char *s2)
+CLAGS_PRIV int clags__strcasecmp(const char *s1, const char *s2)
 {
     if (s1 == s2) return 0;
     if (s1 == NULL) return -1;
@@ -1127,7 +1126,7 @@ int clags__strcasecmp(const char *s1, const char *s2)
     return clags__tolower((unsigned char)*s1) - clags__tolower((unsigned char)*s2);
 }
 
-int clags__strslice_casecmp(const char *slice, size_t slice_len, const char *exact)
+CLAGS_PRIV int clags__strslice_casecmp(const char *slice, size_t slice_len, const char *exact)
 {
     if (slice == exact) return 0;
     if (slice == NULL) return -1;
@@ -1152,7 +1151,7 @@ int clags__strslice_casecmp(const char *slice, size_t slice_len, const char *exa
 
 /* String Builder Functionality */
 
-static inline size_t clags__sb_reserve(clags_sb_t *sb, size_t nbytes)
+CLAGS_PRIV size_t clags__sb_reserve(clags_sb_t *sb, size_t nbytes)
 {
     if (sb->count > SIZE_MAX - nbytes){
         nbytes = SIZE_MAX - sb->count;
@@ -1179,7 +1178,7 @@ static inline size_t clags__sb_reserve(clags_sb_t *sb, size_t nbytes)
     return nbytes;
 }
 
-int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
+CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
 {
     va_list args, args_copy;
 
@@ -1203,7 +1202,7 @@ int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
     return n;
 }
 
-void clags_sb_append_null(clags_sb_t *sb)
+CLAGS_API void clags_sb_append_null(clags_sb_t *sb)
 {
     if (sb == NULL) return;
     if (sb->count > 0 && sb->items[sb->count - 1] == '\0') return;
@@ -1211,7 +1210,7 @@ void clags_sb_append_null(clags_sb_t *sb)
     sb->items[sb->count++] = '\0';
 }
 
-void clags_sb_free(clags_sb_t *sb)
+CLAGS_API void clags_sb_free(clags_sb_t *sb)
 {
     if (sb == NULL) return;
     CLAGS_FREE(sb->items, sb->capacity*sizeof(*sb->items));
@@ -1221,7 +1220,7 @@ void clags_sb_free(clags_sb_t *sb)
 
 /* Logging */
 
-void clags__default_log_handler(clags_config_t *config, clags_log_level_t level, const char *format, va_list args)
+CLAGS_PRIV void clags__default_log_handler(clags_config_t *config, clags_log_level_t level, const char *format, va_list args)
 {
     switch(level){
         case Clags_Info:{
@@ -1251,7 +1250,7 @@ void clags__default_log_handler(clags_config_t *config, clags_log_level_t level,
     fprintf(stderr, "\n");
 }
 
-void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...)
+CLAGS_API void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...)
 {
     if (config && config->options.min_log_level > level) return;
     va_list args;
@@ -1261,7 +1260,7 @@ void clags_log(clags_config_t *config, clags_log_level_t level, const char *form
     va_end(args);
 }
 
-void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb)
+CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb)
 {
     if (sb != NULL && sb->items != NULL){
         clags_log(config, level, "%.*s", (int) sb->count, sb->items);
@@ -1275,7 +1274,7 @@ typedef struct{
     size_t size;
 } clags__alloc_t;
 
-static inline clags__alloc_t clags__memdup(const void *data, size_t size)
+CLAGS_PRIV clags__alloc_t clags__memdup(const void *data, size_t size)
 {
     if (data == NULL || size == 0) return (clags__alloc_t){NULL, 0};
     void *new_data = CLAGS_CALLOC(size, 1);
@@ -1284,7 +1283,7 @@ static inline clags__alloc_t clags__memdup(const void *data, size_t size)
     return (clags__alloc_t) {new_data, size};
 }
 
-static inline bool clags__handle_list_resizing(clags_config_t *config, clags_list_t *list)
+CLAGS_PRIV bool clags__handle_list_resizing(clags_config_t *config, clags_list_t *list)
 {
     if (list->count < list->capacity) return true;
     size_t item_size;
@@ -1323,7 +1322,7 @@ static inline bool clags__handle_list_resizing(clags_config_t *config, clags_lis
     return true;
 }
 
-void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size)
+CLAGS_API void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size)
 {
     void *duplicate;
     if (config && config->options.duplicate_strings){
@@ -1348,7 +1347,7 @@ void* clags_config_duplicate(clags_config_t *config, const void *data, size_t si
     return duplicate;
 }
 
-char* clags_config_duplicate_string(clags_config_t *config, const char *string)
+CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char *string)
 {
     if (string == NULL) return (char*) string;
     return clags_config_duplicate(config, string, strlen(string) + 1);
@@ -1358,7 +1357,7 @@ char* clags_config_duplicate_string(clags_config_t *config, const char *string)
 
 #ifndef CLAGS_NO_PATH_TYPES
 
-clags_path_type_t clags_path_type(const char *path)
+CLAGS_API clags_path_type_t clags_path_type(const char *path)
 {
     clags__stat_struct attrs;
     if (clags__stat_func(path, &attrs) == -1) return Clags_Path_Missing;
@@ -1369,7 +1368,7 @@ clags_path_type_t clags_path_type(const char *path)
 
 #endif // !CLAGS_NO_PATH_TYPES
 
-const char* clags_error_description(clags_error_t error)
+CLAGS_API const char* clags_error_description(clags_error_t error)
 {
     switch(error){
 #define X(type, desc) case (type): return (desc);
@@ -1379,7 +1378,7 @@ const char* clags_error_description(clags_error_t error)
     }
 }
 
-const char* clags_path_type_name(clags_path_type_t type)
+CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
 {
     switch (type){
 #define X(type, name) case (type): return (name);
@@ -1389,7 +1388,7 @@ const char* clags_path_type_name(clags_path_type_t type)
     }
 }
 
-int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
+CLAGS_API int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
 {
     if (!subcmds || !subcmd) return -1;
     uintptr_t items_addr = (uintptr_t) subcmds->items;
@@ -1402,7 +1401,7 @@ int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
     return -1;
 }
 
-int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
+CLAGS_API int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 {
     if (!choices || !choice) return -1;
     uintptr_t items_addr = (uintptr_t) choices->items;
@@ -1418,7 +1417,7 @@ int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 /* String-to-Integer Conversion */
 #if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
 
-static inline int clags_strtoint__digit_value(char c, int base)
+CLAGS_PRIV int clags_strtoint__digit_value(char c, int base)
 {
     int value = -1;
     if ('0' <= c && c <= '9') value = c - '0';
@@ -1428,7 +1427,7 @@ static inline int clags_strtoint__digit_value(char c, int base)
     return -1;
 }
 
-static inline int clags_strtoint__handle_base(const char **str, int base)
+CLAGS_PRIV int clags_strtoint__handle_base(const char **str, int base)
 {
     const char *s = *str;
     if ((base == 0 || base == 2) && s[0] == '0' && (s[1] == 'B' || s[1] == 'b')){
@@ -1453,7 +1452,7 @@ static inline int clags_strtoint__handle_base(const char **str, int base)
     return base;
 }
 
-int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
+CLAGS_API int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
 {
     if (res) memset(res, 0, sizeof(*res));
     if (!str || min > max || base < 0 || base == 1 || base > 36){
@@ -1533,7 +1532,7 @@ end:
     return result;
 }
 
-int64_t clags_strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max)
+CLAGS_API int64_t clags_strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max)
 {
     clags_strtoint_res_t res;
     int64_t result = clags_strtoint_range_s(str, &res, base, min, max);
@@ -1543,47 +1542,47 @@ int64_t clags_strtoint_range(const char *str, char **endptr, int base, int64_t m
     return result;
 }
 
-int8_t clags_strtoint8(const char *str, char **endptr, int base)
+CLAGS_API int8_t clags_strtoint8(const char *str, char **endptr, int base)
 {
     return (int8_t)clags_strtoint_range(str, endptr, base, INT8_MIN, INT8_MAX);
 }
 
-int8_t clags_strtoint8_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API int8_t clags_strtoint8_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return (int8_t)clags_strtoint_range_s(str, res, base, INT8_MIN, INT8_MAX);
 }
 
-int16_t clags_strtoint16(const char *str, char **endptr, int base)
+CLAGS_API int16_t clags_strtoint16(const char *str, char **endptr, int base)
 {
     return (int16_t)clags_strtoint_range(str, endptr, base,INT16_MIN, INT16_MAX);
 }
 
-int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return (int16_t)clags_strtoint_range_s(str, res, base, INT16_MIN, INT16_MAX);
 }
 
-int32_t clags_strtoint32(const char *str, char **endptr, int base)
+CLAGS_API int32_t clags_strtoint32(const char *str, char **endptr, int base)
 {
     return (int32_t)clags_strtoint_range(str, endptr, base, INT32_MIN, INT32_MAX);
 }
 
-int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return (int32_t)clags_strtoint_range_s(str, res, base, INT32_MIN, INT32_MAX);
 }
 
-int64_t clags_strtoint64(const char *str, char **endptr, int base)
+CLAGS_API int64_t clags_strtoint64(const char *str, char **endptr, int base)
 {
     return clags_strtoint_range(str, endptr, base, INT64_MIN, INT64_MAX);
 }
 
-int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return clags_strtoint_range_s(str, res, base, INT64_MIN, INT64_MAX);
 }
 
-uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max)
+CLAGS_API uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max)
 {
     if (res) memset(res, 0, sizeof(*res));
     if (!str || min > max || base < 0 || base == 1 || base > 36){
@@ -1649,7 +1648,7 @@ end:
     return result;
 }
 
-uint64_t clags_strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max)
+CLAGS_API uint64_t clags_strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max)
 {
     clags_strtoint_res_t res;
     uint64_t result = clags_strtouint_range_s(str, &res, base, min, max);
@@ -1659,42 +1658,42 @@ uint64_t clags_strtouint_range(const char *str, char **endptr, int base, uint64_
     return result;
 }
 
-uint8_t clags_strtouint8(const char *str, char **endptr, int base)
+CLAGS_API uint8_t clags_strtouint8(const char *str, char **endptr, int base)
 {
     return (uint8_t)clags_strtouint_range(str, endptr, base, 0, UINT8_MAX);
 }
 
-uint8_t clags_strtouint8_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API uint8_t clags_strtouint8_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return (uint8_t)clags_strtouint_range_s(str, res, base, 0, UINT8_MAX);
 }
 
-uint16_t clags_strtouint16(const char *str, char **endptr, int base)
+CLAGS_API uint16_t clags_strtouint16(const char *str, char **endptr, int base)
 {
     return (uint16_t)clags_strtouint_range(str, endptr, base, 0, UINT16_MAX);
 }
 
-uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return (uint16_t)clags_strtouint_range_s(str, res, base, 0, UINT16_MAX);
 }
 
-uint32_t clags_strtouint32(const char *str, char **endptr, int base)
+CLAGS_API uint32_t clags_strtouint32(const char *str, char **endptr, int base)
 {
     return (uint32_t)clags_strtouint_range(str, endptr, base, 0, UINT32_MAX);
 }
 
-uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return (uint32_t)clags_strtouint_range_s(str, res, base, 0, UINT32_MAX);
 }
 
-uint64_t clags_strtouint64(const char *str, char **endptr, int base)
+CLAGS_API uint64_t clags_strtouint64(const char *str, char **endptr, int base)
 {
     return clags_strtouint_range(str, endptr, base, 0, UINT64_MAX);
 }
 
-uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base)
+CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base)
 {
     return clags_strtouint_range_s(str, res, base, 0, UINT64_MAX);
 }
@@ -1703,7 +1702,7 @@ uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int bas
 
 /* Value Type Verifiers */
 
-bool clags_verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_string(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     (void) arg_name;
@@ -1711,7 +1710,7 @@ bool clags_verify_string(clags_config_t *config, const char *arg_name, const cha
     return true;
 }
 
-bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     if (clags__strcasecmp(arg, "true") == 0 || clags__strcasecmp(arg, "yes") == 0 || clags__strcasecmp(arg, "y") == 0){
@@ -1727,7 +1726,7 @@ bool clags_verify_bool(clags_config_t *config, const char *arg_name, const char 
 
 #ifndef CLAGS_NO_INT_TYPES
 
-bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, int64_t *variable)
+CLAGS_PRIV bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, int64_t *variable)
 {
     int64_t min, max;
     if (range != NULL){
@@ -1756,12 +1755,12 @@ bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, c
     return true;
 }
 
-bool clags_verify_int(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_int(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     return clags__verify_signed_int(config, Clags_Int, data, arg_name, arg, variable);
 }
 
-bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
@@ -1771,7 +1770,7 @@ bool clags_verify_int8(clags_config_t *config, const char *arg_name, const char 
     return result;
 }
 
-bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
@@ -1781,7 +1780,7 @@ bool clags_verify_int16(clags_config_t *config, const char *arg_name, const char
     return result;
 }
 
-bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
@@ -1791,7 +1790,7 @@ bool clags_verify_int32(clags_config_t *config, const char *arg_name, const char
     return result;
 }
 
-bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     int64_t var;
@@ -1801,7 +1800,7 @@ bool clags_verify_int64(clags_config_t *config, const char *arg_name, const char
     return result;
 }
 
-bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, uint64_t *variable)
+CLAGS_PRIV bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, uint64_t *variable)
 {
     uint64_t min, max;
     if (range){
@@ -1832,12 +1831,12 @@ bool clags__verify_unsigned_int(clags_config_t *config, clags_value_type_t type,
     return true;
 }
 
-bool clags_verify_uint(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_uint(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     return clags__verify_unsigned_int(config, Clags_UInt, data, arg_name, arg, variable);
 }
 
-bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
@@ -1847,7 +1846,7 @@ bool clags_verify_uint8(clags_config_t *config, const char *arg_name, const char
     return result;
 }
 
-bool clags_verify_uint16(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_uint16(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
@@ -1857,7 +1856,7 @@ bool clags_verify_uint16(clags_config_t *config, const char *arg_name, const cha
     return result;
 }
 
-bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
@@ -1867,7 +1866,7 @@ bool clags_verify_uint32(clags_config_t *config, const char *arg_name, const cha
     return result;
 }
 
-bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     uint64_t var;
@@ -1881,7 +1880,7 @@ bool clags_verify_uint64(clags_config_t *config, const char *arg_name, const cha
 
 #ifndef CLAGS_NO_REAL_TYPES
 
-bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *variable)
+CLAGS_PRIV bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *variable)
 {
     double min, max;
     if (range != NULL){
@@ -1910,12 +1909,12 @@ bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_r
     return true;
 }
 
-bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_real(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     return clags__verify_real(config, Clags_Real, data, arg_name, arg, variable);
 }
 
-bool clags_verify_float(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_float(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     double var;
@@ -1925,7 +1924,7 @@ bool clags_verify_float(clags_config_t *config, const char *arg_name, const char
     return result;
 }
 
-bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_double(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     double var;
@@ -1939,7 +1938,7 @@ bool clags_verify_double(clags_config_t *config, const char *arg_name, const cha
 
 #ifndef CLAGS_NO_PATH_TYPES
 
-bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1951,7 +1950,7 @@ bool clags_verify_path(clags_config_t *config, const char *arg_name, const char 
     return true;
 }
 
-bool clags_verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1971,7 +1970,7 @@ bool clags_verify_file(clags_config_t *config, const char *arg_name, const char 
     }
 }
 
-bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
@@ -1995,7 +1994,7 @@ bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *
 
 #ifndef CLAGS_NO_SIZE_TYPES
 
-bool clags_verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
 
@@ -2036,7 +2035,7 @@ bool clags_verify_size(clags_config_t *config, const char *arg_name, const char 
 
 #ifndef CLAGS_NO_TIME_TYPES
 
-bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_strtoint_res_t res;
@@ -2093,7 +2092,7 @@ bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const cha
     return true;
 }
 
-bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
     clags_strtoint_res_t res;
@@ -2155,7 +2154,7 @@ bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const ch
 
 #endif // !CLAGS_NO_TIME_TYPES
 
-bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_choices_t  *choices = (clags_choices_t*) data;
     for (size_t i=0; i<choices->count; ++i){
@@ -2170,7 +2169,7 @@ bool clags_verify_choice(clags_config_t *config, const char *arg_name, const cha
     return false;
 }
 
-bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
     for (size_t i=0; i<subcmds->count; ++i){
@@ -2185,7 +2184,7 @@ bool clags_verify_subcmd(clags_config_t *config, const char *arg_name, const cha
     return false;
 }
 
-bool clags_verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_API bool clags_verify_custom(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_custom_t *custom = (clags_custom_t*) data;
     if (custom && custom->verify){
@@ -2196,7 +2195,7 @@ bool clags_verify_custom(clags_config_t *config, const char *arg_name, const cha
 
 /* Verifier Dispatching */
 
-static inline bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_PRIV bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_list_t *list = (clags_list_t*) variable;
     char *ptr = NULL;
@@ -2213,7 +2212,7 @@ static inline bool clags__append_to_list(clags_config_t *config, clags_value_typ
     return false;
 }
 
-static inline bool clags__set_arg(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data, bool is_list)
+CLAGS_PRIV bool clags__set_arg(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data, bool is_list)
 {
     // dispatch to the correct verifier based on the provided value type
     bool result;
@@ -2227,7 +2226,7 @@ static inline bool clags__set_arg(clags_config_t *config, clags_value_type_t val
     return result;
 }
 
-static inline void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
+CLAGS_PRIV void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
 {
     if (!flag->variable) return;
     switch (flag->type){
@@ -2248,7 +2247,7 @@ static inline void clags__set_flag(clags_config_t *config, clags_flag_t *flag)
 
 /* Validation */
 
-bool clags__validate_default(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *value, void *data, bool is_list)
+CLAGS_PRIV bool clags__validate_default(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *value, void *data, bool is_list)
 {
     if (is_list){
         clags_log(config, Clags_ConfigError, "default values are not supported for lists. Argument '%s' must be initialized via user input only.", arg_name);
@@ -2262,7 +2261,7 @@ bool clags__validate_default(clags_config_t *config, clags_value_type_t value_ty
     return true;
 }
 
-bool clags__validate_list(clags_config_t *config, void *variable, clags_value_type_t value_type, const char *arg_name)
+CLAGS_PRIV bool clags__validate_list(clags_config_t *config, void *variable, clags_value_type_t value_type, const char *arg_name)
 {
     clags_list_t *list = (clags_list_t*) variable;
     if (list != NULL){
@@ -2290,7 +2289,7 @@ bool clags__validate_list(clags_config_t *config, void *variable, clags_value_ty
     return true;
 }
 
-clags_config_t* clags__validate_none(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_none(clags_config_t *config, const char *arg_name, void *data)
 {
     (void) config;
     (void) arg_name;
@@ -2298,7 +2297,7 @@ clags_config_t* clags__validate_none(clags_config_t *config, const char *arg_nam
     return NULL;
 }
 
-clags_config_t* clags__validate_subcmd(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_subcmd(clags_config_t *config, const char *arg_name, void *data)
 {
     // a subcommand argument should be provided with a valid `clags_subcmds_t` 
     if (data == NULL){
@@ -2332,7 +2331,7 @@ clags_config_t* clags__validate_subcmd(clags_config_t *config, const char *arg_n
     return NULL;
 }
 
-clags_config_t* clags__validate_choice(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_choice(clags_config_t *config, const char *arg_name, void *data)
 {
     // a choice argument should be provided with a valid `clags_choices_t`
     clags_choices_t* choices = (clags_choices_t*) data;
@@ -2355,7 +2354,7 @@ clags_config_t* clags__validate_choice(clags_config_t *config, const char *arg_n
     return NULL;
 }
 
-clags_config_t* clags__validate_custom(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_custom(clags_config_t *config, const char *arg_name, void *data)
 {
     // a custom argument should be provided with a valid `clags_custom_t`
     clags_custom_t *custom = (clags_custom_t*) data;
@@ -2370,7 +2369,7 @@ clags_config_t* clags__validate_custom(clags_config_t *config, const char *arg_n
     return NULL;
 }
 
-clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t type, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t type, const char *arg_name, void *data)
 {
     // check whether the provided range contraint is of the correct type
     clags_range_t *range = (clags_range_t*)data;
@@ -2413,12 +2412,12 @@ clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t
 
 #ifndef CLAGS_NO_INT_TYPES
 
-clags_config_t* clags__validate_int(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_int(clags_config_t *config, const char *arg_name, void *data)
 {
     return clags__validate_range(config, Clags_Int, arg_name, data);
 }
 
-clags_config_t* clags__validate_uint(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_uint(clags_config_t *config, const char *arg_name, void *data)
 {
     return clags__validate_range(config, Clags_UInt, arg_name, data);
 }
@@ -2427,14 +2426,14 @@ clags_config_t* clags__validate_uint(clags_config_t *config, const char *arg_nam
 
 #ifndef CLAGS_NO_REAL_TYPES
 
-clags_config_t* clags__validate_real(clags_config_t *config, const char *arg_name, void *data)
+CLAGS_PRIV clags_config_t* clags__validate_real(clags_config_t *config, const char *arg_name, void *data)
 {
     return clags__validate_range(config, Clags_Real, arg_name, data);
 }
 
 #endif // !CLAGS_NO_REAL_TYPES
 
-bool clags__validate_value_type(clags_config_t *config, const char *arg_name, clags_value_type_t type)
+CLAGS_PRIV bool clags__validate_value_type(clags_config_t *config, const char *arg_name, clags_value_type_t type)
 {
     switch (type){
 #define X(type, verify_func, name, vtype, validate_func, usage_func) case type: return true;
@@ -2445,7 +2444,7 @@ bool clags__validate_value_type(clags_config_t *config, const char *arg_name, cl
     return false;
 }
 
-clags_config_t* clags__validate_positional(clags_config_t *config, clags_positional_t pos)
+CLAGS_PRIV clags_config_t* clags__validate_positional(clags_config_t *config, clags_positional_t pos)
 {
     // validate the argument's value type and its requirements
     if (!clags__validate_value_type(config, pos.arg_name, pos.value_type)) return config;
@@ -2464,7 +2463,7 @@ clags_config_t* clags__validate_positional(clags_config_t *config, clags_positio
     return NULL;
 }
 
-clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t opt)
+CLAGS_PRIV clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t opt)
 {
     // build a temporary argument name for logging
     char buf[3] = {'-', '\0', '\0'};
@@ -2501,7 +2500,7 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
     return NULL;
 }
 
-clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
+CLAGS_PRIV clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
 {
     // build a temporary argument name for logging
     char buf[3] = {'-', '\0', '\0'};
@@ -2532,7 +2531,7 @@ clags_config_t* clags__validate_flag(clags_config_t *config, clags_flag_t flag)
     return NULL;
 }
 
-bool clags__validate_duplicates(clags_config_t *config, char short_flag, const char *long_flag, size_t index)
+CLAGS_PRIV bool clags__validate_duplicates(clags_config_t *config, char short_flag, const char *long_flag, size_t index)
 {
     clags_config_t *ancestor = config;
     bool reachable = true;
@@ -2594,9 +2593,9 @@ typedef struct{
     size_t suffix;
 } clags__usage_lengths_t;
 
-static clags__usage_lengths_t clags__print_lhs(clags_sb_t *sb, char short_flag, const char *long_flag, const char *arg_name, bool optional, int remaining);
+CLAGS_PRIV clags__usage_lengths_t clags__print_lhs(clags_sb_t *sb, char short_flag, const char *long_flag, const char *arg_name, bool optional, int remaining);
 
-static inline void clags__validate_alignment(clags_config_t *config, size_t *buff_size, size_t needed, const char *arg_name)
+CLAGS_PRIV void clags__validate_alignment(clags_config_t *config, size_t *buff_size, size_t needed, const char *arg_name)
 {
     size_t bytes_needed = needed + 1; // for null-terminator
     size_t max_bytes = CLAGS__USAGE_TEMP_BUFFER_SIZE(config->options.max_usage_alignment);
@@ -2612,7 +2611,7 @@ static inline void clags__validate_alignment(clags_config_t *config, size_t *buf
     }
 }
 
-clags_config_t* clags_validate(const char *name, clags_config_t *config)
+CLAGS_API clags_config_t* clags_validate(const char *name, clags_config_t *config)
 {
     if (config == NULL) return NULL;
     if (config->state != Clags_Config_Unvalidated) return NULL;
@@ -2796,7 +2795,7 @@ typedef struct {
 } clags__parser_t;
 
 // sort the argument types into their respective pre-allocated containers and track their count
-void clags__sort_args(clags__args_t *args, clags_config_t *config)
+CLAGS_PRIV void clags__sort_args(clags__args_t *args, clags_config_t *config)
 {
     for (size_t i=0; i<config->args_count; ++i){
         switch(config->args[i].type){
@@ -2827,7 +2826,7 @@ void clags__sort_args(clags__args_t *args, clags_config_t *config)
     }
 }
 
-clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *long_flag, clags_config_t **found_in)
+CLAGS_PRIV clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *long_flag, clags_config_t **found_in)
 {
     clags_config_t *ancestor = config;
     bool findable = true;
@@ -2872,7 +2871,7 @@ clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, char *
     return NULL;
 }
 
-clags_arg_t* clags__search_short_options_and_flags(clags_config_t *config, char short_flag, clags_config_t **found_in)
+CLAGS_PRIV clags_arg_t* clags__search_short_options_and_flags(clags_config_t *config, char short_flag, clags_config_t **found_in)
 {
     clags_config_t *ancestor = config;
     bool findable = true;
@@ -2904,7 +2903,7 @@ clags_arg_t* clags__search_short_options_and_flags(clags_config_t *config, char 
 }
 
 // try to return the next not-ignored argument
-const char* clags__get_next_arg(clags_config_t *config, clags__parser_t *parser)
+CLAGS_PRIV const char* clags__get_next_arg(clags_config_t *config, clags__parser_t *parser)
 {
     const char *ignore_prefix = config->options.ignore_prefix;
     size_t ignore_prefix_len = ignore_prefix ? strlen(ignore_prefix) : 0;
@@ -2919,7 +2918,7 @@ const char* clags__get_next_arg(clags_config_t *config, clags__parser_t *parser)
     }
 }
 
-bool clags__parse_long_option(clags_config_t *config, clags__parser_t *parser, const char *arg, clags_option_t *opt)
+CLAGS_PRIV bool clags__parse_long_option(clags_config_t *config, clags__parser_t *parser, const char *arg, clags_option_t *opt)
 {
     const char *value = arg + 2 + strlen(opt->long_flag); // skip '--<flag>', value points to remaining rest of the argument
     if (*value == '\0'){
@@ -2944,7 +2943,7 @@ bool clags__parse_long_option(clags_config_t *config, clags__parser_t *parser, c
     return clags__set_arg(config, opt->value_type, arg, value, opt->variable, opt->using._data, opt->is_list);
 }
 
-bool clags__parse_long_flag(clags_config_t *config, clags_flag_t *flag, bool *exit)
+CLAGS_PRIV bool clags__parse_long_flag(clags_config_t *config, clags_flag_t *flag, bool *exit)
 {
     // set the flag variable
     clags__set_flag(config, flag);
@@ -2952,7 +2951,7 @@ bool clags__parse_long_flag(clags_config_t *config, clags_flag_t *flag, bool *ex
     return true;
 }
 
-bool clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_t *parser, bool *do_exit)
+CLAGS_PRIV bool clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_t *parser, bool *do_exit)
 {
     *do_exit = false;
     const char *arg = parser->argv[parser->index];
@@ -3019,7 +3018,7 @@ bool clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_
     return true;
 }
 
-clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t *parser, bool *exit)
+CLAGS_PRIV clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t *parser, bool *exit)
 {
     *exit = false;
     const char *arg = parser->argv[parser->index];
@@ -3051,7 +3050,7 @@ clags_config_t* clags__parse_positional(clags_config_t *config, clags__parser_t 
 }
 
 // apply the default inputs for all arguments of a config
-bool clags__set_defaults(clags_config_t *config)
+CLAGS_PRIV bool clags__set_defaults(clags_config_t *config)
 {
     for (size_t i=0; i<config->args_count; ++i){
         clags_arg_t arg = config->args[i];
@@ -3076,7 +3075,7 @@ bool clags__set_defaults(clags_config_t *config)
     return true;
 }
 
-clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
+CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 {
     if (config == NULL || argc < 1) return NULL;
     // validate the config
@@ -3230,7 +3229,7 @@ defer:
 
 /* Usage Printing */
 
-static clags__usage_lengths_t clags__print_lhs(clags_sb_t *sb, char short_flag, const char *long_flag, const char *arg_name, bool optional, int remaining)
+CLAGS_PRIV clags__usage_lengths_t clags__print_lhs(clags_sb_t *sb, char short_flag, const char *long_flag, const char *arg_name, bool optional, int remaining)
 {
     clags__usage_lengths_t result = {0};
     
@@ -3279,7 +3278,7 @@ static clags__usage_lengths_t clags__print_lhs(clags_sb_t *sb, char short_flag, 
 
 // write the lhs of a usage line into a buffer
 // truncate the format where possible if the format would exceed the config's usage alignment
-static void clags__format_lhs(clags_sb_t *sb, size_t buffer_size, char short_flag, const char *long_flag, const char *arg_name, bool optional)
+CLAGS_PRIV void clags__format_lhs(clags_sb_t *sb, size_t buffer_size, char short_flag, const char *long_flag, const char *arg_name, bool optional)
 {
     // get the length of the format to print
     clags__usage_lengths_t lengths = clags__print_lhs(NULL, short_flag, long_flag, arg_name, optional, -1);
@@ -3304,7 +3303,7 @@ static void clags__format_lhs(clags_sb_t *sb, size_t buffer_size, char short_fla
     (void) clags__print_lhs(sb, short_flag, long_flag, arg_name, optional, remaining);
 }
 
-void clags__choice_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__choice_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     clags_choices_t *choices = (clags_choices_t*) data;
     if (!choices->print_no_details || choices->count > CLAGS_MAX_INLINE_CHOICES){
@@ -3344,7 +3343,7 @@ void clags__choice_usage(FILE* file, clags_config_t *config, clags_value_type_t 
     }
 }
 
-void clags__subcmd_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__subcmd_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     (void) is_list;
     clags_subcmds_t *subcmds = (clags_subcmds_t*) data;
@@ -3357,7 +3356,7 @@ void clags__subcmd_usage(FILE *file, clags_config_t *config, clags_value_type_t 
     }
 }
 
-void clags__custom_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__custom_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     (void) config;
     (void) type;
@@ -3373,7 +3372,7 @@ void clags__custom_usage(FILE *file, clags_config_t *config, clags_value_type_t 
 
 #ifndef CLAGS_NO_INT_TYPES
 
-void clags__int_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__int_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     (void) config;
     clags_range_t *range = (clags_range_t*) data;
@@ -3383,7 +3382,7 @@ void clags__int_usage(FILE *file, clags_config_t *config, clags_value_type_t typ
     if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-void clags__uint_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__uint_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     (void) config;
     clags_range_t *range = (clags_range_t*) data;
@@ -3397,7 +3396,7 @@ void clags__uint_usage(FILE *file, clags_config_t *config, clags_value_type_t ty
 
 #ifndef CLAGS_NO_REAL_TYPES
 
-void clags__real_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__real_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     (void) config;
     clags_range_t *range = (clags_range_t*) data;
@@ -3409,7 +3408,7 @@ void clags__real_usage(FILE* file, clags_config_t *config, clags_value_type_t ty
 
 #endif // !CLAGS_NO_REAL_TYPES
 
-void clags__default_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
+CLAGS_PRIV void clags__default_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
     (void) config;
     (void) data;
@@ -3417,7 +3416,7 @@ void clags__default_usage(FILE* file, clags_config_t *config, clags_value_type_t
     if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-void clags__subcommand_path_usage(FILE *file, const char *program_name, clags_config_t *config)
+CLAGS_PRIV void clags__subcommand_path_usage(FILE *file, const char *program_name, clags_config_t *config)
 {
     if (config->parent){
         clags__subcommand_path_usage(file, program_name, config->parent);
@@ -3427,7 +3426,7 @@ void clags__subcommand_path_usage(FILE *file, const char *program_name, clags_co
     }
 }
 
-static inline void clags__positional_usage(clags_config_t *config, FILE *file, clags_positional_t pos, clags_sb_t *sb)
+CLAGS_PRIV void clags__positional_usage(clags_config_t *config, FILE *file, clags_positional_t pos, clags_sb_t *sb)
 {
     // positional usage is : <name> [(optional)]
     sb->count = 0;
@@ -3438,7 +3437,7 @@ static inline void clags__positional_usage(clags_config_t *config, FILE *file, c
     fprintf(file, "\n");
 }
 
-static inline void clags__option_usage(clags_config_t *config, FILE *file, clags_option_t opt, clags_sb_t *sb)
+CLAGS_PRIV void clags__option_usage(clags_config_t *config, FILE *file, clags_option_t opt, clags_sb_t *sb)
 {
     // option usage is : <flags> : <description> <type-specific-usage>
     sb->count = 0;
@@ -3449,7 +3448,7 @@ static inline void clags__option_usage(clags_config_t *config, FILE *file, clags
     fprintf(file, "\n");
 }
 
-static inline void clags__flag_usage(clags_config_t *config, FILE *file, clags_flag_t flag, clags_sb_t *sb)
+CLAGS_PRIV void clags__flag_usage(clags_config_t *config, FILE *file, clags_flag_t flag, clags_sb_t *sb)
 {
     // flag usage is : <flags> : <description>
     sb->count = 0;
@@ -3458,7 +3457,7 @@ static inline void clags__flag_usage(clags_config_t *config, FILE *file, clags_f
     fprintf(file, "    %*.*s : %s%s\n", CLAGS__USAGE_PRINTF_ALIGNMENT(config->usage_alignment), (int) buffer_size - 1, sb->items, flag.description, flag.exit?" and exit":"");
 }
 
-void clags__inherited_options_usage(FILE *file, clags_config_t *config, clags_sb_t *sb)
+CLAGS_PRIV void clags__inherited_options_usage(FILE *file, clags_config_t *config, clags_sb_t *sb)
 {
     if (config->options.no_inheritance) return;
     clags_config_t *ancestor = config->parent;
@@ -3478,7 +3477,7 @@ void clags__inherited_options_usage(FILE *file, clags_config_t *config, clags_sb
     }
 }
 
-void clags__inherited_flags_usage(FILE *file, clags_config_t *config, clags_sb_t *sb)
+CLAGS_PRIV void clags__inherited_flags_usage(FILE *file, clags_config_t *config, clags_sb_t *sb)
 {
     if (config->options.no_inheritance) return;
     clags_config_t *ancestor = config->parent;
@@ -3498,7 +3497,7 @@ void clags__inherited_flags_usage(FILE *file, clags_config_t *config, clags_sb_t
     }
 }
 
-void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config)
+CLAGS_API void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config)
 {
     if (file == NULL || config == NULL || config->args == NULL) return;
 
@@ -3608,14 +3607,14 @@ void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *c
     clags_sb_free(&sb);
 }
 
-void clags_usage(const char *program_name, clags_config_t *config)
+CLAGS_API void clags_usage(const char *program_name, clags_config_t *config)
 {
     clags_usage_to_file(stdout, program_name, config);
 }
 
 /* Deallocation Functions */
 
-void clags_list_free(clags_list_t *list)
+CLAGS_API void clags_list_free(clags_list_t *list)
 {
     if (list == NULL) return;
     // free the allocated memory
@@ -3625,7 +3624,7 @@ void clags_list_free(clags_list_t *list)
     list->count = list->capacity = 0;
 }
 
-void clags_config_free_allocs(clags_config_t *config)
+CLAGS_API void clags_config_free_allocs(clags_config_t *config)
 {
     if (config == NULL) return;
     clags_list_t *allocs = &config->allocs;
@@ -3639,7 +3638,7 @@ void clags_config_free_allocs(clags_config_t *config)
     clags_list_free(allocs);
 }
 
-void clags_config_free(clags_config_t *config)
+CLAGS_API void clags_config_free(clags_config_t *config)
 {
     if (config == NULL) return;
     for (size_t i=0; i<config->args_count; ++i){
@@ -3658,7 +3657,7 @@ void clags_config_free(clags_config_t *config)
     clags_config_free_allocs(config);
 }
 
-void clags_free(clags_config_t *config)
+CLAGS_API void clags_free(clags_config_t *config)
 {
     if (config == NULL) return;
     for (size_t i=0; i<config->args_count; ++i){
