@@ -2413,9 +2413,21 @@ clags_config_t* clags__validate_real(clags_config_t *config, const char *arg_nam
 
 #endif // !CLAGS_NO_REAL_TYPES
 
+bool clags__validate_value_type(clags_config_t *config, const char *arg_name, clags_value_type_t type)
+{
+    switch (type){
+#define X(type, verify_func, name, vtype, validate_func, usage_func) case type: return true;
+        CLAGS__TYPES
+#undef X
+    }
+    clags_log(config, Clags_ConfigError, "invalid `value_type` of argument '%s': %d! Only use types from `clags_value_type_t`!", arg_name, type);
+    return false;
+}
+
 clags_config_t* clags__validate_positional(clags_config_t *config, clags_positional_t pos)
 {
     // validate the argument's value type and its requirements
+    if (!clags__validate_value_type(config, pos.arg_name, pos.value_type)) return config;
     clags_config_t *failed_config = clags__types[pos.value_type].validate(config, pos.arg_name, pos.using._data);
     if (failed_config != NULL) return failed_config;
     if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return config;
@@ -2451,6 +2463,7 @@ clags_config_t* clags__validate_option(clags_config_t *config, clags_option_t op
     }
 
     // validate the option's value type and its requirements
+    if (!clags__validate_value_type(config, name, opt.value_type)) return config;
     if (opt.value_type == Clags_Subcmd){
         clags_log(config, Clags_ConfigError, "option argument '%s' in config '%s' may not be a subcommand!", name, config->name);
         return config;
@@ -2634,7 +2647,8 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
     size_t alignment_buffer_size = CLAGS__USAGE_TEMP_BUFFER_SIZE(config->options.min_usage_alignment);
 
     for (size_t i=0; i<config->args_count; ++i){
-        switch (config->args[i].type){
+        clags_arg_type_t arg_type = config->args[i].type;
+        switch (arg_type){
             case Clags_Positional:{
                 // validate positional argument
                 clags_positional_t pos = config->args[i].as.pos;
@@ -2715,6 +2729,10 @@ clags_config_t* clags_validate(const char *name, clags_config_t *config)
                 clags__usage_lengths_t lengths = clags__print_lhs(NULL, flag.short_flag, flag.long_flag, NULL, false, -1);
                 clags__validate_alignment(config, &alignment_buffer_size, lengths.total, flag_name);
             } break;
+            default:{
+                clags_log(config, Clags_ConfigError, "invalid `arg_type` of argument %zu: %d! Only use types from `clags_arg_type_t`!", i, arg_type);
+                clags_return_defer(config);
+            }
         }
     }
 defer:
