@@ -13,6 +13,7 @@
 	- `.validate`: a custom validation function of type `clags_validate_func_t`
   - added `clags_custom(name, verify, ...)` macro for easier creation of `clags_custom_t`
 - new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
+- new redefinable `CLAGS_API` and `CLAGS_PRIV` macros for function visibility customization
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`

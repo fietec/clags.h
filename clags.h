@@ -155,14 +155,10 @@
 #ifndef CLAGS_H
 #define CLAGS_H
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <string.h>
-#include <errno.h>
-#include <float.h>
-#include <ctype.h>
-#include <inttypes.h>
 #include <stdarg.h>
 
 // public api linkage / visibility
@@ -1041,26 +1037,26 @@ CLAGS_API int8_t  clags_strtoint8 (const char *str, char **endptr, int base);
 CLAGS_API int16_t clags_strtoint16(const char *str, char **endptr, int base);
 CLAGS_API int32_t clags_strtoint32(const char *str, char **endptr, int base);
 CLAGS_API int64_t clags_strtoint64(const char *str, char **endptr, int base);
-CLAGS_API int64_t strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max);
+CLAGS_API int64_t strtoint_range  (const char *str, char **endptr, int base, int64_t min, int64_t max);
 
 CLAGS_API uint8_t  clags_strtouint8 (const char *str, char **endptr, int base);
 CLAGS_API uint16_t clags_strtouint16(const char *str, char **endptr, int base);
 CLAGS_API uint32_t clags_strtouint32(const char *str, char **endptr, int base);
 CLAGS_API uint64_t clags_strtouint64(const char *str, char **endptr, int base);
-CLAGS_API uint64_t strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max);
+CLAGS_API uint64_t strtouint_range  (const char *str, char **endptr, int base, uint64_t min, uint64_t max);
 
 // safe/structured functions: returns the parsing result via a `clags_strtoint_res_t` struct
 CLAGS_API int8_t  clags_strtoint8_s (const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base);
-CLAGS_API int64_t strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
+CLAGS_API int64_t strtoint_range_s  (const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
 
 CLAGS_API uint8_t  clags_strtouint8_s (const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base);
-CLAGS_API uint64_t strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
+CLAGS_API uint64_t strtouint_range_s  (const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
 
 #endif // !CLAGS_NO_STRTOINT
 
@@ -1071,6 +1067,12 @@ CLAGS_API uint64_t strtouint_range_s(const char *str, clags_strtoint_res_t *res,
   Define `CLAGS_IMPLEMENTATION` to access, otherwise this file will act as a regular header.
 */
 #ifdef CLAGS_IMPLEMENTATION
+
+#include <string.h>
+#include <errno.h>
+#include <float.h>
+#include <ctype.h>
+#include <inttypes.h>
 
 typedef struct{
     clags_verify_func_t verify;
