@@ -1016,7 +1016,7 @@ CLAGS_API bool clags_path_exists(const char *path);
   Returns:
     bool            : the existance of the path
 */
-CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type)
+CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type);
 
 /* Logging */
 
