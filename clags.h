@@ -3144,7 +3144,7 @@ CLAGS_PRIV bool clags__set_defaults(clags_config_t *config)
 
 CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 {
-    if (config == NULL || argc < 1) return NULL;
+    if (config == NULL || argc < 1 || argv == NULL) return NULL;
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
         clags_config_t *failed_config = clags_validate(argv[0], config);
