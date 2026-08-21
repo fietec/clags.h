@@ -132,7 +132,7 @@
   Value Types
   -----------
 
-  This table describes the supported value types and their expected syntax. See the `CLAGS__TYPES` macro for more details.
+  This table describes the supported value types and their expected syntax. See the `CLAGS__VALUE_TYPES` macro for more details.
 
   Value Type    | Syntax / Examples           | Notes
   --------------------------------------------------------------------------
@@ -171,6 +171,7 @@
 #define CLAGS_PRIV static
 #endif // CLAGS_PRIV
 
+// feature stripping macrosa
 #ifdef CLAGS_NO_COMPLEX_TYPES
   #define CLAGS_NO_INT_TYPES
   #define CLAGS_NO_REAL_TYPES
@@ -309,73 +310,75 @@
 #    define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK)
 #endif
 
-#define CLAGS__TYPE(type, verify_func, name, value_type, validate_func, usage_func) X(type, verify_func, name, value_type, validate_func, usage_func)
-#define CLAGS__IGNORE_TYPE(type, verify_func, name, value_type, validate_func, usage_func)
+#define CLAGS__VTYPE(type, verify_func, name, value_type, validate_func, usage_func) X(type, verify_func, name, value_type, validate_func, usage_func)
+#define CLAGS__IGNORE_VTYPE(type, verify_func, name, value_type, validate_func, usage_func)
 
-#define CLAGS__BASIC_TYPE CLAGS__TYPE
+#define CLAGS__BASIC_VTYPE CLAGS__VTYPE
 
 #ifdef CLAGS_NO_INT_TYPES
-  #define CLAGS__INT_TYPE CLAGS__IGNORE_TYPE
+  #define CLAGS__INT_VTYPE CLAGS__IGNORE_VTYPE
 #else
-  #define CLAGS__INT_TYPE CLAGS__TYPE
+  #define CLAGS__INT_VTYPE CLAGS__VTYPE
 #endif // CLAGS_NO_INT_TYPES
 
 #ifdef CLAGS_NO_REAL_TYPES
-  #define CLAGS__REAL_TYPE CLAGS__IGNORE_TYPE
+  #define CLAGS__REAL_VTYPE CLAGS__IGNORE_VTYPE
 #else
-  #define CLAGS__REAL_TYPE CLAGS__TYPE
+  #define CLAGS__REAL_VTYPE CLAGS__VTYPE
 #endif // CLAGS_NO_REAL_TYPES
 
 #ifdef CLAGS_NO_PATH_TYPES
-  #define CLAGS__PATH_TYPE CLAGS__IGNORE_TYPE
+  #define CLAGS__PATH_VTYPE CLAGS__IGNORE_VTYPE
+  #define CLAGS__PATH_TYPE(type, name)
 #else
-  #define CLAGS__PATH_TYPE CLAGS__TYPE
+  #define CLAGS__PATH_VTYPE CLAGS__VTYPE
+  #define CLAGS__PATH_TYPE(type, name) X(type, name)
 #endif // CLAGS_NO_PATH_TYPES
 
 #ifdef CLAGS_NO_SIZE_TYPES
-  #define CLAGS__SIZE_TYPE CLAGS__IGNORE_TYPE
+  #define CLAGS__SIZE_VTYPE CLAGS__IGNORE_VTYPE
 #else
-  #define CLAGS__SIZE_TYPE CLAGS__TYPE
+  #define CLAGS__SIZE_VTYPE CLAGS__VTYPE
 #endif // CLAGS_NO_SIZE_TYPES
 
 #ifdef CLAGS_NO_TIME_TYPES
-  #define CLAGS__TIME_TYPE CLAGS__IGNORE_TYPE
+  #define CLAGS__TIME_VTYPE CLAGS__IGNORE_VTYPE
 #else
-  #define CLAGS__TIME_TYPE CLAGS__TYPE
+  #define CLAGS__TIME_VTYPE CLAGS__VTYPE
 #endif // CLAGS_NO_TIME_TYPES
 
 // the definition of all supported value types
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
-#define CLAGS__TYPES                                                                                                                                                                                        \
- /* Category          Enum Value    Verification Func    Name       Var Type         Validation Func         Usage Func                                                                                  */ \
- /* ================= ============= ==================== ========== ================ ======================= ==========                                                                                  */ \
-    CLAGS__BASIC_TYPE(Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
-    CLAGS__BASIC_TYPE(Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
-    CLAGS__BASIC_TYPE(Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
-    CLAGS__BASIC_TYPE(Clags_Subcmd, clags_verify_subcmd, "subcmd",  clags_subcmd_t*, clags__validate_subcmd, clags__subcmd_usage  ) /* subcommand                                                        */ \
-    CLAGS__BASIC_TYPE(Clags_Custom, clags_verify_custom, "custom",  void*,           clags__validate_custom, clags__custom_usage  ) /* custom type, defined via custom verification function             */ \
-    CLAGS__INT_TYPE  (Clags_Int,    clags_verify_int,    "int",     int64_t,         clags__validate_int,    clags__int_usage     ) /* a signed integer within user-defined limits                       */ \
-    CLAGS__INT_TYPE  (Clags_Int8,   clags_verify_int8,   "int8",    int8_t,          clags__validate_none,   clags__default_usage ) /* signed 8-bit integer                                              */ \
-    CLAGS__INT_TYPE  (Clags_Int16,  clags_verify_int16,  "int16",   int16_t,         clags__validate_none,   clags__default_usage ) /* signed 16-bit integer                                             */ \
-    CLAGS__INT_TYPE  (Clags_Int32,  clags_verify_int32,  "int32",   int32_t,         clags__validate_none,   clags__default_usage ) /* signed 32-bit integer                                             */ \
-    CLAGS__INT_TYPE  (Clags_Int64,  clags_verify_int64,  "int64",   int64_t,         clags__validate_none,   clags__default_usage ) /* signed 64-bit integer                                             */ \
-    CLAGS__INT_TYPE  (Clags_UInt,   clags_verify_uint,   "uint",    uint64_t,        clags__validate_uint,   clags__uint_usage    ) /* an unsigned integer within user-defined limits                    */ \
-    CLAGS__INT_TYPE  (Clags_UInt8,  clags_verify_uint8,  "uint8",   uint8_t,         clags__validate_none,   clags__default_usage ) /* unsigned 8-bit integer                                            */ \
-    CLAGS__INT_TYPE  (Clags_UInt16, clags_verify_uint16, "uint16",  uint16_t,        clags__validate_none,   clags__default_usage ) /* unsigned 16-bit integer                                           */ \
-    CLAGS__INT_TYPE  (Clags_UInt32, clags_verify_uint32, "uint32",  uint32_t,        clags__validate_none,   clags__default_usage ) /* unsigned 32-bit integer                                           */ \
-    CLAGS__INT_TYPE  (Clags_UInt64, clags_verify_uint64, "uint64",  uint64_t,        clags__validate_none,   clags__default_usage ) /* unsigned 64-bit integer                                           */ \
-    CLAGS__REAL_TYPE (Clags_Real,   clags_verify_real,   "real",    double,          clags__validate_real,   clags__real_usage    ) /* a fractional number within user-defined limits                    */ \
-    CLAGS__REAL_TYPE (Clags_Float,  clags_verify_float,  "float",   float,           clags__validate_none,   clags__default_usage ) /* a single-precision fractional number                              */ \
-    CLAGS__REAL_TYPE (Clags_Double, clags_verify_double, "double",  double,          clags__validate_none,   clags__default_usage ) /* a double-precision fractional number                              */ \
-    CLAGS__PATH_TYPE (Clags_Path,   clags_verify_path,   "path",    char*,           clags__validate_none,   clags__default_usage ) /* valid filesystem path                                             */ \
-    CLAGS__PATH_TYPE (Clags_File,   clags_verify_file,   "file",    char*,           clags__validate_none,   clags__default_usage ) /* path to a regular file                                            */ \
-    CLAGS__PATH_TYPE (Clags_Dir,    clags_verify_dir,    "dir",     char*,           clags__validate_none,   clags__default_usage ) /* path to a directory                                               */ \
-    CLAGS__SIZE_TYPE (Clags_Size,   clags_verify_size,   "size",    clags_fsize_t,   clags__validate_none,   clags__default_usage ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
-    CLAGS__TIME_TYPE (Clags_TimeS,  clags_verify_time_s, "time",    clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
-    CLAGS__TIME_TYPE (Clags_TimeNS, clags_verify_time_ns,"time_ns", clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
+#define CLAGS__VALUE_TYPES                                                                                                                                                                                   \
+ /* Category           Enum Value    Verification Func    Name       Var Type         Validation Func         Usage Func                                                                                  */ \
+ /* ================== ============= ==================== ========== ================ ======================= ==========                                                                                  */ \
+    CLAGS__BASIC_VTYPE(Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
+    CLAGS__BASIC_VTYPE(Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
+    CLAGS__BASIC_VTYPE(Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
+    CLAGS__BASIC_VTYPE(Clags_Subcmd, clags_verify_subcmd, "subcmd",  clags_subcmd_t*, clags__validate_subcmd, clags__subcmd_usage  ) /* subcommand                                                        */ \
+    CLAGS__BASIC_VTYPE(Clags_Custom, clags_verify_custom, "custom",  void*,           clags__validate_custom, clags__custom_usage  ) /* custom type, defined via custom verification function             */ \
+    CLAGS__INT_VTYPE  (Clags_Int,    clags_verify_int,    "int",     int64_t,         clags__validate_int,    clags__int_usage     ) /* a signed integer within user-defined limits                       */ \
+    CLAGS__INT_VTYPE  (Clags_Int8,   clags_verify_int8,   "int8",    int8_t,          clags__validate_none,   clags__default_usage ) /* signed 8-bit integer                                              */ \
+    CLAGS__INT_VTYPE  (Clags_Int16,  clags_verify_int16,  "int16",   int16_t,         clags__validate_none,   clags__default_usage ) /* signed 16-bit integer                                             */ \
+    CLAGS__INT_VTYPE  (Clags_Int32,  clags_verify_int32,  "int32",   int32_t,         clags__validate_none,   clags__default_usage ) /* signed 32-bit integer                                             */ \
+    CLAGS__INT_VTYPE  (Clags_Int64,  clags_verify_int64,  "int64",   int64_t,         clags__validate_none,   clags__default_usage ) /* signed 64-bit integer                                             */ \
+    CLAGS__INT_VTYPE  (Clags_UInt,   clags_verify_uint,   "uint",    uint64_t,        clags__validate_uint,   clags__uint_usage    ) /* an unsigned integer within user-defined limits                    */ \
+    CLAGS__INT_VTYPE  (Clags_UInt8,  clags_verify_uint8,  "uint8",   uint8_t,         clags__validate_none,   clags__default_usage ) /* unsigned 8-bit integer                                            */ \
+    CLAGS__INT_VTYPE  (Clags_UInt16, clags_verify_uint16, "uint16",  uint16_t,        clags__validate_none,   clags__default_usage ) /* unsigned 16-bit integer                                           */ \
+    CLAGS__INT_VTYPE  (Clags_UInt32, clags_verify_uint32, "uint32",  uint32_t,        clags__validate_none,   clags__default_usage ) /* unsigned 32-bit integer                                           */ \
+    CLAGS__INT_VTYPE  (Clags_UInt64, clags_verify_uint64, "uint64",  uint64_t,        clags__validate_none,   clags__default_usage ) /* unsigned 64-bit integer                                           */ \
+    CLAGS__REAL_VTYPE (Clags_Real,   clags_verify_real,   "real",    double,          clags__validate_real,   clags__real_usage    ) /* a fractional number within user-defined limits                    */ \
+    CLAGS__REAL_VTYPE (Clags_Float,  clags_verify_float,  "float",   float,           clags__validate_none,   clags__default_usage ) /* a single-precision fractional number                              */ \
+    CLAGS__REAL_VTYPE (Clags_Double, clags_verify_double, "double",  double,          clags__validate_none,   clags__default_usage ) /* a double-precision fractional number                              */ \
+    CLAGS__PATH_VTYPE (Clags_Path,   clags_verify_path,   "path",    char*,           clags__validate_none,   clags__default_usage ) /* valid filesystem path                                             */ \
+    CLAGS__PATH_VTYPE (Clags_File,   clags_verify_file,   "file",    char*,           clags__validate_none,   clags__default_usage ) /* path to a regular file                                            */ \
+    CLAGS__PATH_VTYPE (Clags_Dir,    clags_verify_dir,    "dir",     char*,           clags__validate_none,   clags__default_usage ) /* path to a directory                                               */ \
+    CLAGS__SIZE_VTYPE (Clags_Size,   clags_verify_size,   "size",    clags_fsize_t,   clags__validate_none,   clags__default_usage ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
+    CLAGS__TIME_VTYPE (Clags_TimeS,  clags_verify_time_s, "time",    clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
+    CLAGS__TIME_VTYPE (Clags_TimeNS, clags_verify_time_ns,"time_ns", clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
 
 // the definition of all error types and their respective descriptions
-#define clags__errors                                                                           \
+#define CLAGS__ERROR_TYPES                                                                      \
     X(Clags_Error_Ok,               "no error"                                                ) \
     X(Clags_Error_InvalidConfig,    "configuration is invalid"                                ) \
     X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria" ) \
@@ -385,30 +388,31 @@
 
 // the definition of all path types
 // Note: these are NOT value types but only used internally and together with the `clags_path_type` function
-#define clags__path_types                                                 \
-    X(Clags_Path_Missing, "missing" ) /* path does not exist           */ \
-    X(Clags_Path_Dir,     "dir"     ) /* existing directory            */ \
-    X(Clags_Path_Reg,     "file"    ) /* existing regular file         */ \
-    X(Clags_Path_Other,   "other"   ) /* existing file of unknown type */ \
+#define CLAGS__PATH_TYPES                                                                \
+    CLAGS__PATH_TYPE(Clags_Path_Missing, "missing" ) /* path does not exist           */ \
+    CLAGS__PATH_TYPE(Clags_Path_Unknown, "unknown" ) /* existing path of unknown type */ \
+    CLAGS__PATH_TYPE(Clags_Path_Dir,     "dir"     ) /* existing directory            */ \
+    CLAGS__PATH_TYPE(Clags_Path_Reg,     "file"    ) /* existing regular file         */ \
+    CLAGS__PATH_TYPE(Clags_Path_Other,   "other"   ) /* existing file of another type */ \
 
 // an auto-generated enum of all supported value types
 #define X(type, verify_func, name, vtype, validate_func, usage_func) type,
 typedef enum{
-    CLAGS__TYPES
+    CLAGS__VALUE_TYPES
 } clags_value_type_t;
 #undef X
 
 // an auto-generated enum of all error types
 #define X(type, desc) type,
 typedef enum{
-    clags__errors
+    CLAGS__ERROR_TYPES
 } clags_error_t;
 #undef X
 
 // an auto-generated enum of all path types
 #define X(type, desc) type,
 typedef enum{
-    clags__path_types
+    CLAGS__PATH_TYPES
 } clags_path_type_t;
 #undef X
 
@@ -565,7 +569,7 @@ typedef struct{
     const char *arg_name;                  // name shown in usage for the positional argument
     const char *description;               // help text describing the positional argument
     // options
-    clags_value_type_t value_type;         // type of the positional value. See `CLAGS__TYPES` for a list of all types
+    clags_value_type_t value_type;         // type of the positional value. See `CLAGS__VALUE_TYPES` for a list of all types
     const char *default_input;             // fallback string parsed according to the argument's value_type if the user does not provide a value
     bool is_list;                          // if true, this positional consumes multiple values into a `clags_list_t` of the `value_type`
     bool optional;                         // if true, the positional argument is optional, meaning it may be omitted
@@ -586,7 +590,7 @@ typedef struct{
     const char *arg_name;                  // name shown in usage for the option's value (e.g. "FILE")
     const char *description;               // help text describing the option
     // options
-    clags_value_type_t value_type;         // type of the option's value. See `CLAGS__TYPES` for a list of all types
+    clags_value_type_t value_type;         // type of the option's value. See `CLAGS__VALUE_TYPES` for a list of all types
     const char* default_input;             // fallback string parsed according to the argument's value_type if the user does not provide a value
     bool is_list;                          // if true, each occurrence appends one value to a clags_list_t
     bool inherit;                          // if true, each child config will have access to this option as well
@@ -1084,23 +1088,23 @@ typedef struct{
 
 // Automatically generated declarations of all verifiers
 #define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_API clags_verify_func_def_t verify_func;
-CLAGS__TYPES
+CLAGS__VALUE_TYPES
 #undef X
 
 // Automatically generated declarations of all validators
 #define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_PRIV clags_validate_func_def_t validate_func;
-CLAGS__TYPES
+CLAGS__VALUE_TYPES
 #undef X
 
 // Automatically generated declarations of all usage printers
 #define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_PRIV clags_usage_func_def_t usage_func;
-CLAGS__TYPES
+CLAGS__VALUE_TYPES
 #undef X
 
 /* Automatically generated lookup array for value types */
 #define X(type, verify_func, name, vtype, validate_func, usage_func) [type] = {verify_func, name, sizeof(vtype), validate_func, usage_func},
 static clags__type_t clags__types[] = {
-    CLAGS__TYPES
+    CLAGS__VALUE_TYPES
 };
 #undef X
 
@@ -1362,10 +1366,25 @@ CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char
 CLAGS_API clags_path_type_t clags_path_type(const char *path)
 {
     clags__stat_struct attrs;
-    if (clags__stat_func(path, &attrs) == -1) return Clags_Path_Missing;
+    if (clags__stat_func(path, &attrs) == -1){
+        // On Windows this will always return `Clags_Path_Missing`
+        // TODO: consider implementing this using the winapi functions
+        if (errno == ENOENT || errno == ENOTDIR) return Clags_Path_Missing;
+        return Clags_Path_Unknown;
+    }
     if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
     if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
     return Clags_Path_Other;
+}
+
+CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
+{
+    switch (type){
+#define X(type, name) case (type): return (name);
+        CLAGS__PATH_TYPES
+#undef X
+        default: return "unknown file type";
+    }
 }
 
 #endif // !CLAGS_NO_PATH_TYPES
@@ -1374,19 +1393,9 @@ CLAGS_API const char* clags_error_description(clags_error_t error)
 {
     switch(error){
 #define X(type, desc) case (type): return (desc);
-        clags__errors
+        CLAGS__ERROR_TYPES
 #undef X
         default: return "unknown error";
-    }
-}
-
-CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
-{
-    switch (type){
-#define X(type, name) case (type): return (name);
-        clags__path_types
-#undef X
-        default: return "unknown file type";
     }
 }
 
@@ -2439,7 +2448,7 @@ CLAGS_PRIV bool clags__validate_value_type(clags_config_t *config, const char *a
 {
     switch (type){
 #define X(type, verify_func, name, vtype, validate_func, usage_func) case type: return true;
-        CLAGS__TYPES
+        CLAGS__VALUE_TYPES
 #undef X
     }
     clags_log(config, Clags_ConfigError, "invalid `value_type` of argument '%s': %d! Only use types from `clags_value_type_t`!", arg_name, type);
