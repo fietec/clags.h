@@ -1033,14 +1033,15 @@ CLAGS_API void clags_log(clags_config_t *config, clags_log_level_t level, const 
 // log the content of a string builder instead of a formatted message
 CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
 
-/* String Builder Functionality */
+/* String Builder */
 CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
 CLAGS_API void clags_sb_append_null(clags_sb_t *sb);
 CLAGS_API void clags_sb_free(clags_sb_t *sb);
 
 /* String-to-Integer Conversion */
-
 #if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
+// strtoint.h - Public Domain - https://github.com/fietec/strtoint.h
+
 // These are the functions used internally to convert strings to integers.
 // You can use these functions when the existing verifiers
 // are too strict (e.g. forcing '\0' at the end) or too verbose since they
@@ -1502,15 +1503,17 @@ CLAGS_PRIV int clags_strtoint__handle_base(const char **str, int base)
 
 CLAGS_API int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
 {
-    if (res) memset(res, 0, sizeof(*res));
     if (!str || min > max || base < 0 || base == 1 || base > 36){
         if (res){
-            res->invalid_params = true;
             res->endptr = str;
+            res->negative = false;
+            res->leading_spaces = false;
+            res->no_digits = false;
+            res->out_of_range = false;
+            res->invalid_params = true;
         }
         return 0;
     }
-    int64_t result = 0;
     const char *start = str;
     while (isspace((unsigned char)*start)) start++;
 
@@ -1525,57 +1528,59 @@ CLAGS_API int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *
 
     base = clags_strtoint__handle_base(&start, base);
 
-    const char *end = start;
-    while (clags_strtoint__digit_value(*end, base) != -1) end++;
-
-    if (end == start){
-        if (res){
-            res->endptr = str;
-            res->no_digits = true;
-            res->leading_spaces = leading_spaces;
-        }
-        return 0;
-    }
-
     bool out_of_range = false;
-
-    const char *pdigit = start;
     int64_t cutoff = INT64_MIN / base;
     int64_t cutoff_digit = -(INT64_MIN % base);
-    while (pdigit < end){
-        int64_t digit = clags_strtoint__digit_value(*pdigit++, base);
+    const char *pdigit = start;
+    int digit;
+    int64_t result = 0;
+    while ((digit = clags_strtoint__digit_value((unsigned char)*pdigit, base)) != -1){
+        pdigit++;
+        if (out_of_range || (result == 0 && digit == 0)) continue;
         if (result < cutoff || (result == cutoff && digit > cutoff_digit)){
             result = negative? min : max;
             out_of_range = true;
-            goto end;
+            continue;
         }
         result = result * base - digit;
     }
 
-    if (!negative){
-        if (result < -INT64_MAX){
+    if (pdigit == start){
+        if (res){
+            res->endptr = str;
+            res->negative = negative;
+            res->leading_spaces = leading_spaces;
+            res->no_digits = true;
+            res->out_of_range = false;
+            res->invalid_params = false;
+        }
+        return 0;
+    }
+    if (!out_of_range){
+        if (!negative){
+            if (result < -INT64_MAX){
+                result = max;
+                out_of_range = true;
+            } else{
+                result = -result;
+            }
+        }
+        if (result > max){
             result = max;
             out_of_range = true;
-            goto end;
+        } else if (result < min){
+            result = min;
+            out_of_range = true;
         }
-        result = -result;
     }
 
-    if (result > max){
-        result = max;
-        out_of_range = true;
-    }
-    if (result < min){
-        result = min;
-        out_of_range = true;
-    }
-
-end:
     if (res){
-        res->endptr = end;
+        res->endptr = pdigit;
         res->negative = negative;
         res->leading_spaces = leading_spaces;
+        res->no_digits = false;
         res->out_of_range = out_of_range;
+        res->invalid_params = false;
     }
     return result;
 }
@@ -1632,15 +1637,17 @@ CLAGS_API int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res,
 
 CLAGS_API uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max)
 {
-    if (res) memset(res, 0, sizeof(*res));
     if (!str || min > max || base < 0 || base == 1 || base > 36){
         if (res){
             res->endptr = str;
+            res->negative = false;
+            res->leading_spaces = false;
+            res->no_digits = false;
+            res->out_of_range = false;
             res->invalid_params = true;
         }
         return 0;
     }
-    uint64_t result = 0;
     const char *start = str;
     while (isspace((unsigned char)*start)) start++;
 
@@ -1655,43 +1662,55 @@ CLAGS_API uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t
 
     base = clags_strtoint__handle_base(&start, base);
 
-    const char *end = start;
-    while (clags_strtoint__digit_value(*end, base) != -1) end++;
-
-    if (end == start){
+    bool out_of_range = false;
+    const char *pdigit = start;
+    uint64_t result = 0;
+    uint64_t udigit;
+    int digit;
+    while ((digit = clags_strtoint__digit_value((unsigned char)*pdigit, base)) != -1){
+        udigit = (uint64_t) digit;
+        pdigit++;
+        if (out_of_range || (result == 0 && udigit == 0)) continue;
+        if (udigit > max || result > (max - udigit) / base){
+            result = max;
+            out_of_range = true;
+            continue;
+        }
+        result = result * base + udigit;
+    }
+    if (pdigit == start){
         if (res){
             res->endptr = str;
-            res->no_digits = true;
+            res->negative = negative;
             res->leading_spaces = leading_spaces;
+            res->no_digits = true;
+            res->out_of_range = false;
+            res->invalid_params = false;
         }
         return 0;
     }
 
-    bool out_of_range = false;
-    const char *pdigit = start;
-    while (pdigit < end){
-        uint64_t digit = clags_strtoint__digit_value(*pdigit++, base);
-        if (digit > max || result > (max - digit) / base){
-            result = max;
+    if (!out_of_range){
+        if (negative && result > 0) {
+            if (max - result + 1 < min){
+                result = max;
+                out_of_range = true;
+            } else{
+                result = max - result + 1;
+            }
+        } else if (result < min){
+            result = min;
             out_of_range = true;
-            goto end;
         }
-        result = result * base + digit;
     }
 
-    if (negative && result > 0) {
-        result = max - result + 1;
-    }
-    if (result < min){
-        out_of_range = true;
-        result = min;
-    }
-end:
     if (res){
-        res->endptr = end;
+        res->endptr = pdigit;
         res->negative = negative;
         res->leading_spaces = leading_spaces;
+        res->no_digits = false;
         res->out_of_range = out_of_range;
+        res->invalid_params = false;
     }
     return result;
 }

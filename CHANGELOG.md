@@ -42,6 +42,7 @@
 - `clags_sb_appendf` now returns `int` instead of `void` to report the number of characters that (would) have been written, similarly to functions of the `printf`-family
 - config-level logs using the default log handler now print the name of the config
 - rewrote usage alignment handling and argument truncation
+- updated to `strtoint.h` v3.0.0
 
 ### Fixes
 - removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version
