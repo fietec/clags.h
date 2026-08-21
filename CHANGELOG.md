@@ -14,6 +14,8 @@
   - added `clags_custom(name, verify, ...)` macro for easier creation of `clags_custom_t`
 - new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
 - new redefinable `CLAGS_API` and `CLAGS_PRIV` macros for function visibility customization
+- new path type `Clags_Path_Unknown` to distinguish between access errors and paths of some other type (`Clags_Path_Other`)
+- new helper functions `clags_path_exists` and `clags_path_exists_by_type`
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
@@ -30,8 +32,11 @@
 
 ### Changes
 - clags is now fully ISO-C99 compatible
-- `CLAGS__TYPES` replaces `clags__types`
+- `CLAGS__VALUE_TYPES` replaces `clags__types`
   - now with fields for validation and usage functions for each type
+- `CLAGS__PATH_TYPES` replaces `clags__path_types`
+  - now with a boolean field for indicating whether the type means existance
+- `CLAGS__ERROR_TYPES` replaces `clags__errors`
 - modularised type validation and usage printing
 - increased default value of `CLAGS_LIST_INIT_CAPACITY` from `8` to `16`
 - `clags_sb_appendf` now returns `int` instead of `void` to report the number of characters that (would) have been written, similarly to functions of the `printf`-family

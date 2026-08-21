@@ -329,10 +329,10 @@
 
 #ifdef CLAGS_NO_PATH_TYPES
   #define CLAGS__PATH_VTYPE CLAGS__IGNORE_VTYPE
-  #define CLAGS__PATH_TYPE(type, name)
+  #define CLAGS__PATH_TYPE(type, name, exist)
 #else
   #define CLAGS__PATH_VTYPE CLAGS__VTYPE
-  #define CLAGS__PATH_TYPE(type, name) X(type, name)
+  #define CLAGS__PATH_TYPE(type, name, exist) X(type, name, exist)
 #endif // CLAGS_NO_PATH_TYPES
 
 #ifdef CLAGS_NO_SIZE_TYPES
@@ -388,12 +388,12 @@
 
 // the definition of all path types
 // Note: these are NOT value types but only used internally and together with the `clags_path_type` function
-#define CLAGS__PATH_TYPES                                                                \
-    CLAGS__PATH_TYPE(Clags_Path_Missing, "missing" ) /* path does not exist           */ \
-    CLAGS__PATH_TYPE(Clags_Path_Unknown, "unknown" ) /* existing path of unknown type */ \
-    CLAGS__PATH_TYPE(Clags_Path_Dir,     "dir"     ) /* existing directory            */ \
-    CLAGS__PATH_TYPE(Clags_Path_Reg,     "file"    ) /* existing regular file         */ \
-    CLAGS__PATH_TYPE(Clags_Path_Other,   "other"   ) /* existing file of another type */ \
+#define CLAGS__PATH_TYPES                                                                       \
+    CLAGS__PATH_TYPE(Clags_Path_Missing, "missing", false ) /* path does not exist           */ \
+    CLAGS__PATH_TYPE(Clags_Path_Unknown, "unknown", true  ) /* existing path of unknown type */ \
+    CLAGS__PATH_TYPE(Clags_Path_Dir,     "dir",     true  ) /* existing directory            */ \
+    CLAGS__PATH_TYPE(Clags_Path_Reg,     "file",    true  ) /* existing regular file         */ \
+    CLAGS__PATH_TYPE(Clags_Path_Other,   "other",   true  ) /* existing file of another type */ \
 
 // an auto-generated enum of all supported value types
 #define X(type, verify_func, name, vtype, validate_func, usage_func) type,
@@ -410,7 +410,7 @@ typedef enum{
 #undef X
 
 // an auto-generated enum of all path types
-#define X(type, desc) type,
+#define X(type, desc, exist) type,
 typedef enum{
     CLAGS__PATH_TYPES
 } clags_path_type_t;
@@ -996,6 +996,28 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path);
 */
 CLAGS_API const char* clags_path_type_name(clags_path_type_t type);
 
+/*
+  Returns whether a path exists.
+
+  Arguments:
+    - type          : the path type
+
+  Returns:
+    bool            : the existance of the path
+*/
+CLAGS_API bool clags_path_exists(const char *path);
+
+/*
+  Returns whether a path type means that the path exists.
+
+  Arguments:
+    - type          : the path type
+
+  Returns:
+    bool            : the existance of the path
+*/
+CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type)
+
 /* Logging */
 
 /*
@@ -1380,11 +1402,26 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
 CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
 {
     switch (type){
-#define X(type, name) case (type): return (name);
+#define X(type, name, exist) case type: return name;
         CLAGS__PATH_TYPES
 #undef X
         default: return "unknown file type";
     }
+}
+
+CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type)
+{
+    switch (type){
+#define X(type, name, exist) case type: return exist;
+        CLAGS__PATH_TYPES
+#undef X
+        default: return false;
+    }
+}
+
+CLAGS_API bool clags_path_exists(const char *path)
+{
+    return clags_path_exists_by_type(clags_path_type(path));
 }
 
 #endif // !CLAGS_NO_PATH_TYPES
