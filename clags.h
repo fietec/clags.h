@@ -381,6 +381,7 @@
 #define CLAGS__ERROR_TYPES                                                                      \
     X(Clags_Error_Ok,               "no error"                                                ) \
     X(Clags_Error_InvalidConfig,    "configuration is invalid"                                ) \
+    X(Clags_Error_InvalidDefault,   "failed to set a default value"                           ) \
     X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria" ) \
     X(Clags_Error_InvalidOption,    "unrecognized option or flag syntax"                      ) \
     X(Clags_Error_TooManyArguments, "too many positional arguments provided"                  ) \
@@ -651,11 +652,12 @@ typedef struct{
     void *_reserved;
 } clags_options_t;
 
+// definition of a config's error
 typedef struct{
-    clags_error_type_t type;
-    struct{
-        clags_arg_t *pointer;
-        clags_config_t *config;
+    clags_error_type_t type;          // the error type that occured
+    struct{                           // this is only populated certain error types. Check with `CLAGS_ERROR_HAS_ARG(type)`.
+        clags_arg_t *pointer;         // a pointer to the arg that failed
+        clags_config_t *config;       // a pointer to the config to which the arg belongs. Due to inheritance this may be different to the failed config returned by `clags_parse`
     } arg;
 } clags_error_t;
 
@@ -1043,6 +1045,14 @@ CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type);
 CLAGS_API void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...) CLAGS__PRINTF_FORMAT(3, 4);
 // log the content of a string builder instead of a formatted message
 CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, clags_sb_t *sb);
+
+/*
+  Set the log level of a config and all its children.
+
+  Arguments:
+    - config        : the root config for which to set the log level
+    - level         : the log level to set
+*/
 CLAGS_API void clags_propagate_log_level(clags_config_t *config, clags_log_level_t level);
 
 /* String Builder */
@@ -1311,7 +1321,7 @@ CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, cla
 CLAGS_API void clags_propagate_log_level(clags_config_t *config, clags_log_level_t level)
 {
     if (config == NULL) return;
-    config->min_log_level = level;
+    config->options.min_log_level = level;
     for (size_t i=0; i<config->args_count; ++i){
         clags_arg_t arg = config->args[i];
         if (arg.type == Clags_Positional){
@@ -2929,29 +2939,29 @@ CLAGS_PRIV void clags__sort_args(clags__args_t *args, clags_config_t *config)
 }
 
 // apply the default inputs for all arguments of a config
-CLAGS_PRIV bool clags__set_defaults(clags_config_t *config)
+CLAGS_PRIV clags_error_t clags__set_defaults(clags_config_t *config)
 {
     for (size_t i=0; i<config->args_count; ++i){
-        clags_arg_t arg = config->args[i];
-        switch (arg.type){
+        clags_arg_t *arg = &config->args[i];
+        switch (arg->type){
             case Clags_Positional:{
-                clags_positional_t pos = arg.as.pos;
+                clags_positional_t pos = arg->as.pos;
                 if (pos.optional && pos.default_input != NULL){
-                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, pos.is_list)) return false;
+                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, pos.is_list)) return clags_error(Clags_Error_InvalidDefault, arg, config);
                 }
             } break;
             case Clags_Option:{
-                clags_option_t opt = arg.as.opt;
+                clags_option_t opt = arg->as.opt;
                 if (opt.default_input != NULL){
                     char buf[3] = {'-', '\0', '\0'};
                     const char *name = opt.long_flag ? opt.long_flag : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
-                    if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, opt.is_list)) return false;
+                    if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, opt.is_list)) return clags_error(Clags_Error_InvalidDefault, arg, config);
                 }
             } break;
             default: continue;
         }
     }
-    return true;
+    return clags_error(Clags_Error_Ok, NULL, NULL);
 }
 
 CLAGS_PRIV clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, const char *long_flag, clags_config_t **found_in)
@@ -3201,17 +3211,69 @@ CLAGS_PRIV clags_error_t clags__parse_positional(clags_config_t *config, clags__
     return clags_error(Clags_Error_Ok, NULL, NULL);
 }
 
+CLAGS_PRIV bool clags__parse_option_toggle(clags_config_t *config, clags__parser_t *parser, const char *arg)
+{
+    if (strcmp(arg, "--") == 0){
+        if (parser->accept_options || config->options.allow_option_parsing_toggle){
+            parser->accept_options = !parser->accept_options;
+            return true;
+        }
+    }
+    return false;
+}
+
+CLAGS_PRIV bool clags__parse_ignore_prefix(clags_config_t *config, clags__parser_t *parser, const char *arg, const char *ignore_prefix)
+{
+    if (ignore_prefix != NULL){
+        size_t ignore_prefix_len = strlen(ignore_prefix);
+        if (strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
+            parser->args_ignored = true;
+            // track ignored arguments if thus configured
+            if (config->options.ignored_args){
+                if (config->options.ignored_args->item_size == 0) config->options.ignored_args->item_size = sizeof(char*);
+                (void) clags__append_to_list(config, Clags_String, NULL, arg+ignore_prefix_len, config->options.ignored_args, NULL);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+CLAGS_PRIV bool clags__parse_list_terminator(clags__parser_t *parser, const char *arg, const char *list_term)
+{
+    if (list_term != NULL && strcmp(arg, list_term) == 0){
+        if (parser->in_list){
+            parser->in_list = false;
+            parser->pos_count += 1;
+            if (!parser->parsing_optionals) parser->req_count += 1;
+        }
+        return true;
+    }
+    return false;
+}
+
 CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *config)
 {
     if (config == NULL || argc < 1 || argv == NULL) return NULL;
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
         clags_config_t *failed_config = clags_validate(argv[0], config);
-        clags_assert(failed_config == NULL, "validation of config failed");
+        if (failed_config != NULL){
+            clags_log(config, Clags_ConfigError, "validation of config '%s' failed!", failed_config->name);
+            return failed_config;
+        }
     }
-    clags_assert(config->state == Clags_Config_Valid, "passed config is invalid");
+    if (config->state != Clags_Config_Valid){
+        clags_log(config, Clags_ConfigError, "passed config is invalid!");
+        return config;
+    }
 
-    clags_assert(clags__set_defaults(config) == true, "failed to set default values for valid config");
+    clags_error_t default_error = clags__set_defaults(config);
+    if (default_error.type != Clags_Error_Ok){
+        config->error = default_error;
+        clags_log(config, Clags_ConfigError, "failed to set default values for config");
+        return config;
+    }
 
     config->error = clags_error(Clags_Error_Ok, NULL, NULL);
     clags_config_t *result = NULL;
@@ -3234,41 +3296,20 @@ CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *co
     clags__sort_args(&parser.args, config);
 
     const char *ignore_prefix = config->options.ignore_prefix;
-    size_t ignore_prefix_len = ignore_prefix? strlen(ignore_prefix) : 0;
     const char *list_term = config->options.list_terminator;
 
     // iterate over the provided arguments, skipping the first one
     for (parser.index=1; parser.index<parser.argc; ++parser.index){
-        char *arg = parser.argv[parser.index];
+        const char *arg = parser.argv[parser.index];
 
         // toggle option and flag parsing based on '--'
-        if (strcmp(arg, "--") == 0){
-            if (parser.accept_options || config->options.allow_option_parsing_toggle){
-                parser.accept_options = !parser.accept_options;
-                continue;
-            }
-        }
+        if (clags__parse_option_toggle(config, &parser, arg)) continue;
 
         // ignore arguments prefixed with `ignore_prefix`
-        if (ignore_prefix && strncmp(arg, ignore_prefix, ignore_prefix_len) == 0){
-            parser.args_ignored = true;
-            // track ignored arguments if thus configured
-            if (config->options.ignored_args){
-                if (config->options.ignored_args->item_size == 0) config->options.ignored_args->item_size = sizeof(char*);
-                (void) clags__append_to_list(config, Clags_String, NULL, arg+ignore_prefix_len, config->options.ignored_args, NULL);
-            }
-            continue;
-        }
+        if (clags__parse_ignore_prefix(config, &parser, arg, ignore_prefix)) continue;
 
         // detect list terminator
-        if (list_term && strcmp(arg, list_term) == 0){
-            if (parser.in_list){
-                parser.in_list = false;
-                parser.pos_count += 1;
-                if (!parser.parsing_optionals) parser.req_count += 1;
-            }
-            continue;
-        }
+        if (clags__parse_list_terminator(&parser, arg, list_term)) continue;
 
         bool exit = false;
         clags_config_t *error_config;
@@ -3294,6 +3335,7 @@ CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *co
         parser.pos_count += 1;
         if (!parser.parsing_optionals) parser.req_count += 1;
     }
+
     if (parser.args_ignored) clags_log(config, Clags_Warning, "Arguments were ignored because they were prefixed with '%s'", ignore_prefix);
 
     // report missing positional arguments

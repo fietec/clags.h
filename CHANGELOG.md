@@ -31,7 +31,7 @@
     - `.using.range = &my_range`
 - removed `clags_config_with_options` due to reliance on non-standard static-scope variable assignments. Predefined option macros are now recommended, offering greater flexibility and future-proofing
 - removed all explicit list initializer macros `clags_<type>_list` apart from `clags_custom_list`. This is to allow easier automatic addition and grouping of new types and to separate `Clags_Custom` lists from others syntactically
-- removed `CLAGS_STRTOLL` and `CLAGS_STRTOULL` macros
+- removed previously deprecated `CLAGS_STRTOLL` and `CLAGS_STRTOULL` macros
 - removed `CLAGS_USAGE_ALIGNMENT` macro
 - removed floating point time parsing
   - this was done to remove conversion inconsistencies between `double` and `clags_time_t` and because it has had been a bit out-of-scope from the start
