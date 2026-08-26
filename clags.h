@@ -1244,9 +1244,7 @@ CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
         if (reserved > 0){
             char *start = sb->items + sb->count;
             int w = vsnprintf(start, reserved, format, args);
-            if (w > 0){
-                sb->count += reserved - 1;
-            }
+            if (w > 0) sb->count += reserved - 1;
         }
     }
     va_end(args);
@@ -1303,11 +1301,16 @@ CLAGS_PRIV void clags__default_log_handler(clags_config_t *config, clags_log_lev
 
 CLAGS_API void clags_log(clags_config_t *config, clags_log_level_t level, const char *format, ...)
 {
+    // skip logging of message based on the set mininum log level
     if (config && config->options.min_log_level > level) return;
+
     va_list args;
     va_start(args, format);
+
+    // call the correct log handler
     clags_log_handler_t handler = (config && config->options.log_handler)? config->options.log_handler : clags__default_log_handler;
     handler(config, level, format, args);
+
     va_end(args);
 }
 
@@ -1321,18 +1324,22 @@ CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, cla
 CLAGS_API void clags_propagate_log_level(clags_config_t *config, clags_log_level_t level)
 {
     if (config == NULL) return;
+    // set the log level
     config->options.min_log_level = level;
+
+    // propagate to child configs
     for (size_t i=0; i<config->args_count; ++i){
         clags_arg_t arg = config->args[i];
-        if (arg.type == Clags_Positional){
-            clags_positional_t pos = arg.as.pos;
-            if (pos.value_type == Clags_Subcmd && pos.using.subcmds != NULL){
-                clags_subcmds_t *subcmds = arg.as.pos.using.subcmds;
-                for (size_t j=0; j<subcmds->count; ++j){
-                    clags_subcmd_t subcmd = subcmds->items[j];
-                    clags_propagate_log_level(subcmd.config, level);
-                }
-            }
+
+        // find a positional subcommand definition
+        if (arg.type != Clags_Positional) continue;
+        clags_positional_t pos = arg.as.pos;
+        if (pos.value_type != Clags_Subcmd || pos.using.subcmds == NULL) continue;
+
+        clags_subcmds_t *subcmds = arg.as.pos.using.subcmds;
+        for (size_t j=0; j<subcmds->count; ++j){
+            // set the log level for each subcommand's config
+            clags_propagate_log_level(subcmds->items[j].config, level);
         }
     }
 }
@@ -2654,7 +2661,7 @@ CLAGS_PRIV bool clags__validate_duplicates(clags_config_t *config, char short_fl
 
         for (; j < ancestor->args_count; ++j) {
             clags_arg_t *p_arg = &ancestor->args[j];
-            if (p_arg->type == Clags_Positional) continue;
+            if (p_arg->type != Clags_Option && p_arg->type != Clags_Flag) continue;
 
             // extract the argument's short and long flag
             char p_short = (p_arg->type == Clags_Option) ? p_arg->as.opt.short_flag : p_arg->as.flag.short_flag;
@@ -3560,6 +3567,35 @@ CLAGS_PRIV void clags__subcommand_path_usage(FILE *file, const char *program_nam
     }
 }
 
+CLAGS_PRIV void clags__summary_usage(FILE *file, clags_config_t *config, const char *program_name, clags__args_t args)
+{
+    clags__subcommand_path_usage(file, program_name, config); // the subcommand path (e.g. './main foo bar baz')
+
+    if (args.option_count) fprintf(file, " [OPTIONS]");
+    if (args.flag_count) fprintf(file, " [FLAGS]");
+
+    // print positional arguments
+    bool last_was_list = false;
+    for (size_t i = 0; i < args.positional_count; ++i) {
+        if (last_was_list) {
+            // print `list_terminator` after each list argument
+            fprintf(file, " %s", config->options.list_terminator);
+            last_was_list = false;
+        }
+        // print positional argument with correct usage line syntax
+        clags_positional_t pos = args.positionals[i]->as.pos;
+        fprintf(file, " %c", pos.optional? '[':'<');
+        if (pos.is_list) {
+            fprintf(file, "%s..", pos.arg_name);
+            last_was_list = true;
+        } else {
+            fprintf(file, "%s", pos.arg_name);
+        }
+        fprintf(file, "%c", pos.optional? ']':'>');
+    }
+    fprintf(file, "\n");
+}
+
 CLAGS_PRIV void clags__positional_usage(clags_config_t *config, FILE *file, clags_positional_t pos, clags_sb_t *sb)
 {
     // positional usage is : <name> [(optional)]
@@ -3657,33 +3693,7 @@ CLAGS_API void clags_usage_to_file(FILE *file, const char *program_name, clags_c
     clags__sb_reserve(&sb, temp_buffer_size);
 
     // usage line printing
-    {
-        clags__subcommand_path_usage(file, program_name, config); // the subcommand path (e.g. './main foo bar baz')
-
-        if (args.option_count) fprintf(file, " [OPTIONS]");
-        if (args.flag_count) fprintf(file, " [FLAGS]");
-
-        // print positional arguments
-        bool last_was_list = false;
-        for (size_t i = 0; i < args.positional_count; ++i) {
-            if (last_was_list) {
-                // print `list_terminator` after each list argument
-                fprintf(file, " %s", config->options.list_terminator);
-                last_was_list = false;
-            }
-            // print positional argument with correct usage line syntax
-            clags_positional_t pos = args.positionals[i]->as.pos;
-            fprintf(file, " %c", pos.optional? '[':'<');
-            if (pos.is_list) {
-                fprintf(file, "%s..", pos.arg_name);
-                last_was_list = true;
-            } else {
-                fprintf(file, "%s", pos.arg_name);
-            }
-            fprintf(file, "%c", pos.optional? ']':'>');
-        }
-        fprintf(file, "\n");
-    }
+    clags__summary_usage(file, config, program_name, args);
 
     // print arguments
     // positional arguments
