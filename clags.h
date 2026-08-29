@@ -378,10 +378,10 @@
     CLAGS__TIME_VTYPE (Clags_TimeNS, clags_verify_time_ns,"time_ns", clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
 
 // the definition of all flag types
-#define CLAGS__FLAG_TYPES                        \
-    X(Clags_BoolFlag,   clags__set_bool_flag   ) \
-    X(Clags_ConfigFlag, clags__set_config_flag ) \
-    X(Clags_CountFlag,  clags__set_count_flag  ) \
+#define CLAGS__FLAG_TYPES                                                                                                                       \
+    X(Clags_BoolFlag,   clags__set_bool_flag   ) /* standard boolean flag; set to `true` when the flag occurs; variable type: bool           */ \
+    X(Clags_ConfigFlag, clags__set_config_flag ) /* stores a pointer to the config in which the flag was set; variable type: clags_config_t* */ \
+    X(Clags_CountFlag,  clags__set_count_flag  ) /* tracks how many times the flag was encountered; variable type: size_t                    */ \
 
 // the definition of all error types and their respective descriptions
 #define CLAGS__ERROR_TYPES                                                                      \
@@ -426,11 +426,14 @@ typedef enum{
 
 // all available flag types
 // if a flag's `type` is not explicitly set, `Clags_BoolFlag` is used by default
+#define X(type, setter) type,
 typedef enum {
-    Clags_BoolFlag = 0,   // standard boolean flag; set to `true` when the flag occurs; variable type: bool
-    Clags_ConfigFlag,     // stores a pointer to the config in which the flag was set; variable type: clags_config_t*
-    Clags_CountFlag,      // tracks how many times the flag was encountered; variable type: size_t
+    CLAGS__FLAG_TYPES
+    /* Clags_BoolFlag = 0,   // standard boolean flag; set to `true` when the flag occurs; variable type: bool */
+    /* Clags_ConfigFlag,     // stores a pointer to the config in which the flag was set; variable type: clags_config_t* */
+    /* Clags_CountFlag,      // tracks how many times the flag was encountered; variable type: size_t */
 } clags_flag_type_t;
+#undef X
 
 typedef struct clags_config_t clags_config_t;
 typedef struct clags_choice_t clags_choice_t;
@@ -2388,6 +2391,7 @@ CLAGS_PRIV clags_error_type_t clags__set_arg(clags_config_t *config, clags_value
 
 CLAGS_PRIV clags_error_type_t clags__set_flag(clags_config_t *config, clags_flag_t *flag)
 {
+    // dispatch to the correct setter based on the flag's type
     switch (flag->type){
 #define X(type, setter) case type: return setter(config, flag->variable);
         CLAGS__FLAG_TYPES
@@ -2671,15 +2675,15 @@ CLAGS_PRIV clags_config_t* clags__validate_flag(clags_config_t *config, clags_fl
                   "so including it in the config may cause incorrect parsing.",
                   flag.long_flag);
     }
+#define X(type, setter) case type: break;
     switch (flag.type){
-        case Clags_BoolFlag: break;
-        case Clags_ConfigFlag: break;
-        case Clags_CountFlag: break;
+        CLAGS__FLAG_TYPES
         default:{
             clags_log(config, Clags_ConfigError, "invalid flag type for flag '%s': %d!", name, flag.type);
             return config;
         }
     }
+#undef X
 
     return NULL;
 }
