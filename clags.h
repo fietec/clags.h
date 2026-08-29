@@ -377,6 +377,12 @@
     CLAGS__TIME_VTYPE (Clags_TimeS,  clags_verify_time_s, "time",    clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
     CLAGS__TIME_VTYPE (Clags_TimeNS, clags_verify_time_ns,"time_ns", clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
 
+// the definition of all flag types
+#define CLAGS__FLAG_TYPES                        \
+    X(Clags_BoolFlag,   clags__set_bool_flag   ) \
+    X(Clags_ConfigFlag, clags__set_config_flag ) \
+    X(Clags_CountFlag,  clags__set_count_flag  ) \
+
 // the definition of all error types and their respective descriptions
 #define CLAGS__ERROR_TYPES                                                                      \
     X(Clags_Error_Ok,               "no error"                                                ) \
@@ -481,6 +487,17 @@ typedef clags_validate_func_def_t *clags_validate_func_t; // the function pointe
 */
 typedef void (clags_usage_func_def_t)(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data);
 typedef clags_usage_func_def_t *clags_usage_func_t; // the function pointer type of usage printers
+
+/*
+ The definition of the flag setter function type.
+ These functions are responsible for setting a flag for a specific flag type.
+
+ Arguments:
+   - config        : the current config
+   - variable      : the variable to set
+*/
+typedef clags_error_type_t (clags_flag_func_def_t)(clags_config_t *config, void *variable);
+typedef clags_flag_func_def_t *clags_flag_func_t;   // the function pointer type of flag setters
 
 // log levels used by clags. Levels are ordered by priority: higher enum values indicate higher severity.
 typedef enum{
@@ -1144,6 +1161,11 @@ CLAGS__VALUE_TYPES
 // Automatically generated declarations of all usage printers
 #define X(type, verify_func, name, vtype, validate_func, usage_func) CLAGS_PRIV clags_usage_func_def_t usage_func;
 CLAGS__VALUE_TYPES
+#undef X
+
+// Automatically generated declaration of all flag setters
+#define X(type, setter) CLAGS_PRIV clags_flag_func_def_t setter;
+CLAGS__FLAG_TYPES
 #undef X
 
 /* Automatically generated lookup array for value types */
@@ -2310,6 +2332,28 @@ CLAGS_API bool clags_verify_custom(clags_config_t *config, const char *arg_name,
     return false;
 }
 
+/* Flag Setters */
+
+CLAGS_PRIV clags_error_type_t clags__set_bool_flag(clags_config_t *config, void *variable)
+{
+    (void) config;
+    if (variable != NULL) *(bool*) variable = true;
+    return Clags_Error_Ok;
+}
+
+CLAGS_PRIV clags_error_type_t clags__set_config_flag(clags_config_t *config, void *variable)
+{
+    if (variable != NULL) *(clags_config_t**) variable = config;
+    return Clags_Error_Ok;
+}
+
+CLAGS_PRIV clags_error_type_t clags__set_count_flag(clags_config_t *config, void *variable)
+{
+    (void) config;
+    if (variable != NULL) *(size_t*) variable += 1;
+    return Clags_Error_Ok;
+}
+
 /* Verifier Dispatching */
 
 CLAGS_PRIV bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
@@ -2317,7 +2361,7 @@ CLAGS_PRIV bool clags__append_to_list(clags_config_t *config, clags_value_type_t
     clags_list_t *list = (clags_list_t*) variable;
     char *ptr = NULL;
     if (list != NULL){
-        if (!clags__handle_list_resizing(config, list)) return false;
+        if (!clags__handle_list_resizing(config, list)) return false; // TODO: report special error here?
         // calculate the pointer to write to based on the stored items' size
         ptr = ((char*) list->items) + list->item_size * list->count;
     }
@@ -2344,23 +2388,14 @@ CLAGS_PRIV clags_error_type_t clags__set_arg(clags_config_t *config, clags_value
 
 CLAGS_PRIV clags_error_type_t clags__set_flag(clags_config_t *config, clags_flag_t *flag)
 {
-    if (flag->variable != NULL){
-        switch (flag->type){
-            case Clags_BoolFlag:{
-                *(bool*) flag->variable = true;
-            }break;
-            case Clags_ConfigFlag:{
-                *(clags_config_t**) flag->variable = config;
-            }break;
-            case Clags_CountFlag:{
-                *(size_t*) flag->variable += 1;
-            }break;
-            default:{
-                clags_unreachable("Invalid clags_flag_type_t");
-            }
+    switch (flag->type){
+#define X(type, setter) case type: return setter(config, flag->variable);
+        CLAGS__FLAG_TYPES
+#undef X
+        default:{
+            clags_unreachable("Invalid clags_flag_type_t");
         }
     }
-    return Clags_Error_Ok;
 }
 
 /* Validation */
