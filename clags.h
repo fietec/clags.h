@@ -392,6 +392,7 @@
     X(Clags_Error_InvalidOption,    "unrecognized option or flag syntax"                      ) \
     X(Clags_Error_TooManyArguments, "too many positional arguments provided"                  ) \
     X(Clags_Error_TooFewArguments,  "required positional arguments missing"                   ) \
+    X(Clags_Error_ListOverflow,     "a list reached its maximum capacity"                     ) \
     X(Clags_Error_ChildConfigError, "a child config encountered an error"                     ) \
 
 // the definition of all path types
@@ -1431,7 +1432,6 @@ CLAGS_API void* clags_config_duplicate(clags_config_t *config, const void *data,
         allocs->value_type = Clags_Custom;
         allocs->item_size = sizeof(clags__alloc_t);
 
-        // TODO: handle this more smoothly?
         clags_assert(clags__handle_list_resizing(config, allocs), "allocation context overflown!");
 
         ((clags__alloc_t*) allocs->items)[allocs->count++] = alloc;
@@ -2354,34 +2354,36 @@ CLAGS_PRIV clags_error_type_t clags__set_count_flag(clags_config_t *config, void
 
 /* Verifier Dispatching */
 
-CLAGS_PRIV bool clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
+CLAGS_PRIV clags_error_type_t clags__set_arg(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data, bool is_list);
+
+CLAGS_PRIV clags_error_type_t clags__append_to_list(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data)
 {
     clags_list_t *list = (clags_list_t*) variable;
     char *ptr = NULL;
     if (list != NULL){
-        if (!clags__handle_list_resizing(config, list)) return false; // TODO: report special error here?
+        if (!clags__handle_list_resizing(config, list)) return Clags_Error_ListOverflow;
         // calculate the pointer to write to based on the stored items' size
         ptr = ((char*) list->items) + list->item_size * list->count;
     }
     // dispatch to the correct verifier based on the provided value type
-    if (clags__types[value_type].verify(config, arg_name, arg, ptr, data)){
-        if (list != NULL) list->count++;
-        return true;
+    clags_error_type_t result = clags__set_arg(config, value_type, arg_name, arg, ptr, data, false);
+    if (result == Clags_Error_Ok && list != NULL){
+        // update the list's size
+        list->count++;
     }
-    return false;
+    return result;
 }
 
 CLAGS_PRIV clags_error_type_t clags__set_arg(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *arg, void *variable, void *data, bool is_list)
 {
     // dispatch to the correct verifier based on the provided value type
-    bool result;
     if (is_list){
         // for lists we first need to calculate the exact address to write to and handle possible reallocations
-        result = clags__append_to_list(config, value_type, arg_name, arg, variable, data);
+        return clags__append_to_list(config, value_type, arg_name, arg, variable, data);
     } else{
-        result = clags__types[value_type].verify(config, arg_name, arg, variable, data);
+        bool result = clags__types[value_type].verify(config, arg_name, arg, variable, data);
+        return result? Clags_Error_Ok : Clags_Error_InvalidValue;
     }
-    return result? Clags_Error_Ok : Clags_Error_InvalidValue;
 }
 
 CLAGS_PRIV clags_error_type_t clags__set_flag(clags_config_t *config, clags_flag_t *flag)

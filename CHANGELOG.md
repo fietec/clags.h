@@ -22,6 +22,7 @@
   - a pointer to the config to which that argument belongs
 - added `clags_error(type, arg, config)` macro for easier error creation
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
+- added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
@@ -44,12 +45,15 @@
 - `CLAGS__PATH_TYPES` replaces `clags__path_types`
   - now with a boolean field for indicating whether the type means existance
 - `CLAGS__ERROR_TYPES` replaces `clags__errors`
-- modularised type validation and usage printing
+- modularized type validation and usage printing
+- added `CLAGS__FLAG_TYPES` to modularize flag setting
 - increased default value of `CLAGS_LIST_INIT_CAPACITY` from `8` to `16`
 - `clags_sb_appendf` now returns `int` instead of `void` to report the number of characters that (would) have been written, similarly to functions of the `printf`-family
 - config-level logs using the default log handler now print the name of the config
 - rewrote usage alignment handling and argument truncation
 - updated to `strtoint.h` v3.0.0
+- `clags_usage` and `clags_usage_to_file` now exit gracefully when an invalid config is passed
+- `clags_usage` and `clags_usage_to_file` no longer automatically validate a config. This change was made make these function side-effect free and to strengthen the usability of `clags_validate`
 
 ### Fixes
 - removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version
