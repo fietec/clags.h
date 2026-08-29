@@ -49,7 +49,7 @@ bool help = false;
 
 clags_arg_t args[] = {
     // Set `.custom` to the custom value type
-    clags_positional(&list, "values", "lower case strings", .value_type=Clags_Custom, .custom=&custom_lower_case_type, .is_list=true),
+    clags_positional(&list, "values", "lower case strings", .value_type=Clags_Custom, .using.custom=&custom_lower_case_type, .is_list=true),
     clags_flag_help(&help),
 };
 

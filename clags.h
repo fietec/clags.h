@@ -854,14 +854,9 @@ CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *co
 /*
   Print a detailed usage menu based on the provided config.
 
-  Calling this on a root configuration automatically validates and initializes
-  the config itself, links all nested sub-configs, and validates all default
-  values across the entire tree.
-
   Note: If you need to print the usage of a nested sub-command BEFORE the root
-  configuration has been initialized (e.g., via `clags_parse` or `clags_usage`),
-  you must manually run `clags_validate` on the root config first to establish
-  the upward parent paths.
+  configuration has been initialized (via `clags_parse`), you must first manually
+  run `clags_validate` on the root config to establish the upward parent paths.
 
   Arguments:
     - program_name  : the name of the program
@@ -889,7 +884,7 @@ CLAGS_API void clags_usage_to_file(FILE *file, const char *program_name, clags_c
   This traverses the root config to link parent paths and verify that all
   schema rules (like default values matching bounds) are valid. You only need
   to call this manually if you intend to interact with a nested sub-config
-  before the root config has been initialized by one of the primary entry points.
+  before the root config has been initialized by `clags_parse`.
 
   Arguments:
     - program_name  : the name of the program
@@ -3708,14 +3703,7 @@ CLAGS_PRIV void clags__inherited_flags_usage(FILE *file, clags_config_t *config,
 
 CLAGS_API void clags_usage_to_file(FILE *file, const char *program_name, clags_config_t *config)
 {
-    if (file == NULL || config == NULL || config->args == NULL) return;
-
-    // validate the config
-    if (config->state == Clags_Config_Unvalidated){
-        clags_config_t *failed_config = clags_validate(program_name, config);
-        clags_assert(failed_config == NULL, "validation error in config tree");
-    }
-    clags_assert(config->state == Clags_Config_Valid, "config is invalid");
+    if (file == NULL || config == NULL || config->args == NULL || config->state != Clags_Config_Valid) return;
 
     // sort arguments by type
     clags_arg_t **positionals = CLAGS_CALLOC(config->args_count, sizeof(*positionals));

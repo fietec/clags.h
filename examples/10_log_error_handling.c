@@ -21,8 +21,9 @@
     - format : a printf-style format string
     - args   : the variadic arguments for the format printing
 */
-void custom_log_handler(clags_log_level_t level, const char *format, va_list args)
+void custom_log_handler(clags_config_t *config, clags_log_level_t level, const char *format, va_list args)
 {
+    (void) config;
     switch(level){
         case Clags_Info:
             // should never occur since `min_log_level` is set to `Clags_Warning`
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
         failed_config->options.min_log_level = Clags_Info;
 
         // act based on error type
-        if (failed_config->error == Clags_Error_InvalidValue){
+        if (failed_config->error.type == Clags_Error_InvalidValue){
             clags_log(failed_config, Clags_Info, "Invalid number detected. Using defaults (lhs=0, rhs=0).");
             lhs = 0;
             rhs = 0;
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
             // fatal: print detailed usage and exit
             clags_log(failed_config, Clags_Error, "error in '%s': %s",
                     failed_config->name,
-                    clags_error_description(failed_config->error));
+                    clags_error_description(failed_config->error.type));
             clags_usage(program_name, failed_config);
             return 1;
         }

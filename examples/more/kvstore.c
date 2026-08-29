@@ -48,8 +48,8 @@ bool verify_addr(clags_config_t *config, const char *arg_name, const char *arg, 
     return clags_verify_string(config, arg_name, arg, variable, data);
 }
 
-clags_custom_t dict_type = {"key-value", verify_dict, NULL};
-clags_custom_t addr_type = {"ip:port", verify_addr, NULL};
+clags_custom_t dict_type = clags_custom("key-value", verify_dict);
+clags_custom_t addr_type = clags_custom("ip:port", verify_addr);
 
 // --- Global Definitions ---
 struct{
@@ -57,7 +57,7 @@ struct{
     uint64_t timeout;
     clags_config_t *help_config;
 } global = {0};
-const clags_options_t global_options = {.ignore_prefix="!", .duplicate_strings=true};
+#define GLOBAL_OPTIONS .ignore_prefix="!", .duplicate_strings=true
 
 // --- Put Config ---
 struct{
@@ -74,9 +74,9 @@ clags_arg_t put_args[] = {
     clags_positional(&put.key, "key", "the key of the entry to update"),
     clags_positional(&put.value, "value", "the value the entry should be set to"),
     clags_option(0, "ttl", &put.ttl, "SECS", "time to live in seconds", .value_type=Clags_UInt),
-    clags_option(0, "tag", &put.tags, "TAG", "tags to add", .value_type=Clags_Custom, .custom=&dict_type, .is_list=true),
+    clags_option(0, "tag", &put.tags, "TAG", "tags to add", .value_type=Clags_Custom, .using.custom=&dict_type, .is_list=true),
 };
-clags_config_t put_config = clags_config_with_options(put_args, global_options);
+clags_config_t put_config = clags_config(put_args, GLOBAL_OPTIONS);
 
 // --- Delete Config ---
 // Interval type ommited for simplicity now but would be implemented similarily to the other custom types
@@ -92,7 +92,7 @@ clags_arg_t delete_args[] = {
     clags_positional(&delete.keys, "keys", "the keys of the entries to delete", .is_list=true),
     clags_option('e', "exclude", &delete.exclude, "KEY", "keys to shield", .is_list=true),
 };
-clags_config_t delete_config = clags_config_with_options(delete_args, global_options);
+clags_config_t delete_config = clags_config(delete_args, GLOBAL_OPTIONS);
 
 // --- Query Config ---
 struct{
@@ -106,7 +106,7 @@ clags_arg_t query_args[] = {
     clags_option(0, "max-mem", &query.mem_size, "SIZE", "the mamimum amount of memory to use", .value_type=Clags_Size),
     clags_option(0, "window", &query.window, "TIME", "the maximum amount of time to spend", .value_type=Clags_TimeS),
 };
-clags_config_t query_config = clags_config_with_options(query_args, global_options);
+clags_config_t query_config = clags_config(query_args, GLOBAL_OPTIONS);
 
 // --- Data Config ---
 struct{
@@ -127,9 +127,9 @@ clags_subcmd_t data_commands[] = {
 clags_subcmds_t data_subcmds = clags_subcmds(data_commands);
 
 clags_arg_t data_args[] = {
-    clags_positional(&data.command, "command", "the command to run", .value_type=Clags_Subcmd, .subcmds=&data_subcmds)
+    clags_positional(&data.command, "command", "the command to run", .value_type=Clags_Subcmd, .using.subcmds=&data_subcmds)
 };
-clags_config_t data_config = clags_config_with_options(data_args, global_options);
+clags_config_t data_config = clags_config(data_args, GLOBAL_OPTIONS);
 
 // --- Set Config ---
 struct{
@@ -140,10 +140,10 @@ struct{
 
 clags_arg_t set_args[] = {
     clags_positional(&set.environment, "environment", "the name of the target environment"),
-    clags_option('l', "listen-addr", &set.addr, "ADDR", "the address to listen for", .value_type=Clags_Custom, .custom=&addr_type),
+    clags_option('l', "listen-addr", &set.addr, "ADDR", "the address to listen for", .value_type=Clags_Custom, .using.custom=&addr_type),
     clags_option('b', "backoff", &set.backoff, "INTERVAL", "the retry multiplier interval", .value_type=Clags_Float),
 };
-clags_config_t set_config = clags_config_with_options(set_args, global_options);
+clags_config_t set_config = clags_config(set_args, GLOBAL_OPTIONS);
 
 // --- Export Config ---
 struct{
@@ -155,7 +155,7 @@ clags_arg_t export_args[] = {
     clags_flag(0, "json", &export.json, "output in the json format"),
     clags_flag(0, "include-secrets", &export.secrets, "include api keys in the export"),
 };
-clags_config_t export_config = clags_config_with_options(export_args, global_options);
+clags_config_t export_config = clags_config(export_args, GLOBAL_OPTIONS);
 
 // --- "Config" Config ---
 struct{
@@ -174,9 +174,9 @@ clags_subcmd_t config_commands[] = {
 clags_subcmds_t config_subcmds = clags_subcmds(config_commands);
 
 clags_arg_t config_args[] = {
-    clags_positional(&config.command, "command", "the command to run", .value_type=Clags_Subcmd, .subcmds=&config_subcmds)
+    clags_positional(&config.command, "command", "the command to run", .value_type=Clags_Subcmd, .using.subcmds=&config_subcmds)
 };
-clags_config_t config_config = clags_config_with_options(config_args, global_options);
+clags_config_t config_config = clags_config(config_args, GLOBAL_OPTIONS);
 
 // --- Root Config ---
 struct{
@@ -195,12 +195,12 @@ clags_subcmd_t root_commands[] = {
 clags_subcmds_t root_subcmds = clags_subcmds(root_commands);
 
 clags_arg_t root_args[] = {
-    clags_positional(&root.command, "command", "the command to run", .value_type=Clags_Subcmd, .subcmds=&root_subcmds),
+    clags_positional(&root.command, "command", "the command to run", .value_type=Clags_Subcmd, .using.subcmds=&root_subcmds),
     clags_option('t', "timeout", &global.timeout, "TIME", "api timeout in milliseconds", .value_type=Clags_UInt, .default_input="5000", .inherit=true),
     clags_flag('v', "verbose", &global.verbosity, "the logging verbosity", .type=Clags_CountFlag, .inherit=true),
     clags_flag_help_config(&global.help_config),
 };
-clags_config_t root_config = clags_config_with_options(root_args, global_options);
+clags_config_t root_config = clags_config(root_args, GLOBAL_OPTIONS);
 
 int config_set(void)
 {

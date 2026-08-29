@@ -54,7 +54,7 @@ clags_subcmd_t *selected_subcmd = NULL;
 // --- Main CLI config ---
 clags_arg_t main_args[] = {
     // With `.subcmds` you set the subcommand parsing verifier
-    clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .subcmds=&my_subcmds),
+    clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .using.subcmds=&my_subcmds),
     // With the `.type` field, we specify how the flag stores its result.
     // A full list of available storage types can be found in the `clags_flag_type_t` enum.
     // The default is `Clags_BoolFlag`, a normal boolean flag.

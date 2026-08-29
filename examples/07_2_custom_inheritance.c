@@ -37,8 +37,8 @@ int64_t mtwo = 0;
 bool help = false;
 
 clags_arg_t args[] = {
-    clags_positional(&mten, "10-multiple", "a multiple of ten", .value_type=Clags_Custom, .custom=&multiple_10),
-    clags_positional(&mtwo, "2-multiple", "a multiple of two", .value_type=Clags_Custom, .custom=&multiple_2),
+    clags_positional(&mten, "10-multiple", "a multiple of ten", .value_type=Clags_Custom, .using.custom=&multiple_10),
+    clags_positional(&mtwo, "2-multiple", "a multiple of two", .value_type=Clags_Custom, .using.custom=&multiple_2),
     clags_flag_help(&help),
 };
 

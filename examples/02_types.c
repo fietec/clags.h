@@ -46,7 +46,7 @@ clags_arg_t args[] = {
     clags_option('q', "quality", &quality, "NUM", "the quality of the output image", .value_type=Clags_UInt8, .default_input="50"),
 
     // Use `Clags_Int` together with the `range` field for custom number ranges
-    clags_option('c', "compression", &compression, "NUM", "compression value of the output file", .value_type=Clags_UInt, .range=&compression_range, .default_input="0"),
+    clags_option('c', "compression", &compression, "NUM", "compression value of the output file", .value_type=Clags_UInt, .using.range=&compression_range, .default_input="0"),
     clags_option('s', "scaling", &scaling, "FACT", "the factor by which to scale the image", .value_type=Clags_Float, .default_input="1.0"),
 
     clags_flag('w', "warnings", &warnings, "print warnings"),

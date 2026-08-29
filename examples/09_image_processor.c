@@ -16,7 +16,7 @@ clags_config_t *help = NULL;
 bool version = false;
 
 // the options used for all configs
-const clags_options_t options = {.ignore_prefix="!", .list_terminator="::", .duplicate_strings=true};
+#define GLOBAL_OPTIONS .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true
 
 /* Convert subcommand config */
 
@@ -39,13 +39,12 @@ clags_choice_t *convert_format = NULL;
 clags_arg_t convert_args[] = {
     clags_positional(&convert_input_file, "input_file", "the file to convert", .value_type=Clags_File),
     clags_option('o', "output", &convert_output_file, "FILE", "the file to output", .default_input="a.out"),
-    clags_option('f', "format", &convert_format, "FORMAT", "the format which to convert to", .value_type=Clags_Choice, .choices=&choices, .default_input="PNG"),
-    clags_option('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_Int, .default_input="90", .range=&convert_quality_range),
+    clags_option('f', "format", &convert_format, "FORMAT", "the format which to convert to", .value_type=Clags_Choice, .using.choices=&choices, .default_input="PNG"),
+    clags_option('q', "quality", &convert_quality, "QUALITY", "the quality of the convertion", .value_type=Clags_Int, .default_input="90", .using.range=&convert_quality_range),
     clags_flag('w', "warnings", &convert_warnings, "print warnings"),
 };
 
-// this macro is an alternative to `clags_config`. You can use it if multiple configs share the same options.
-clags_config_t convert_config = clags_config_with_options(convert_args, options);
+clags_config_t convert_config = clags_config(convert_args, GLOBAL_OPTIONS);
 
 /* Resize subcommand config */
 
@@ -63,7 +62,7 @@ clags_arg_t resize_args[] = {
     clags_flag('k', "keep-aspect", &resize_keep_aspect, "keep the aspect ratio of the input image"),
 };
 
-clags_config_t resize_config = clags_config_with_options(resize_args, options);
+clags_config_t resize_config = clags_config(resize_args, GLOBAL_OPTIONS);
 
 /* Tag subcommand config */
 
@@ -83,11 +82,11 @@ clags_choice_t *tag_format = NULL;
 clags_arg_t tag_args[] = {
     clags_positional(&tag_images, "images", "list of images to tag", .is_list=true, .value_type=Clags_File),
     clags_positional(&tag_values, "tags", "tags to apply to all images", .is_list=true),
-    clags_option('f', "format", &tag_format, "FORMAT", "format to save tags", .value_type=Clags_Choice, .choices=&tag_choices, .default_input="JSON"),
+    clags_option('f', "format", &tag_format, "FORMAT", "format to save tags", .value_type=Clags_Choice, .using.choices=&tag_choices, .default_input="JSON"),
     clags_flag('o', "overwrite", &tag_overwrite, "replace existing tags"),
 };
 
-clags_config_t tag_config = clags_config_with_options(tag_args, options);
+clags_config_t tag_config = clags_config(tag_args, GLOBAL_OPTIONS);
 
 /* Parent config */
 
@@ -107,12 +106,12 @@ clags_subcmds_t subcmds = clags_subcmds(subcommands);
 clags_subcmd_t *selected_subcmd = NULL;
 
 clags_arg_t parent_args[] = {
-    clags_positional(&selected_subcmd, "action", "the subcommand to run", .value_type=Clags_Subcmd, .subcmds=&subcmds),
+    clags_positional(&selected_subcmd, "action", "the subcommand to run", .value_type=Clags_Subcmd, .using.subcmds=&subcmds),
     clags_flag('v', "version", &version, "print the version", .exit=true, .inherit=true),
     clags_flag_help_config(&help),
 };
 
-clags_config_t parent_config = clags_config_with_options(parent_args, options);
+clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
 
 int main(int argc, char **argv)
 {
