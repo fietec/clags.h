@@ -1102,26 +1102,26 @@ CLAGS_API int8_t  clags_strtoint8 (const char *str, char **endptr, int base);
 CLAGS_API int16_t clags_strtoint16(const char *str, char **endptr, int base);
 CLAGS_API int32_t clags_strtoint32(const char *str, char **endptr, int base);
 CLAGS_API int64_t clags_strtoint64(const char *str, char **endptr, int base);
-CLAGS_API int64_t strtoint_range  (const char *str, char **endptr, int base, int64_t min, int64_t max);
+CLAGS_API int64_t clags_strtoint_custom(const char *str, char **endptr, int base, int64_t min, int64_t max);
 
 CLAGS_API uint8_t  clags_strtouint8 (const char *str, char **endptr, int base);
 CLAGS_API uint16_t clags_strtouint16(const char *str, char **endptr, int base);
 CLAGS_API uint32_t clags_strtouint32(const char *str, char **endptr, int base);
 CLAGS_API uint64_t clags_strtouint64(const char *str, char **endptr, int base);
-CLAGS_API uint64_t strtouint_range  (const char *str, char **endptr, int base, uint64_t min, uint64_t max);
+CLAGS_API uint64_t clags_strtouint_custom(const char *str, char **endptr, int base, uint64_t min, uint64_t max);
 
 // safe/structured functions: returns the parsing result via a `clags_strtoint_res_t` struct
 CLAGS_API int8_t  clags_strtoint8_s (const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base);
-CLAGS_API int64_t strtoint_range_s  (const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
+CLAGS_API int64_t clags_strtoint_custom_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max);
 
 CLAGS_API uint8_t  clags_strtouint8_s (const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base);
-CLAGS_API uint64_t strtouint_range_s  (const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
+CLAGS_API uint64_t clags_strtouint_custom_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
 
 #endif // !CLAGS_NO_STRTOINT
 
@@ -1571,7 +1571,7 @@ CLAGS_PRIV int clags_strtoint__handle_base(const char **str, int base)
     return base;
 }
 
-CLAGS_API int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
+CLAGS_API int64_t clags_strtoint_custom_s(const char *str, clags_strtoint_res_t *res, int base, int64_t min, int64_t max)
 {
     if (!str || min > max || base < 0 || base == 1 || base > 36){
         if (res){
@@ -1655,10 +1655,10 @@ CLAGS_API int64_t clags_strtoint_range_s(const char *str, clags_strtoint_res_t *
     return result;
 }
 
-CLAGS_API int64_t clags_strtoint_range(const char *str, char **endptr, int base, int64_t min, int64_t max)
+CLAGS_API int64_t clags_strtoint_custom(const char *str, char **endptr, int base, int64_t min, int64_t max)
 {
     clags_strtoint_res_t res;
-    int64_t result = clags_strtoint_range_s(str, &res, base, min, max);
+    int64_t result = clags_strtoint_custom_s(str, &res, base, min, max);
     if (res.invalid_params) errno = EINVAL;
     else if (res.out_of_range) errno = ERANGE;
     if (endptr) *endptr = (char*) res.endptr;
@@ -1667,45 +1667,45 @@ CLAGS_API int64_t clags_strtoint_range(const char *str, char **endptr, int base,
 
 CLAGS_API int8_t clags_strtoint8(const char *str, char **endptr, int base)
 {
-    return (int8_t)clags_strtoint_range(str, endptr, base, INT8_MIN, INT8_MAX);
+    return (int8_t)clags_strtoint_custom(str, endptr, base, INT8_MIN, INT8_MAX);
 }
 
 CLAGS_API int8_t clags_strtoint8_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return (int8_t)clags_strtoint_range_s(str, res, base, INT8_MIN, INT8_MAX);
+    return (int8_t)clags_strtoint_custom_s(str, res, base, INT8_MIN, INT8_MAX);
 }
 
 CLAGS_API int16_t clags_strtoint16(const char *str, char **endptr, int base)
 {
-    return (int16_t)clags_strtoint_range(str, endptr, base,INT16_MIN, INT16_MAX);
+    return (int16_t)clags_strtoint_custom(str, endptr, base,INT16_MIN, INT16_MAX);
 }
 
 CLAGS_API int16_t clags_strtoint16_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return (int16_t)clags_strtoint_range_s(str, res, base, INT16_MIN, INT16_MAX);
+    return (int16_t)clags_strtoint_custom_s(str, res, base, INT16_MIN, INT16_MAX);
 }
 
 CLAGS_API int32_t clags_strtoint32(const char *str, char **endptr, int base)
 {
-    return (int32_t)clags_strtoint_range(str, endptr, base, INT32_MIN, INT32_MAX);
+    return (int32_t)clags_strtoint_custom(str, endptr, base, INT32_MIN, INT32_MAX);
 }
 
 CLAGS_API int32_t clags_strtoint32_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return (int32_t)clags_strtoint_range_s(str, res, base, INT32_MIN, INT32_MAX);
+    return (int32_t)clags_strtoint_custom_s(str, res, base, INT32_MIN, INT32_MAX);
 }
 
 CLAGS_API int64_t clags_strtoint64(const char *str, char **endptr, int base)
 {
-    return clags_strtoint_range(str, endptr, base, INT64_MIN, INT64_MAX);
+    return clags_strtoint_custom(str, endptr, base, INT64_MIN, INT64_MAX);
 }
 
 CLAGS_API int64_t clags_strtoint64_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags_strtoint_range_s(str, res, base, INT64_MIN, INT64_MAX);
+    return clags_strtoint_custom_s(str, res, base, INT64_MIN, INT64_MAX);
 }
 
-CLAGS_API uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max)
+CLAGS_API uint64_t clags_strtouint_custom_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max)
 {
     if (!str || min > max || base < 0 || base == 1 || base > 36){
         if (res){
@@ -1785,10 +1785,10 @@ CLAGS_API uint64_t clags_strtouint_range_s(const char *str, clags_strtoint_res_t
     return result;
 }
 
-CLAGS_API uint64_t clags_strtouint_range(const char *str, char **endptr, int base, uint64_t min, uint64_t max)
+CLAGS_API uint64_t clags_strtouint_custom(const char *str, char **endptr, int base, uint64_t min, uint64_t max)
 {
     clags_strtoint_res_t res;
-    uint64_t result = clags_strtouint_range_s(str, &res, base, min, max);
+    uint64_t result = clags_strtouint_custom_s(str, &res, base, min, max);
     if (res.invalid_params) errno = EINVAL;
     else if (res.out_of_range) errno = ERANGE;
     if (endptr) *endptr = (char*) res.endptr;
@@ -1797,42 +1797,42 @@ CLAGS_API uint64_t clags_strtouint_range(const char *str, char **endptr, int bas
 
 CLAGS_API uint8_t clags_strtouint8(const char *str, char **endptr, int base)
 {
-    return (uint8_t)clags_strtouint_range(str, endptr, base, 0, UINT8_MAX);
+    return (uint8_t)clags_strtouint_custom(str, endptr, base, 0, UINT8_MAX);
 }
 
 CLAGS_API uint8_t clags_strtouint8_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return (uint8_t)clags_strtouint_range_s(str, res, base, 0, UINT8_MAX);
+    return (uint8_t)clags_strtouint_custom_s(str, res, base, 0, UINT8_MAX);
 }
 
 CLAGS_API uint16_t clags_strtouint16(const char *str, char **endptr, int base)
 {
-    return (uint16_t)clags_strtouint_range(str, endptr, base, 0, UINT16_MAX);
+    return (uint16_t)clags_strtouint_custom(str, endptr, base, 0, UINT16_MAX);
 }
 
 CLAGS_API uint16_t clags_strtouint16_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return (uint16_t)clags_strtouint_range_s(str, res, base, 0, UINT16_MAX);
+    return (uint16_t)clags_strtouint_custom_s(str, res, base, 0, UINT16_MAX);
 }
 
 CLAGS_API uint32_t clags_strtouint32(const char *str, char **endptr, int base)
 {
-    return (uint32_t)clags_strtouint_range(str, endptr, base, 0, UINT32_MAX);
+    return (uint32_t)clags_strtouint_custom(str, endptr, base, 0, UINT32_MAX);
 }
 
 CLAGS_API uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return (uint32_t)clags_strtouint_range_s(str, res, base, 0, UINT32_MAX);
+    return (uint32_t)clags_strtouint_custom_s(str, res, base, 0, UINT32_MAX);
 }
 
 CLAGS_API uint64_t clags_strtouint64(const char *str, char **endptr, int base)
 {
-    return clags_strtouint_range(str, endptr, base, 0, UINT64_MAX);
+    return clags_strtouint_custom(str, endptr, base, 0, UINT64_MAX);
 }
 
 CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base)
 {
-    return clags_strtouint_range_s(str, res, base, 0, UINT64_MAX);
+    return clags_strtouint_custom_s(str, res, base, 0, UINT64_MAX);
 }
 
 #endif // !CLAGS_NO_STRTOINT
@@ -1875,7 +1875,7 @@ CLAGS_PRIV bool clags__verify_signed_int(clags_config_t *config, clags_value_typ
     }
 
     clags_strtoint_res_t res;
-    int64_t value = clags_strtoint_range_s(arg, &res, 0, min, max);
+    int64_t value = clags_strtoint_custom_s(arg, &res, 0, min, max);
     if (res.no_digits){
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__types[type].name, arg_name, arg);
         return false;
@@ -1949,7 +1949,7 @@ CLAGS_PRIV bool clags__verify_unsigned_int(clags_config_t *config, clags_value_t
     }
 
     clags_strtoint_res_t res;
-    uint64_t value = clags_strtouint_range_s(arg, &res, 0, min, max);
+    uint64_t value = clags_strtouint_custom_s(arg, &res, 0, min, max);
 
     if (res.no_digits) {
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__types[type].name, arg_name, arg);
