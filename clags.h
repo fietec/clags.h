@@ -160,6 +160,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <errno.h>
 
 // public api linkage / visibility
 #ifndef CLAGS_API
@@ -756,9 +757,10 @@ struct clags_config_t{
   #define clags_real_range(from, to) {.type=Clags_Real, .min.as_double=(from), .max.as_double=(to)}
 #endif // !CLAGS_NO_REAL_TYPES
 
-
+// macro for a `clags_custom_t` struct
 #define clags_custom(type_name, verifier, ...) {.name=(type_name), .verify=(verifier), __VA_ARGS__}
 
+// macro for a `clags_error_t` struct
 #define clags_error(type, arg, config) (clags_error_t){(type), {(arg), (config)}}
 
 /* Argument Constructors */
@@ -1008,8 +1010,6 @@ CLAGS_API const char* clags_error_description(clags_error_type_t error);
 */
 CLAGS_API clags_path_type_t clags_path_type(const char *path);
 
-#endif // CLAGS_NO_PATH_TYPES
-
 /*
   Return the name of the provided path type.
 
@@ -1042,6 +1042,8 @@ CLAGS_API bool clags_path_exists(const char *path);
     bool            : the existance of the path
 */
 CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type);
+
+#endif // CLAGS_NO_PATH_TYPES
 
 /* Logging */
 
@@ -1130,7 +1132,6 @@ CLAGS_API uint64_t clags_strtouint_custom_s(const char *str, clags_strtoint_res_
 #ifdef CLAGS_IMPLEMENTATION
 
 #include <string.h>
-#include <errno.h>
 #include <float.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -3100,7 +3101,6 @@ CLAGS_PRIV const char* clags__get_next_arg(clags_config_t *config, clags__parser
 CLAGS_PRIV clags_error_type_t clags__parse_option(clags_config_t *config, clags__parser_t *parser, const char *value, clags_option_t *opt, bool is_long_flag)
 {
     const char *arg = parser->argv[parser->index];
-    printf("arg: '%s' value:'%s'\n", arg, value);
     if (*value == '\0'){
         // value is next argument
         value = clags__get_next_arg(config, parser);
@@ -3149,7 +3149,7 @@ CLAGS_PRIV clags_error_t clags__parse_long_options_and_flags(clags_config_t *con
         return clags_error(Clags_Error_InvalidOption, NULL, NULL);
     }
     if (parg->type == Clags_Option){
-        const char *value = flag_name + strlen(flag_name);
+        const char *value = flag_name + strlen(parg->as.opt.long_flag);
         clags_error_type_t error = clags__parse_option(config, parser, value, &parg->as.opt, true);
         if (error != Clags_Error_Ok) return clags_error(error, parg, arg_config);
     } else if (parg->type == Clags_Flag){
