@@ -379,7 +379,7 @@
 
 // the definition of all flag types
 #define CLAGS__FLAG_TYPES                                                                                                                       \
-    X(Clags_BoolFlag,   clags__set_bool_flag   ) /* standard boolean flag; set to `true` when the flag occurs; variable type: bool           */ \
+    X(Clags_BoolFlag,   clags__set_bool_flag   ) /* standard boolean flag (default); set to `true` when the flag occurs; variable type: bool */ \
     X(Clags_ConfigFlag, clags__set_config_flag ) /* stores a pointer to the config in which the flag was set; variable type: clags_config_t* */ \
     X(Clags_CountFlag,  clags__set_count_flag  ) /* tracks how many times the flag was encountered; variable type: size_t                    */ \
 
@@ -425,14 +425,10 @@ typedef enum{
 } clags_path_type_t;
 #undef X
 
-// all available flag types
-// if a flag's `type` is not explicitly set, `Clags_BoolFlag` is used by default
+// an auto-genereated enum of all available flag types
 #define X(type, setter) type,
 typedef enum {
     CLAGS__FLAG_TYPES
-    /* Clags_BoolFlag = 0,   // standard boolean flag; set to `true` when the flag occurs; variable type: bool */
-    /* Clags_ConfigFlag,     // stores a pointer to the config in which the flag was set; variable type: clags_config_t* */
-    /* Clags_CountFlag,      // tracks how many times the flag was encountered; variable type: size_t */
 } clags_flag_type_t;
 #undef X
 
@@ -2672,15 +2668,15 @@ CLAGS_PRIV clags_config_t* clags__validate_flag(clags_config_t *config, clags_fl
                   "so including it in the config may cause incorrect parsing.",
                   flag.long_flag);
     }
-#define X(type, setter) case type: break;
     switch (flag.type){
+#define X(type, setter) case type: break;
         CLAGS__FLAG_TYPES
+#undef X
         default:{
             clags_log(config, Clags_ConfigError, "invalid flag type for flag '%s': %d!", name, flag.type);
             return config;
         }
     }
-#undef X
 
     return NULL;
 }
@@ -2990,15 +2986,17 @@ CLAGS_PRIV clags_error_t clags__set_defaults(clags_config_t *config)
             case Clags_Positional:{
                 clags_positional_t pos = arg->as.pos;
                 if (pos.optional && pos.default_input != NULL){
-                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, pos.is_list)) return clags_error(Clags_Error_InvalidDefault, arg, config);
+                    clags_assert(!pos.is_list, "list arguments may not have default values!");
+                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, false)) return clags_error(Clags_Error_InvalidDefault, arg, config);
                 }
             } break;
             case Clags_Option:{
                 clags_option_t opt = arg->as.opt;
                 if (opt.default_input != NULL){
+                    clags_assert(!opt.is_list, "list arguments may not have default values!");
                     char buf[3] = {'-', '\0', '\0'};
                     const char *name = opt.long_flag ? opt.long_flag : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
-                    if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, opt.is_list)) return clags_error(Clags_Error_InvalidDefault, arg, config);
+                    if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, false)) return clags_error(Clags_Error_InvalidDefault, arg, config);
                 }
             } break;
             default: continue;
