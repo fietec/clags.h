@@ -705,10 +705,10 @@ struct clags_config_t{
 };
 
 // helper macros
-#define clags_arr_len(arr) (sizeof(arr)/sizeof((arr)[0]))
+#define clags_arr_len(arr) ((arr) != NULL? sizeof(arr)/sizeof((arr)[0]) : 0)
 #define clags_return_defer(value) do{result = (value); goto defer;}while(0) // set the `result` variable and jump to the `defer` label
-#define clags_assert(expr, fmt)  do{if(!(expr)){fprintf(stderr, "%s:%d: in %s: [FATAL] "fmt"\n", __FILE__, __LINE__, __func__); fflush(stderr); CLAGS_PANIC;}}while(0)
-#define clags_unreachable(fmt) {fprintf(stderr, "%s:%d in %s: [UNREACHABLE]: "fmt"\n", __FILE__, __LINE__, __func__); fflush(stderr); CLAGS_PANIC;}while(0)
+#define clags_assert(expr, msg)  do{if(!(expr)){fprintf(stderr, "%s:%d: in %s: [FATAL] "msg"\n", __FILE__, __LINE__, __func__); fflush(stderr); CLAGS_PANIC;}}while(0)
+#define clags_unreachable(msg) do{fprintf(stderr, "%s:%d in %s: [UNREACHABLE]: "msg"\n", __FILE__, __LINE__, __func__); fflush(stderr); CLAGS_PANIC;}while(0)
 
 /* Struct Constructors */
 
@@ -2405,7 +2405,7 @@ CLAGS_PRIV bool clags__validate_default(clags_config_t *config, clags_value_type
         return false;
     }
     // verify but do not write to the variable
-    if (!clags__set_arg(config, value_type, arg_name, value, NULL, data, false)){
+    if (clags__set_arg(config, value_type, arg_name, value, NULL, data, false) != Clags_Error_Ok){
         clags_log(config, Clags_ConfigError, "invalid default value for argument '%s': '%s'", arg_name, value);
         return false;
     }
@@ -2988,7 +2988,7 @@ CLAGS_PRIV clags_error_t clags__set_defaults(clags_config_t *config)
                 clags_positional_t pos = arg->as.pos;
                 if (pos.optional && pos.default_input != NULL){
                     clags_assert(!pos.is_list, "list arguments may not have default values!");
-                    if (!clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, false)) return clags_error(Clags_Error_InvalidDefault, arg, config);
+                    if (clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, false) != Clags_Error_Ok) return clags_error(Clags_Error_InvalidDefault, arg, config);
                 }
             } break;
             case Clags_Option:{
@@ -2997,7 +2997,7 @@ CLAGS_PRIV clags_error_t clags__set_defaults(clags_config_t *config)
                     clags_assert(!opt.is_list, "list arguments may not have default values!");
                     char buf[3] = {'-', '\0', '\0'};
                     const char *name = opt.long_flag ? opt.long_flag : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
-                    if (!clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, false)) return clags_error(Clags_Error_InvalidDefault, arg, config);
+                    if (clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, false) != Clags_Error_Ok) return clags_error(Clags_Error_InvalidDefault, arg, config);
                 }
             } break;
             default: continue;
