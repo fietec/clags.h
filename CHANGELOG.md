@@ -23,6 +23,7 @@
 - added `clags_error(type, arg, config)` macro for easier error creation
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
+- introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`

@@ -234,3 +234,12 @@ To integrate with custom allocators (such as arena or pool allocators), override
 #define CLAGS_IMPLEMENTATION
 #include "clags.h"
 ```
+
+## Known Issues and Planned Features
+
+This project uses the [tatr](https://github.com/tsoding/tatr) task and issue tracker.  
+For example, to get the list of all known bugs run:
+```
+tatr ls :bug
+```
+For more information, see the extensive documentation in the repo's README.
