@@ -1,7 +1,16 @@
 TARGET = tests
-SRCS   = tests.c ../clags.h
-CFLAGS = -Wall -Wextra --std=c99 -g
-LDFLAGS = -lm
+SRCS   = tests.c syntax.c parsing.c validation.c
+OBJS   = $(SRCS:%.c=build/%.o)
 
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LDFLAGS)
+CFLAGS  = -Wall -Wextra --std=c99 -g
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $@
+
+build/%.o: %.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.PHONY: clean
+clean:
+	rm -rf build $(TARGET)
