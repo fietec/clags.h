@@ -172,7 +172,7 @@
 #define CLAGS_PRIV static
 #endif // CLAGS_PRIV
 
-// feature stripping macrosa
+// feature stripping macros
 #ifdef CLAGS_NO_COMPLEX_TYPES
   #define CLAGS_NO_INT_TYPES
   #define CLAGS_NO_REAL_TYPES
@@ -352,7 +352,7 @@
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define CLAGS__VALUE_TYPES                                                                                                                                                                                   \
  /* Category           Enum Value    Verification Func    Name       Var Type         Validation Func         Usage Func                                                                                  */ \
- /* ================== ============= ==================== ========== ================ ======================= ==========                                                                                  */ \
+ /* ================== ============= ==================== ========== ================ ======================= ====================                                                                                  */ \
     CLAGS__BASIC_VTYPE(Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
     CLAGS__BASIC_VTYPE(Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
     CLAGS__BASIC_VTYPE(Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
@@ -419,12 +419,14 @@ typedef enum{
 } clags_error_type_t;
 #undef X
 
+#ifndef CLAGS_NO_PATH_TYPES
 // an auto-generated enum of all path types
 #define X(type, desc, exist) type,
 typedef enum{
     CLAGS__PATH_TYPES
 } clags_path_type_t;
 #undef X
+#endif // !CLAGS_NO_PATH_TYPES
 
 // an auto-genereated enum of all available flag types
 #define X(type, setter) type,
@@ -510,7 +512,18 @@ typedef enum{
     Clags_NoLogs,        // disable all logs
 } clags_log_level_t;
 
-typedef void (*clags_log_handler_t)(clags_config_t *config, clags_log_level_t level, const char *format, va_list args); // the function type of custom log handlers
+/*
+  The definition of the log handler function type.
+  These functions are responsible for logging a formatted message in respect to a given log level.
+  For an example implementation, see `clags__default_log_handler`.
+
+  Arguments:
+    - config  : the current config
+    - level   : the log level of the message
+    - format  : a 'printf'-like format string
+    - args    : the variadic arguments for the format string
+*/
+typedef void (*clags_log_handler_t)(clags_config_t *config, clags_log_level_t level, const char *format, va_list args);
 
 // the definition of clags's string builder
 typedef struct {
@@ -1195,6 +1208,7 @@ CLAGS_PRIV int clags__strcasecmp(const char *s1, const char *s2)
     return clags__tolower((unsigned char)*s1) - clags__tolower((unsigned char)*s2);
 }
 
+#ifndef CLAGS_NO_TIME_TYPES
 CLAGS_PRIV int clags__strslice_casecmp(const char *slice, size_t slice_len, const char *exact)
 {
     if (slice == exact) return 0;
@@ -1217,6 +1231,7 @@ CLAGS_PRIV int clags__strslice_casecmp(const char *slice, size_t slice_len, cons
 
     return '\0' - clags__tolower((unsigned char)*exact);
 }
+#endif // !CLAGS_NO_TIME_TYPES
 
 /* String Builder Functionality */
 
@@ -1456,7 +1471,7 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     clags__stat_struct attrs;
     if (clags__stat_func(path, &attrs) == -1){
         // On Windows this will always return `Clags_Path_Missing`
-        // TODO: consider implementing this using winapi functions
+        // TODO(20260922-141528): consider implementing this using winapi functions
         if (errno == ENOENT || errno == ENOTDIR) return Clags_Path_Missing;
         return Clags_Path_Unknown;
     }
@@ -2118,7 +2133,7 @@ CLAGS_API bool clags_verify_dir(clags_config_t *config, const char *arg_name, co
             return true;
         }
         default:{
-            clags_log(config, Clags_Error, "Path for arguments '%s' is not a dir: '%s'!", arg_name, arg);
+            clags_log(config, Clags_Error, "Path for argument '%s' is not a dir: '%s'!", arg_name, arg);
             return false;
         }
     }
@@ -2314,7 +2329,7 @@ CLAGS_API bool clags_verify_subcmd(clags_config_t *config, const char *arg_name,
             return true;
         }
     }
-    clags_log(config, Clags_Error, "unknown subcommand '%s' for argument '%s'!", arg, arg_name);
+    clags_log(config, Clags_Error, "Unknown subcommand '%s' for argument '%s'!", arg, arg_name);
     return false;
 }
 
@@ -2428,7 +2443,7 @@ CLAGS_PRIV bool clags__validate_list(clags_config_t *config, void *variable, cla
                 return false;
             }
             if (list->item_size == 0){
-                clags_log(config, Clags_ConfigError, "`item_size` of custom list for argument '%s' must notbe zero!", arg_name);
+                clags_log(config, Clags_ConfigError, "`item_size` of custom list for argument '%s' must not be zero!", arg_name);
                 return false;
             }
         }
@@ -2520,6 +2535,7 @@ CLAGS_PRIV clags_config_t* clags__validate_custom(clags_config_t *config, const 
     return NULL;
 }
 
+#ifndef CLAGS_NO_INT_TYPES
 CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t type, const char *arg_name, void *data)
 {
     // check whether the provided range contraint is of the correct type
@@ -2561,7 +2577,6 @@ CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_v
     return NULL;
 }
 
-#ifndef CLAGS_NO_INT_TYPES
 
 CLAGS_PRIV clags_config_t* clags__validate_int(clags_config_t *config, const char *arg_name, void *data)
 {
@@ -2810,7 +2825,6 @@ CLAGS_API clags_config_t* clags_validate(const char *name, clags_config_t *confi
     }
 
     // validate args
-
     bool last_was_list = false;
     bool subcmd_found = false;
     bool optional_found = false;
@@ -3360,6 +3374,7 @@ CLAGS_API clags_config_t* clags_parse(int argc, char *argv[], clags_config_t *co
         if (parser.accept_options && strncmp(arg, "--", 2) == 0){
             error = clags__parse_long_options_and_flags(config, &parser, &error_config, &exit);
         } else if (parser.accept_options && arg[0] == '-' && !isdigit((unsigned char)arg[1]) && !(arg[1] == '.' && isdigit((unsigned char)arg[2]))){
+            // argument is a short flag and not a negative number
             error = clags__parse_short_options_and_flags(config, &parser, &error_config, &exit);
         } else{
             error = clags__parse_positional(config, &parser, &error_config, &exit);
