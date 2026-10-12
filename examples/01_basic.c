@@ -27,18 +27,17 @@ int main(int argc, char **argv)
         // For long flags, both the `--output <file>` and `--output=<file>` syntaxes are supported
         clags_option('o', "output", &output_file, "FILE", "the output file"),
 
-
         // Use flags to set boolean values on occurrence
         // Short flags can be standalone, or combined into multi-flags, e.g.: -abc
         clags_flag('w', "warnings", &warnings, "print warnings"),
         // This is a neat short-hand since the `--help` flag is so common
-        // Note: When this flag is encountered, parsing exists immediately
+        // Note: When this flag is encountered, parsing exits immediately
         //       If you don't want this behavior then define the flag yourself
         clags_flag_help(&help),
     };
 
-    // A config is the description a single (sub)command
-    // It contains the previously defined argument rules as well as other settings
+    // A config is the description of a single (sub)command
+    // It contains the previously defined argument rules as well as other settings.
     // See later examples and `clags_options_t` for more details
     clags_config_t config = clags_config(args);
 

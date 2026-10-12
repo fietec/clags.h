@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
     clags_arg_t args[] = {
         clags_positional(&host, "host", "the host to connect to"),
-        // Verify a time string (like '1h', '2.5ms', '1h25m18s')
+        // Verify a time string (like '1h', '1h25m18s')
         // `Clags_TimeS` supports these units (case-insensitively): 'd', 'h', 'm', 's' and yields the input converted to seconds
         // `Clags_TimeNS` supports all the above and additionally: 'ns', 'us', 'ms' and yields the input converted to nanoseconds
         clags_positional(&timeout, "timeout", "total duration to hold the connection", .value_type=Clags_TimeS),

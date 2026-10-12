@@ -15,7 +15,7 @@
 clags_config_t *help = NULL;
 bool version = false;
 
-// the options used for all configs
+// With a macro like this you can reduce duplicated config options
 #define GLOBAL_OPTIONS .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true
 
 /* Convert subcommand config */
@@ -182,8 +182,10 @@ int main(int argc, char **argv)
     }
     
 defer:
-    // free all the memory that clags might have allocated during parsing
-    // Note: the difference to `clags_config_free` is that this function is recursive,
+    // Free all the memory that clags might have allocated during parsing.
+    // This means all populated lists and (string) duplications.
+    // Apart from these opt-in features, clags doesn't allocate any other persistent memory.
+    // Note: The difference to `clags_config_free` is that this function is recursive,
     //       meaning all child configs are freed automatically
     clags_free(&parent_config);
     return result;

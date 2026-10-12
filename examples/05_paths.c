@@ -18,7 +18,7 @@ bool warnings = false;
 bool help = false;
 
 clags_arg_t args[] = {
-    // Force the provided string to be a valid path to a file
+    // Force the provided string to be a valid path to a file (use `Clags_Dir` if should be a directory instead).
     clags_positional(&input_file, "input_file", "the input file", .value_type=Clags_File),
 
     // Verify that the provided string is a valid path, no matter whether regular file, dir or other
@@ -40,10 +40,11 @@ int main(int argc, char **argv)
         clags_usage(argv[0], &config);
         return 0;
     }
-    // Since `output_file` was only checked for existance, you don't know of what type the path is
+    // Since `output_file` was only checked for existance, you don't know of what type the path is.
     clags_path_type_t type = clags_path_type(output_file);
     const char *type_name = clags_path_type_name(type);
 
     printf("input: %s, size: %"PRIu64", output: %s (%s)\n", input_file, size, output_file, type_name);
     return 0;
 }
+

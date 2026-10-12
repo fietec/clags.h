@@ -352,7 +352,7 @@
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define CLAGS__VALUE_TYPES                                                                                                                                                                                   \
  /* Category           Enum Value    Verification Func    Name       Var Type         Validation Func         Usage Func                                                                                  */ \
- /* ================== ============= ==================== ========== ================ ======================= ====================                                                                                  */ \
+ /* ================== ============= ==================== ========== ================ ======================= ====================                                                                        */ \
     CLAGS__BASIC_VTYPE(Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
     CLAGS__BASIC_VTYPE(Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
     CLAGS__BASIC_VTYPE(Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
@@ -527,7 +527,7 @@ typedef void (*clags_log_handler_t)(clags_config_t *config, clags_log_level_t le
 
 // the definition of clags's string builder
 typedef struct {
-    char *items;
+    char *item;s
     size_t count;
     size_t capacity;
 } clags_sb_t;
@@ -611,7 +611,7 @@ typedef struct{
         clags_choices_t *choices;          // pointer to the choice wrapper, only if `value_type` == `Clags_Choice`
         clags_subcmds_t *subcmds;          // pointer to subcommand definitions, only if `value_type` == `Clags_Subcmd`
         clags_range_t *range;              // pointer to range definition, only if `value_type` is `Clags_Int`, `Clags_UInt` or `Clags_Real`
-        void *_data;                        // internal, do not touch
+        void *_data;                       // internal, do not touch
     } using;
 } clags_positional_t;
 

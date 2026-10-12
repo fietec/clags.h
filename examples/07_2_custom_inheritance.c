@@ -28,7 +28,9 @@ bool multiple_of(clags_config_t *config, const char *arg_name, const char *arg, 
     return true;
 }
 
-// The definition of two custom types with that share the same verification function, but differ in the type argument, here the `base`
+// The `.data` field contains arbitrary user data which will be passed to the verfier via the `data` argument.
+// Thereby, you can have definitions of two custom types with that share the same verification function, but differ in behaviour, here the `base`.
+// Additionally, you can also define custom usage functions, validators and more. See the `clags_custom_t` struct for more information.
 clags_custom_t multiple_10 = clags_custom("multiple of 10", multiple_of, .data=(void*) 10);
 clags_custom_t multiple_2 = clags_custom("multiple of 2", multiple_of, .data=(void*) 2);
 

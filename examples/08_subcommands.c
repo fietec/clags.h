@@ -10,14 +10,14 @@
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>
 
-// Global help flag
-// since the help flag can be set from multiple subcommands, we can track the corresponding config here
+// === GLOBAL_FLAGS === 
+// Since the help flag can be set from multiple subcommands, we can track the corresponding config here
 clags_config_t *help = NULL;
 
 // This flag tracks how many times it was encountered
 size_t verbosity = 0;
 
-// --- COPY subcommand ---
+// === COPY subcommand ===
 char *copy_source = NULL;
 char *copy_dest   = NULL;
 
@@ -28,7 +28,7 @@ clags_arg_t copy_args[] = {
 
 clags_config_t copy_config = clags_config(copy_args);
 
-// --- DELETE subcommand ---
+// === DELETE subcommand ===
 char *delete_target = NULL;
 bool delete_force   = false;
 
@@ -39,21 +39,21 @@ clags_arg_t delete_args[] = {
 
 clags_config_t delete_config = clags_config(delete_args);
 
-// --- Subcommands ---
+// === Main config ===
+// -- Subcommands ---
+
 // This links the previously created subcommand configs to their respective arguments
 clags_subcmd_t subcmds[] = {
     {"copy",   "Copy a file from source to destination", &copy_config},
     {"delete", "Delete a file", &delete_config}
 };
-
 clags_subcmds_t my_subcmds = clags_subcmds(subcmds);
 
 // Define a variable that will hold a pointer to the selected `clags_subcmd_t`
 clags_subcmd_t *selected_subcmd = NULL;
 
-// --- Main CLI config ---
 clags_arg_t main_args[] = {
-    // With `.subcmds` you set the subcommand parsing verifier
+    // With `.using.subcmds` you set the subcommand parsing verifier
     clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .using.subcmds=&my_subcmds),
     // With the `.type` field, we specify how the flag stores its result.
     // A full list of available storage types can be found in the `clags_flag_type_t` enum.
@@ -79,7 +79,15 @@ int main(int argc, char **argv)
     // But since we have nested configs here, this can be used to determine which subcommand failed
     clags_config_t* failed_config = clags_parse(argc, argv, &main_config);
     if (failed_config) {
-        // print the usage for the failed subcommand
+        // Print the usage for the failed subcommand
+        // Note: Printing the usage for a sub-config here will correctly print all inherited arguments and
+        //       the subcommand path (e.g. 'Usage: ./08_subcommands copy').
+        //       This works because `clags_parse` automatically calls `clags_validate` which does two things:
+        //         - validate the entire config tree regarding unallowed parsing setups, type conflicts etc.
+        //         - initialize the config tree. This means linking the parent config in each child and setting
+        //           other fields, such as the name, usage-alignment etc.
+        //       For this reason if you want to print the usage for some child config, you first have to pass the
+        //       root config to `clags_parse` or `clags_validate`. Otherwise `clags_usage` will exit without printing anything.
         clags_usage(argv[0], failed_config);
         return 1;
     }

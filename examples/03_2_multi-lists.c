@@ -10,41 +10,55 @@
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>
 
+// To create a typed list, simply provide the corresponding value type
 clags_list_t string_list = clags_list(Clags_String);
 clags_list_t int_list = clags_list(Clags_Int32);
-clags_list_t file_list = clags_list(Clags_File);
+clags_list_t file_list = clags_list(Clags_String);
 clags_list_t extra_list = clags_list(Clags_String);
 clags_list_t ignored_list = clags_list(Clags_String);
 
 bool help = false;
 
 clags_arg_t args[] = {
-    // You can simply combine the known `.value_type` and `.is_list` fields to achieve typed lists
     clags_positional(&string_list, "strings", "a list of strings", .is_list=true),
+
+    // You can simply combine the known `.value_type` and `.is_list` fields to achieve typed lists
     clags_positional(&int_list, "ints", "a list of integers", .value_type=Clags_Int32, .is_list=true),
     // Positional arguments may also be optional, so the parser does not throw an error if no argument is provided
     clags_positional(&extra_list, "extras", "extra arguments", .optional=true, .is_list=true),
 
     // Options can also be lists
     // Every time the user provides the flag together with an argument that argument is added to the list
-    clags_option('f', "file", &file_list, "FILE", "a list of files", .value_type=Clags_File, .is_list=true),
+    // Note that comma-seperated lists are **not** supported.
+    clags_option('f', "file", &file_list, "FILE", "a list of files", .is_list=true),
     clags_flag_help(&help),
 };
 
+// A `clags_config_t` is the parsing context for a specific (sub-)command containing:
+//  - the argument declarations (args)
+//  - parsing options (see `clags_options_t`)
+//  - parsing state (these fields are set during config validation and should not be touched)
+//
 // Having multiple lists or, in fact, any other required arguments directly after a list,
-// requires for a delimeter that terminates the list.
+// requires for a delimeter that terminates the list. Set the `.list_terminator` field to define one.
+//
 // When `.duplicate_strings` is true, clags duplicates all strings. 
 // This is necessary if the original argument strings may go out of scope before the parsed values are used.
+// The allocations are tracked inside of the config. Use `clags_config_free_allocs` to free them (see below).
 //
 // Set `.ignored_args` to a list pointer to instruct clags to collect all ignored arguments
-// in the provided list. The `ignore_prefix` is removed from all arguments.
+// in the provided list. The `.ignore_prefix` is removed from all arguments.
+//
+// Part of the POSIX cli specification is the `--` operator which turns off option/flag parsing.
+// By setting the `.allow_option_parsing_toggle` flag, clags additionally allows you
+// to use it as a toggle meaning providing it again will re-enable option/flag parsing for the remaining arguments.
 clags_config_t config = clags_config(
     args,
     .list_terminator="::",
+    .duplicate_strings=true,
     .ignore_prefix="!",
     .ignored_args=&ignored_list,
     .allow_option_parsing_toggle=true,
-    .duplicate_strings=true,
 );
 
 int main(int argc, char **argv)
@@ -54,7 +68,9 @@ int main(int argc, char **argv)
 
     if (clags_parse(argc, argv, &config) != NULL){
         clags_usage(program_name, &config);
-        // this makes working with lists way more convenient
+        // This makes working with lists way more convenient
+        // It sets the `result` variable to the provided value and jumps to the `defer` label.
+        // Nothing special just for convenience.
         clags_return_defer(1);
     }
     if (help){
@@ -92,18 +108,17 @@ int main(int argc, char **argv)
 
 defer:
 #if 1
-    // free all allocated memory by this config
+    // Free all allocated memory by this config
     clags_config_free(&config);
 #else
-    // alternatively, this is the manual way
-    // manually free each list explicitly
+    // Alternatively, this is the manual way
     clags_list_free(&string_list);
     clags_list_free(&int_list);
     clags_list_free(&extra_list);
     clags_list_free(&file_list);
     clags_list_free(&ignored_list);
 
-    // the config stores all the duplicated strings. You can free them like this
+    // The config stores all the duplicated strings. You can free them like this
     clags_config_free_allocs(&config);
 #endif
     return result;

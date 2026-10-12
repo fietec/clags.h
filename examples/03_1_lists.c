@@ -14,11 +14,11 @@ bool help = false;
 
 // Create a list to store multiple values of a specific type
 // Use the generic `clags_list(TYPE)` macro for any supported type
-// or one of the explicit initializers, e.g. `clags_string_list()`
 clags_list_t list = clags_list(Clags_String);
 
 clags_arg_t args[] = {
-    // Set `.is_list` to tell the parser that the variable is a list storing values of type `.value_type`, `Clags_String` is default
+    // Set `.is_list` to tell the parser that the variable is a list storing values of type `.value_type`, `Clags_String` is default.
+    // Note that this value type has to match the type of the list, otherwise `clags_parse` will exit with a `Clags_ConfigError`.
     clags_positional(&list, "strings", "the strings to print", .is_list=true),
     clags_flag_help(&help),
 };

@@ -38,7 +38,7 @@ clags_arg_t args[] = {
 
     clags_option('o', "output", &output, "FILE", "the output file", .default_input="output.pdf"),
 
-    // With `.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing
+    // With `.using.choices` you set the `clags_choices_t` wrapper as the verifier for choice parsing
     clags_option('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .using.choices=&choices, .default_input="LIFO"),
     clags_option('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8, .default_input="100"),
 
@@ -59,6 +59,7 @@ int main(int argc, char **argv)
         return 0;
     }
     printf("input: %s\n", input);
+    // Use the `clags_choice_index` function to get the index within the `choice_values` array.
     printf("algorithm: %s or choice no. %d\n", choice->value, clags_choice_index(&choices, choice));
     printf("quality: %"PRIu8"\n", quality);
     printf("output: %s\n", output);

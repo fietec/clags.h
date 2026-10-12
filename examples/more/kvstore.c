@@ -44,7 +44,7 @@ bool verify_dict(clags_config_t *config, const char *arg_name, const char *arg, 
 
 bool verify_addr(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
-    // TODO: implement
+    // implementation goes here
     return clags_verify_string(config, arg_name, arg, variable, data);
 }
 
