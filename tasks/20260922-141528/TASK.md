@@ -1,6 +1,6 @@
 # winapi `clags_path_type`
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 50
 - TAGS: portability
 

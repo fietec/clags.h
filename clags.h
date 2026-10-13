@@ -172,38 +172,6 @@
 #define CLAGS_PRIV static
 #endif // CLAGS_PRIV
 
-// feature stripping macros
-#ifdef CLAGS_NO_COMPLEX_TYPES
-  #define CLAGS_NO_INT_TYPES
-  #define CLAGS_NO_REAL_TYPES
-  #define CLAGS_NO_PATH_TYPES
-  #define CLAGS_NO_SIZE_TYPES
-  #define CLAGS_NO_TIME_TYPES
-#endif // CLAGS_NO_COMPLEX_TYPES
-
-#ifndef CLAGS_NO_PATH_TYPES
-  #include <sys/stat.h>
-
-  #ifdef _WIN32
-    #ifndef S_ISREG
-      #define S_ISREG(m) (((m) & _S_IFREG) != 0)
-    #endif // S_ISREG
-    #ifndef S_ISDIR
-      #define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
-    #endif // S_ISDIR
-    #if defined(_WIN64) || defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__)
-      #define clags__stat_struct struct __stat64
-      #define clags__stat_func   _stat64
-    #else
-      #define clags__stat_struct struct _stat
-      #define clags__stat_func   _stat
-    #endif
-  #else
-    #define clags__stat_struct struct stat
-    #define clags__stat_func   stat
-  #endif // _WIN32
-#endif // !CLAGS_NO_PATH_TYPES
-
 // memory allocation functions; can be overridden
 #ifndef CLAGS_CALLOC
 /*
@@ -311,6 +279,15 @@
 #    define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK)
 #endif
 
+// feature stripping macros
+#ifdef CLAGS_NO_COMPLEX_TYPES
+  #define CLAGS_NO_INT_TYPES
+  #define CLAGS_NO_REAL_TYPES
+  #define CLAGS_NO_PATH_TYPES
+  #define CLAGS_NO_SIZE_TYPES
+  #define CLAGS_NO_TIME_TYPES
+#endif // CLAGS_NO_COMPLEX_TYPES
+
 #define CLAGS__VTYPE(type, verify_func, name, value_type, validate_func, usage_func) X(type, verify_func, name, value_type, validate_func, usage_func)
 #define CLAGS__IGNORE_VTYPE(type, verify_func, name, value_type, validate_func, usage_func)
 
@@ -399,8 +376,7 @@
 // the definition of all path types
 // Note: these are NOT value types but only used internally and together with the `clags_path_type` function
 #define CLAGS__PATH_TYPES                                                                       \
-    CLAGS__PATH_TYPE(Clags_Path_Missing, "missing", false ) /* path does not exist           */ \
-    CLAGS__PATH_TYPE(Clags_Path_Unknown, "unknown", true  ) /* existing path of unknown type */ \
+    CLAGS__PATH_TYPE(Clags_Path_Invalid, "invalid", false ) /* invalid path                  */ \
     CLAGS__PATH_TYPE(Clags_Path_Dir,     "dir",     true  ) /* existing directory            */ \
     CLAGS__PATH_TYPE(Clags_Path_Reg,     "file",    true  ) /* existing regular file         */ \
     CLAGS__PATH_TYPE(Clags_Path_Other,   "other",   true  ) /* existing file of another type */ \
@@ -1466,18 +1442,45 @@ CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char
 
 #ifndef CLAGS_NO_PATH_TYPES
 
+#ifdef _WIN32
+# include <windows.h>
+#else
+# include <sys/stat.h>
+#endif
+
 CLAGS_API clags_path_type_t clags_path_type(const char *path)
 {
-    clags__stat_struct attrs;
-    if (clags__stat_func(path, &attrs) == -1){
-        // On Windows this will always return `Clags_Path_Missing`
-        // TODO(20260922-141528): consider implementing this using winapi functions
-        if (errno == ENOENT || errno == ENOTDIR) return Clags_Path_Missing;
-        return Clags_Path_Unknown;
+#ifdef _WIN32
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
+    if (wlen <= 0) return Clags_Path_Invalid;
+
+    WCHAR stack_buf[512];
+    WCHAR *wpath = stack_buf;
+    int use_heap = (wlen > 512);
+    if (use_heap){
+        wpath = (WCHAR *)malloc(wlen * sizeof(WCHAR));
+        if (wpath == NULL) return Clags_Path_Invalid;
     }
+
+    MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
+
+    DWORD attrs = GetFileAttributesW(wpath);
+
+    if (use_heap) {
+        free(wpath);
+    }
+
+    if (attrs == INVALID_FILE_ATTRIBUTES) return Clags_Path_Invalid;
+    if (attrs & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
+    if (attrs & FILE_ATTRIBUTE_REPARSE_POINT) return Clags_Path_Other;
+    return Clags_Path_Reg;
+#else
+    struct stat attrs;
+    if (stat(path, &attrs) == -1) return Clags_Path_Invalid;
     if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
     if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
     return Clags_Path_Other;
+#endif
 }
 
 CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
@@ -2091,7 +2094,7 @@ CLAGS_API bool clags_verify_path(clags_config_t *config, const char *arg_name, c
 {
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
-    if (type == Clags_Path_Missing){
+    if (type == Clags_Path_Invalid){
         clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
         return false;
     }
@@ -2104,7 +2107,7 @@ CLAGS_API bool clags_verify_file(clags_config_t *config, const char *arg_name, c
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
     switch (type){
-        case Clags_Path_Missing:{
+        case Clags_Path_Invalid:{
             clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
             return false;
         } break;
@@ -2124,7 +2127,7 @@ CLAGS_API bool clags_verify_dir(clags_config_t *config, const char *arg_name, co
     (void) data;
     clags_path_type_t type = clags_path_type(arg);
     switch (type){
-        case Clags_Path_Missing:{
+        case Clags_Path_Invalid:{
             clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
             return false;
         } break;
