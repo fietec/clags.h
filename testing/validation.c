@@ -334,6 +334,17 @@ bool test_duplicates(clags_sb_t *sb)
     return true;
 }
 
+bool test_default_input_type_mismatch(clags_sb_t *sb)
+{
+    clags_arg_t args[] = {
+        clags_option('n', "num", NULL, "N", "number", .value_type = Clags_Int, .default_input = "notanumber")
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    test(clags_validate("", &config) == &config);
+    return true;
+}
+
 Test validation_tests[] = {
     {"null and state guards", test_null_and_state_guards},
     {"valid config", test_valid_config},
@@ -347,6 +358,7 @@ Test validation_tests[] = {
     {"ranges", test_range_validation},
     {"custom verifier", test_custom_validation},
     {"inherited duplicates", test_duplicates},
+    {"default input type mismatch", test_default_input_type_mismatch},
 };
 
 TestSection validation_section = {

@@ -527,7 +527,7 @@ typedef void (*clags_log_handler_t)(clags_config_t *config, clags_log_level_t le
 
 // the definition of clags's string builder
 typedef struct {
-    char *item;s
+    char *items;
     size_t count;
     size_t capacity;
 } clags_sb_t;

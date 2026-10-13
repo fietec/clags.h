@@ -349,6 +349,112 @@ bool test_custom_list(clags_sb_t *sb)
     return true;
 }
 
+bool test_real_scientific(clags_sb_t *sb)
+{
+    double r = 0.0;
+    char *argv[] = {"", "--r", "1e3"};
+    clags_arg_t args[] = {
+        clags_option('\0', "r", &r, "R", "real", .value_type = Clags_Real),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(r == 1000.0);
+
+    clags_config_free(&config);
+    return true;
+}
+
+bool test_size_variants(clags_sb_t *sb)
+{
+    clags_fsize_t s1 = 0;
+    clags_fsize_t s2 = 0;
+    clags_arg_t args[] = {
+        clags_option('\0', "s1", &s1, "SIZE", "size raw", .value_type = Clags_Size),
+        clags_option('\0', "s2", &s2, "SIZE", "size kib", .value_type = Clags_Size),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    char *argv[] = {"", "--s1", "1024", "--s2", "1KiB"};
+    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(s1 == 1024);
+    test(s2 == 1024);
+
+    clags_config_free(&config);
+    return true;
+}
+
+bool test_default_value_applied(clags_sb_t *sb)
+{
+    char *val = NULL;
+    clags_arg_t args[] = {
+        clags_option('\0', "opt", &val, "VAL", "defaulted", .value_type = Clags_String, .default_input = "defval"),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    char *argv[] = {"prog"};
+    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(val != NULL && strcmp(val, "defval") == 0);
+
+    clags_config_free(&config);
+    return true;
+}
+
+bool test_choice_invalid_value(clags_sb_t *sb)
+{
+    clags_choice_t choices_arr[] = {
+        { "a", "" },
+        { "b", "" },
+    };
+    clags_choices_t choices = clags_choices(choices_arr);
+    clags_choice_t *sel = NULL;
+
+    char *argv[] = {"", "z"};
+    clags_arg_t args[] = {
+        clags_positional(&sel, "ch", "choice", .value_type = Clags_Choice, .using.choices = &choices),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    clags_config_t *res = clags_parse(arr_len(argv), argv, &config);
+    test(res != NULL);
+
+    clags_config_free(&config);
+    return true;
+}
+
+bool test_custom_verifier_failure(clags_sb_t *sb)
+{
+    char *out = NULL;
+    clags_custom_t custom = clags_custom("mycust", custom_verifier);
+
+    char *argv[] = {"", "badpayload"};
+    clags_arg_t args[] = {
+        clags_positional(&out, "cust", "custom", .value_type = Clags_Custom, .using.custom = &custom),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    clags_config_t *res = clags_parse(arr_len(argv), argv, &config);
+    test(res != NULL);
+
+    clags_config_free(&config);
+    return true;
+}
+
+bool test_nonexistent_file_fails(clags_sb_t *sb)
+{
+    char *argv[] = {"", "this_file_should_not_exist_0123456789"};
+    clags_arg_t args[] = {
+        clags_positional(NULL, "f", "file", .value_type = Clags_File),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+
+    clags_config_t *res = clags_parse(arr_len(argv), argv, &config);
+    test(res != NULL);
+
+    clags_config_free(&config);
+    return true;
+}
+
 static Test parsing_tests[] = {
     {"string", test_value_string},
     {"bool", test_value_bool},
@@ -365,6 +471,12 @@ static Test parsing_tests[] = {
     {"custom", test_value_custom},
     {"integer list", test_int_list},
     {"custom list", test_custom_list},
+    {"real scientific (1e3)", test_real_scientific},
+    {"size variants (1024 vs 1KiB)", test_size_variants},
+    {"default value applied", test_default_value_applied},
+    {"invalid choice value", test_choice_invalid_value},
+    {"custom verifier failure", test_custom_verifier_failure},
+    {"nonexistent file fails for Clags_File", test_nonexistent_file_fails},
 };
 
 TestSection parsing_section = {
