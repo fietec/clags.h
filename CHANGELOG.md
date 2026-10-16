@@ -58,6 +58,7 @@
 - updated to `strtoint.h` v3.0.0
 - `clags_usage` and `clags_usage_to_file` now exit gracefully when an invalid config is passed
 - `clags_usage` and `clags_usage_to_file` no longer automatically validate a config. This change was made make these function side-effect free and to strengthen the usability of `clags_validate`
+- removed the `clags__stat_struct`, `clags__stat_func` abstraction layer. On Windows, `clags_path_type` now uses winapi directly.
 
 ### Fixes
 - removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version
