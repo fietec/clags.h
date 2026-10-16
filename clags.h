@@ -35,6 +35,7 @@
     #include <stdbool.h>
 
     // This includes the function implementations and only has to be done once per translation unit
+    // For more information on stb-style libraries, see https://github.com/nothings/stb#how-do-i-use-these-libraries
     #define CLAGS_IMPLEMENTATION
     #include <clags.h>
 
