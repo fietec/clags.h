@@ -1070,7 +1070,7 @@ CLAGS_API const char* clags_error_description(clags_error_type_t error);
     - path            : the path to check
 
   Returns:
-    clags_path_type_t : the type of the provided path. See `clags__path_types` for a list of all available types.
+    clags_path_type_t : the type of the provided path. See `CLAGS__PATH_TYPES` for a list of all available types.
 */
 CLAGS_API clags_path_type_t clags_path_type(const char *path);
 
@@ -2090,7 +2090,7 @@ CLAGS_PRIV bool clags__verify_real(clags_config_t *config, clags_value_type_t ty
     errno = 0;
     double value = CLAGS_STRTOD(arg, &endptr);
 
-    if (*endptr != '\0') {
+    if (endptr == arg || *endptr != '\0') {
         clags_log(config, Clags_Error, "Invalid %s value for argument '%s': '%s'!", clags__types[type].name, arg_name, arg);
         return false;
     }
