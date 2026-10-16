@@ -27,6 +27,62 @@
 */
 
 /*
+  Example
+  =======
+
+  ```
+    #include <stdio.h>
+    #include <stdbool.h>
+
+    // This includes the function implementations and only has to be done once per translation unit
+    #define CLAGS_IMPLEMENTATION
+    #include <clags.h>
+
+    int main(int argc, char **argv)
+    {
+        // Declare argument variables with optional default values
+        const char *input_file;
+        const char *output_file;
+        bool warnings = false;
+        bool help = false;
+
+        // Describe the CLI
+        clags_arg_t args[] = {
+            // Positional arguments are parsed in the order they are defined here
+            clags_positional(&input_file, "input_file", "the input file"),
+
+            // Optional flag arguments that take an accompanying value
+            clags_option('o', "output", &output_file, "FILE", "the output file", .default_input="a.out"),
+
+            // Optional standalone flags to set a boolean value on occurrence
+            clags_flag('w', "warnings", &warnings, "print warnings"),
+            // Convenience helper for the standard '-h', '--help' flag
+            clags_flag_help(&help),
+        };
+        // The parsing context for the (sub)command defined above
+        clags_config_t config = clags_config(args);
+
+        // Parse the arguments using the previously defined rules, returns the config on error
+        clags_config_t *failed = clags_parse(argc, argv, &config);
+        if (failed != NULL){
+            // Print an automatic usage, based on the defined config
+            clags_usage(argv[0], failed);
+            return 1;
+        }
+
+        // You can now use the populated argument variables
+        if (help){
+            clags_usage(argv[0], &config);
+            return 0;
+        }
+        printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");
+        return 0;
+    }
+
+  ```
+*/
+
+/*
   Syntax Reference
   ======================
 
@@ -38,16 +94,6 @@
 
   <arg..>      positional list argument (one or more values)
   [arg..]      optional positional list argument
-
-
-  List Termination
-  ----------------
-
-  If a list terminator is configured (e.g. "::"):
-
-  <list1..> :: <list2..> :: [arg]
-
-  Without a terminator, a positional list must be last.
 
 
   Options
@@ -110,17 +156,27 @@
   Parsing continues in the selected subcommand's config.
 
 
-  Special Tokens
-  --------------
-
-  Option parsing toggle (`--`):
+  Option parsing toggle (`--`)
+  ----------------------------
 
   `--` disables option/flag parsing from this point onward.
 
   If the config enables toggling, `--` can re-enable parsing.
   This is an add-on feature of clags, not POSIX.
 
-  Ignored Arguments (`ignore_prefix`):
+
+  List Terminator
+  ---------------
+
+  If a list terminator is configured (e.g. "::"):
+
+  <list1..> :: <list2..> :: [arg]
+
+  Without a terminator, a positional list must be last.
+
+
+  Ignored Arguments (`ignore_prefix`)
+  -----------------------------------
 
   Arguments prefixed with the configured ignore prefix are ignored.
 
@@ -675,9 +731,10 @@ typedef enum {
     Clags_Config_Invalid,             // config is invalid
 } clags_config_state_t;
 
-// a config for a single (sub)command
-// construct with the `clags_config()` macro
+// the parsing context for a single (sub)command.
+// construct with the `clags_config()` macro.
 struct clags_config_t{
+    // set by the user
     clags_arg_t *args;                // the array of argument definitions
     size_t args_count;                // the amount of argument definitions
     clags_options_t options;          // additional settings
