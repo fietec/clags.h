@@ -1117,7 +1117,7 @@ CLAGS_API void clags_sb_append_null(clags_sb_t *sb);
 CLAGS_API void clags_sb_free(clags_sb_t *sb);
 
 /* String-to-Integer Conversion */
-#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_SIZE_TYPES) || !defined(CLAGS_STRIP_STRTOINT)
+#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_SIZE_TYPES) || !defined(CLAGS_STRIP_TIME_TYPES) || !defined(CLAGS_STRIP_STRTOINT)
 // strtoint.h - Public Domain - https://github.com/fietec/strtoint.h
 
 // These are the functions used internally to convert strings to integers.
@@ -1595,7 +1595,7 @@ CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg)
 }
 
 /* String-to-Integer Conversion */
-#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_SIZE_TYPES) || !defined(CLAGS_STRIP_STRTOINT)
+#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_SIZE_TYPES) || !defined(CLAGS_STRIP_TIME_TYPES) || !defined(CLAGS_STRIP_STRTOINT)
 
 CLAGS_PRIV int clags_strtoint__digit_value(char c, int base)
 {
@@ -2584,7 +2584,8 @@ CLAGS_PRIV clags_config_t* clags__validate_custom(clags_config_t *config, const 
     return NULL;
 }
 
-#ifndef CLAGS_STRIP_INT_TYPES
+#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_REAL_TYPES)
+
 CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t type, const char *arg_name, void *data)
 {
     // check whether the provided range contraint is of the correct type
@@ -2626,6 +2627,9 @@ CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_v
     return NULL;
 }
 
+#endif // !CLAGS_STRIP_INT_TYPES || !CLAGS_STRIP_REAL_TYPES
+
+#ifndef CLAGS_STRIP_INT_TYPES
 
 CLAGS_PRIV clags_config_t* clags__validate_int(clags_config_t *config, const char *arg_name, void *data)
 {
@@ -2829,7 +2833,8 @@ CLAGS_PRIV void clags__validate_alignment(clags_config_t *config, size_t *buff_s
 CLAGS_API clags_config_t* clags_validate(const char *name, clags_config_t *config)
 {
     if (config == NULL) return NULL;
-    if (config->state != Clags_Config_Unvalidated) return NULL;
+    if (config->state == Clags_Config_Valid) return NULL;
+    if (config->state == Clags_Config_Invalid) return config;
     clags_config_t *result = NULL;
     // set the config name
     if (config->name == NULL) config->name = clags_config_duplicate_string(config, name);
@@ -3249,6 +3254,7 @@ CLAGS_PRIV clags_error_t clags__parse_short_options_and_flags(clags_config_t *co
             } else if (parg->type == Clags_Flag){
                 clags_error_type_t error = clags__parse_flag(config, &parg->as.flag, do_exit);
                 if (error != Clags_Error_Ok) return clags_error(error, parg, arg_config);
+                if (*do_exit) break;
             } else {
                 clags_unreachable("arg type has changed");
             }
