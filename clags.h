@@ -1515,8 +1515,8 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     WCHAR *wpath = stack_buf;
     int use_heap = (wlen > 512);
     if (use_heap){
-        wpath = (WCHAR *)malloc(wlen * sizeof(WCHAR));
-        if (wpath == NULL) return Clags_Path_Invalid;
+        wpath = (WCHAR *)CLAGS_CALLOC(wlen, sizeof(WCHAR));
+        clags_assert(wpath != NULL, "Out of memory!");
     }
 
     MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
@@ -1524,7 +1524,7 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     DWORD attrs = GetFileAttributesW(wpath);
 
     if (use_heap) {
-        free(wpath);
+        CLAGS_FREE(wpath, wlen*sizeof(WCHAR));
     }
 
     if (attrs == INVALID_FILE_ATTRIBUTES) return Clags_Path_Invalid;
