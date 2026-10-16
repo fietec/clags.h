@@ -14,8 +14,6 @@
   - added `clags_custom(name, verify, ...)` macro for easier creation of `clags_custom_t`
 - new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
 - new redefinable `CLAGS_API` and `CLAGS_PRIV` macros for function visibility customization
-- new path type `Clags_Path_Unknown` to distinguish between access errors and paths of some other type (`Clags_Path_Other`)
-- new helper functions `clags_path_exists` and `clags_path_exists_by_type`
 - new helper function `clags_arg_index` to get the index of an argument within a config's argument declaration array
 - new error type `clags_error_t`: the error set inside a config may now alongside the already known type also contain:
   - a pointer to the argument that failed
@@ -24,6 +22,7 @@
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
+- added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_ALL_TYPES`)
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
@@ -38,6 +37,10 @@
 - removed floating point time parsing
   - this was done to remove conversion inconsistencies between `double` and `clags_time_t` and because it has had been a bit out-of-scope from the start
 - `clags_error_t` has been renamed to `clags_error_type_t` while the old name now belongs to the new error struct
+- renamed feature stripping macros 
+  - renamed individual stripping macros `CLAGS_NO_<GROUP>_TYPES` -> `CLAGS_STRIP_<GROUP>_TYPES`
+  - renamed `CLAGS_NO_COMPLEX_TYPES` -> `CLAGS_STRIP_ALL_TYPES`  
+  These changes were made because the previous naming was inprecise and this naming works better with the new `CLAGS_KEEP_<GROUP>_TYPES` macros
 
 ### Changes
 - clags is now fully ISO-C99 compatible

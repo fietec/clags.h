@@ -218,15 +218,45 @@
 #include <stdarg.h>
 #include <errno.h>
 
-// public api linkage / visibility
+/* Compile-Time Configuration */
+
+// Public api linkage / visibility
 #ifndef CLAGS_API
 #define CLAGS_API
 #endif // CLAGS_API
 
-// private implementation linkage
+// Private implementation linkage
 #ifndef CLAGS_PRIV
 #define CLAGS_PRIV static
 #endif // CLAGS_PRIV
+
+// Feature-stripping configuration
+// All types are included by default
+// Disable individual groups or all at once
+#ifdef CLAGS_STRIP_ALL_TYPES
+# define CLAGS_STRIP_INT_TYPES
+# define CLAGS_STRIP_REAL_TYPES
+# define CLAGS_STRIP_PATH_TYPES
+# define CLAGS_STRIP_SIZE_TYPES
+# define CLAGS_STRIP_TIME_TYPES
+#endif // CLAGS_STRIP_ALL_TYPES
+
+// Exclude specific groups with the `KEEP` macros
+#ifdef CLAGS_KEEP_INT_TYPES
+# undef CLAGS_STRIP_INT_TYPES
+#endif
+#ifdef CLAGS_KEEP_REAL_TYPES
+# undef CLAGS_STRIP_REAL_TYPES
+#endif
+#ifdef CLAGS_KEEP_PATH_TYPES
+# undef CLAGS_STRIP_PATH_TYPES
+#endif
+#ifdef CLAGS_KEEP_SIZE_TYPES
+# undef CLAGS_STRIP_SIZE_TYPES
+#endif
+#ifdef CLAGS_KEEP_TIME_TYPES
+# undef CLAGS_STRIP_TIME_TYPES
+#endif
 
 // memory allocation functions; can be overridden
 #ifndef CLAGS_CALLOC
@@ -237,7 +267,7 @@
         size  - the size in bytes of one element
 */
 #include <stdlib.h>
-#define CLAGS_CALLOC(count, size) calloc(count, size)
+#define CLAGS_CALLOC(count, size) calloc((count), (size))
 #endif // CLAGS_CALLOC
 
 #ifndef CLAGS_REALLOC
@@ -249,7 +279,7 @@
         newsz - new requested size in bytes
 */
 #include <stdlib.h>
-#define CLAGS_REALLOC(ptr, oldsz, newsz) realloc(ptr, newsz)
+#define CLAGS_REALLOC(ptr, oldsz, newsz) realloc((ptr), (newsz))
 #endif // CLAGS_REALLOC
 
 #ifndef CLAGS_FREE
@@ -260,17 +290,18 @@
         sz  - size of the allocation in bytes (default free ignores this)
 */
 #include <stdlib.h>
-#define CLAGS_FREE(ptr, sz) free(ptr)
+#define CLAGS_FREE(ptr, sz) free((ptr))
 #endif // CLAGS_FREE
 
-#if !defined(CLAGS_NO_REAL_TYPES) && !defined(CLAGS_STRTOD)
+#if !defined(CLAGS_STRIP_REAL_TYPES) && !defined(CLAGS_STRTOD)
 /*
     CLAGS_STRTOD: Convert a string to a double-precision floating-point number.
-    The macro must expand to a function matching the signature:
-        double CLAGS_STRTOD(const char *nptr, char **endptr);
+    Parameters:
+        str    - the string to parse
+        endptr - string pointer to set to the first unparsed character
 */
 #include <stdlib.h>
-#define CLAGS_STRTOD strtod
+#define CLAGS_STRTOD(nptr, endptr) strtod((nptr), (endptr))
 #endif // CLAGS_STRTOD
 
 // terminates the program due to a unrecoverable fatal error.
@@ -290,7 +321,11 @@
 #define CLAGS_SB_INIT_CAPACITY 32
 #endif // CLAGS_SB_INIT_CAPACITY
 
-/* Usage Alignment */
+// the maximum amount of choices to print in the inline format, when `.print_no_details=true`
+// if there are more than the defined maximum of choices the detailed output will be printed nevertheless
+#ifndef CLAGS_MAX_INLINE_CHOICES
+#define CLAGS_MAX_INLINE_CHOICES 5
+#endif // CLAGS_MAX_INLINE_CHOICES
 
 // the default minimum character column at which ':' appears in `clags_usage` output
 // used when no `.min_usage_alignment` config option is specified
@@ -313,16 +348,7 @@
 #error CLAGS_DEFAULT_MIN_USAGE_ALIGNMENT may not be greater than CLAGS_DEFAULT_MAX_USAGE_ALIGNMENT!
 #endif
 
-#define CLAGS__USAGE_PRINTF_ALIGNMENT(alignment) (int)-((alignment)-5)
-#define CLAGS__USAGE_TEMP_BUFFER_SIZE(alignment) ((alignment)-4)
-#define CLAGS__USAGE_ALIGNMENT_FROM_BUFFER_SIZE(size) ((size)+4)
-#define CLAGS__USAGE_TRUNCATION_ELLIPSIS "..."
-
-// the maximum amount of choices to print in the inline format, when `.print_no_details=true`
-// if there are more than the defined maximum of choices the detailed output will be printed nevertheless
-#ifndef CLAGS_MAX_INLINE_CHOICES
-#define CLAGS_MAX_INLINE_CHOICES 5
-#endif // CLAGS_MAX_INLINE_CHOICES
+/* Type Declarations */
 
 // macro for enabling printf-like format checks in `clags_sb_appendf`
 #if defined(__GNUC__) || defined(__clang__)
@@ -335,51 +361,42 @@
 #    define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK)
 #endif
 
-// feature stripping macros
-#ifdef CLAGS_NO_COMPLEX_TYPES
-  #define CLAGS_NO_INT_TYPES
-  #define CLAGS_NO_REAL_TYPES
-  #define CLAGS_NO_PATH_TYPES
-  #define CLAGS_NO_SIZE_TYPES
-  #define CLAGS_NO_TIME_TYPES
-#endif // CLAGS_NO_COMPLEX_TYPES
-
 #define CLAGS__VTYPE(type, verify_func, name, value_type, validate_func, usage_func) X(type, verify_func, name, value_type, validate_func, usage_func)
 #define CLAGS__IGNORE_VTYPE(type, verify_func, name, value_type, validate_func, usage_func)
 
 #define CLAGS__BASIC_VTYPE CLAGS__VTYPE
 
-#ifdef CLAGS_NO_INT_TYPES
+#ifdef CLAGS_STRIP_INT_TYPES
   #define CLAGS__INT_VTYPE CLAGS__IGNORE_VTYPE
 #else
   #define CLAGS__INT_VTYPE CLAGS__VTYPE
-#endif // CLAGS_NO_INT_TYPES
+#endif // CLAGS_STRIP_INT_TYPES
 
-#ifdef CLAGS_NO_REAL_TYPES
+#ifdef CLAGS_STRIP_REAL_TYPES
   #define CLAGS__REAL_VTYPE CLAGS__IGNORE_VTYPE
 #else
   #define CLAGS__REAL_VTYPE CLAGS__VTYPE
-#endif // CLAGS_NO_REAL_TYPES
+#endif // CLAGS_STRIP_REAL_TYPES
 
-#ifdef CLAGS_NO_PATH_TYPES
+#ifdef CLAGS_STRIP_PATH_TYPES
   #define CLAGS__PATH_VTYPE CLAGS__IGNORE_VTYPE
-  #define CLAGS__PATH_TYPE(type, name, exist)
+  #define CLAGS__PATH_TYPE(type, name)
 #else
   #define CLAGS__PATH_VTYPE CLAGS__VTYPE
-  #define CLAGS__PATH_TYPE(type, name, exist) X(type, name, exist)
-#endif // CLAGS_NO_PATH_TYPES
+  #define CLAGS__PATH_TYPE(type, name) X(type, name)
+#endif // CLAGS_STRIP_PATH_TYPES
 
-#ifdef CLAGS_NO_SIZE_TYPES
+#ifdef CLAGS_STRIP_SIZE_TYPES
   #define CLAGS__SIZE_VTYPE CLAGS__IGNORE_VTYPE
 #else
   #define CLAGS__SIZE_VTYPE CLAGS__VTYPE
-#endif // CLAGS_NO_SIZE_TYPES
+#endif // CLAGS_STRIP_SIZE_TYPES
 
-#ifdef CLAGS_NO_TIME_TYPES
+#ifdef CLAGS_STRIP_TIME_TYPES
   #define CLAGS__TIME_VTYPE CLAGS__IGNORE_VTYPE
 #else
   #define CLAGS__TIME_VTYPE CLAGS__VTYPE
-#endif // CLAGS_NO_TIME_TYPES
+#endif // CLAGS_STRIP_TIME_TYPES
 
 // the definition of all supported value types
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
@@ -431,11 +448,11 @@
 
 // the definition of all path types
 // Note: these are NOT value types but only used internally and together with the `clags_path_type` function
-#define CLAGS__PATH_TYPES                                                                       \
-    CLAGS__PATH_TYPE(Clags_Path_Invalid, "invalid", false ) /* invalid path                  */ \
-    CLAGS__PATH_TYPE(Clags_Path_Dir,     "dir",     true  ) /* existing directory            */ \
-    CLAGS__PATH_TYPE(Clags_Path_Reg,     "file",    true  ) /* existing regular file         */ \
-    CLAGS__PATH_TYPE(Clags_Path_Other,   "other",   true  ) /* existing file of another type */ \
+#define CLAGS__PATH_TYPES                                                                \
+    CLAGS__PATH_TYPE(Clags_Path_Invalid, "invalid" ) /* invalid path                  */ \
+    CLAGS__PATH_TYPE(Clags_Path_Dir,     "dir"     ) /* existing directory            */ \
+    CLAGS__PATH_TYPE(Clags_Path_Reg,     "file"    ) /* existing regular file         */ \
+    CLAGS__PATH_TYPE(Clags_Path_Other,   "other"   ) /* existing file of another type */ \
 
 // an auto-generated enum of all supported value types
 #define X(type, verify_func, name, vtype, validate_func, usage_func) type,
@@ -451,14 +468,14 @@ typedef enum{
 } clags_error_type_t;
 #undef X
 
-#ifndef CLAGS_NO_PATH_TYPES
+#ifndef CLAGS_STRIP_PATH_TYPES
 // an auto-generated enum of all path types
-#define X(type, desc, exist) type,
+#define X(type, desc) type,
 typedef enum{
     CLAGS__PATH_TYPES
 } clags_path_type_t;
 #undef X
-#endif // !CLAGS_NO_PATH_TYPES
+#endif // !CLAGS_STRIP_PATH_TYPES
 
 // an auto-genereated enum of all available flag types
 #define X(type, setter) type,
@@ -795,13 +812,13 @@ struct clags_config_t{
 // wrapper for a `clags_subcmd_t` array
 #define clags_subcmds(subcmds) {.items=(subcmds), .count=clags_arr_len(subcmds)}
 
-#ifndef CLAGS_NO_INT_TYPES
+#ifndef CLAGS_STRIP_INT_TYPES
   #define clags_int_range(from, to) {.type=Clags_Int, .min.as_int=(from), .max.as_int=(to)}
   #define clags_uint_range(from, to) {.type=Clags_UInt, .min.as_uint=(from), .max.as_uint=(to)}
-#endif // !CLAGS_NO_INT_TYPES
-#ifndef CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_INT_TYPES
+#ifndef CLAGS_STRIP_REAL_TYPES
   #define clags_real_range(from, to) {.type=Clags_Real, .min.as_double=(from), .max.as_double=(to)}
-#endif // !CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_REAL_TYPES
 
 // macro for a `clags_custom_t` struct
 #define clags_custom(type_name, verifier, ...) {.name=(type_name), .verify=(verifier), __VA_ARGS__}
@@ -1043,7 +1060,7 @@ CLAGS_API void clags_free(clags_config_t *config);
 */
 CLAGS_API const char* clags_error_description(clags_error_type_t error);
 
-#ifndef CLAGS_NO_PATH_TYPES
+#ifndef CLAGS_STRIP_PATH_TYPES
 
 /*
   Return the type of a path.
@@ -1067,29 +1084,7 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path);
 */
 CLAGS_API const char* clags_path_type_name(clags_path_type_t type);
 
-/*
-  Returns whether a path exists.
-
-  Arguments:
-    - type          : the path type
-
-  Returns:
-    bool            : the existance of the path
-*/
-CLAGS_API bool clags_path_exists(const char *path);
-
-/*
-  Returns whether a path type means that the path exists.
-
-  Arguments:
-    - type          : the path type
-
-  Returns:
-    bool            : the existance of the path
-*/
-CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type);
-
-#endif // CLAGS_NO_PATH_TYPES
+#endif // CLAGS_STRIP_PATH_TYPES
 
 /* Logging */
 
@@ -1121,7 +1116,7 @@ CLAGS_API void clags_sb_append_null(clags_sb_t *sb);
 CLAGS_API void clags_sb_free(clags_sb_t *sb);
 
 /* String-to-Integer Conversion */
-#if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
+#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_SIZE_TYPES) || !defined(CLAGS_STRIP_STRTOINT)
 // strtoint.h - Public Domain - https://github.com/fietec/strtoint.h
 
 // These are the functions used internally to convert strings to integers.
@@ -1167,7 +1162,7 @@ CLAGS_API uint32_t clags_strtouint32_s(const char *str, clags_strtoint_res_t *re
 CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *res, int base);
 CLAGS_API uint64_t clags_strtouint_custom_s(const char *str, clags_strtoint_res_t *res, int base, uint64_t min, uint64_t max);
 
-#endif // !CLAGS_NO_STRTOINT
+#endif // !CLAGS_STRIP_STRTOINT
 
 #endif // CLAGS_H
 
@@ -1217,6 +1212,11 @@ static clags__type_t clags__types[] = {
 };
 #undef X
 
+#define CLAGS__USAGE_PRINTF_ALIGNMENT(alignment) (int)-((alignment)-5)
+#define CLAGS__USAGE_TEMP_BUFFER_SIZE(alignment) ((alignment)-4)
+#define CLAGS__USAGE_ALIGNMENT_FROM_BUFFER_SIZE(size) ((size)+4)
+#define CLAGS__USAGE_TRUNCATION_ELLIPSIS "..."
+
 /* String Utilities */
 
 CLAGS_PRIV int clags__tolower(int c)
@@ -1241,7 +1241,7 @@ CLAGS_PRIV int clags__strcasecmp(const char *s1, const char *s2)
     return clags__tolower((unsigned char)*s1) - clags__tolower((unsigned char)*s2);
 }
 
-#ifndef CLAGS_NO_TIME_TYPES
+#ifndef CLAGS_STRIP_TIME_TYPES
 CLAGS_PRIV int clags__strslice_casecmp(const char *slice, size_t slice_len, const char *exact)
 {
     if (slice == exact) return 0;
@@ -1264,7 +1264,7 @@ CLAGS_PRIV int clags__strslice_casecmp(const char *slice, size_t slice_len, cons
 
     return '\0' - clags__tolower((unsigned char)*exact);
 }
-#endif // !CLAGS_NO_TIME_TYPES
+#endif // !CLAGS_STRIP_TIME_TYPES
 
 /* String Builder Functionality */
 
@@ -1497,7 +1497,7 @@ CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char
 
 /* Utility Functions */
 
-#ifndef CLAGS_NO_PATH_TYPES
+#ifndef CLAGS_STRIP_PATH_TYPES
 
 #ifdef _WIN32
 # include <windows.h>
@@ -1543,29 +1543,14 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
 CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
 {
     switch (type){
-#define X(type, name, exist) case type: return name;
+#define X(type, name) case type: return name;
         CLAGS__PATH_TYPES
 #undef X
         default: return "unknown file type";
     }
 }
 
-CLAGS_API bool clags_path_exists_by_type(clags_path_type_t type)
-{
-    switch (type){
-#define X(type, name, exist) case type: return exist;
-        CLAGS__PATH_TYPES
-#undef X
-        default: return false;
-    }
-}
-
-CLAGS_API bool clags_path_exists(const char *path)
-{
-    return clags_path_exists_by_type(clags_path_type(path));
-}
-
-#endif // !CLAGS_NO_PATH_TYPES
+#endif // !CLAGS_STRIP_PATH_TYPES
 
 CLAGS_API const char* clags_error_description(clags_error_type_t error)
 {
@@ -1606,7 +1591,7 @@ CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg)
 }
 
 /* String-to-Integer Conversion */
-#if !defined(CLAGS_NO_INT_TYPES) || !defined(CLAGS_NO_SIZE_TYPES) || !defined(CLAGS_NO_STRTOINT)
+#if !defined(CLAGS_STRIP_INT_TYPES) || !defined(CLAGS_STRIP_SIZE_TYPES) || !defined(CLAGS_STRIP_STRTOINT)
 
 CLAGS_PRIV int clags_strtoint__digit_value(char c, int base)
 {
@@ -1907,7 +1892,7 @@ CLAGS_API uint64_t clags_strtouint64_s(const char *str, clags_strtoint_res_t *re
     return clags_strtouint_custom_s(str, res, base, 0, UINT64_MAX);
 }
 
-#endif // !CLAGS_NO_STRTOINT
+#endif // !CLAGS_STRIP_STRTOINT
 
 /* Value Type Verifiers */
 
@@ -1933,7 +1918,7 @@ CLAGS_API bool clags_verify_bool(clags_config_t *config, const char *arg_name, c
     return false;
 }
 
-#ifndef CLAGS_NO_INT_TYPES
+#ifndef CLAGS_STRIP_INT_TYPES
 
 CLAGS_PRIV bool clags__verify_signed_int(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, int64_t *variable)
 {
@@ -2085,9 +2070,9 @@ CLAGS_API bool clags_verify_uint64(clags_config_t *config, const char *arg_name,
     return result;
 }
 
-#endif // !CLAGS_NO_INT_TYPES
+#endif // !CLAGS_STRIP_INT_TYPES
 
-#ifndef CLAGS_NO_REAL_TYPES
+#ifndef CLAGS_STRIP_REAL_TYPES
 
 CLAGS_PRIV bool clags__verify_real(clags_config_t *config, clags_value_type_t type, clags_range_t *range, const char *arg_name, const char *arg, void *variable)
 {
@@ -2143,9 +2128,9 @@ CLAGS_API bool clags_verify_double(clags_config_t *config, const char *arg_name,
     return result;
 }
 
-#endif // !CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_REAL_TYPES
 
-#ifndef CLAGS_NO_PATH_TYPES
+#ifndef CLAGS_STRIP_PATH_TYPES
 
 CLAGS_API bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
@@ -2199,9 +2184,9 @@ CLAGS_API bool clags_verify_dir(clags_config_t *config, const char *arg_name, co
     }
 }
 
-#endif // !CLAGS_NO_PATH_TYPES
+#endif // !CLAGS_STRIP_PATH_TYPES
 
-#ifndef CLAGS_NO_SIZE_TYPES
+#ifndef CLAGS_STRIP_SIZE_TYPES
 
 CLAGS_API bool clags_verify_size(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
@@ -2240,9 +2225,9 @@ CLAGS_API bool clags_verify_size(clags_config_t *config, const char *arg_name, c
     return true;
 }
 
-#endif // !CLAGS_NO_SIZE_TYPES
+#endif // !CLAGS_STRIP_SIZE_TYPES
 
-#ifndef CLAGS_NO_TIME_TYPES
+#ifndef CLAGS_STRIP_TIME_TYPES
 
 CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
@@ -2361,7 +2346,7 @@ CLAGS_API bool clags_verify_time_ns(clags_config_t *config, const char *arg_name
     return true;
 }
 
-#endif // !CLAGS_NO_TIME_TYPES
+#endif // !CLAGS_STRIP_TIME_TYPES
 
 CLAGS_API bool clags_verify_choice(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
@@ -2595,7 +2580,7 @@ CLAGS_PRIV clags_config_t* clags__validate_custom(clags_config_t *config, const 
     return NULL;
 }
 
-#ifndef CLAGS_NO_INT_TYPES
+#ifndef CLAGS_STRIP_INT_TYPES
 CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_value_type_t type, const char *arg_name, void *data)
 {
     // check whether the provided range contraint is of the correct type
@@ -2606,7 +2591,7 @@ CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_v
             return config;
         }
         switch (range->type){
-#ifndef CLAGS_NO_INT_TYPES            
+#ifndef CLAGS_STRIP_INT_TYPES            
             case Clags_Int:{
                 if (range->min.as_int > range->max.as_int){
                     clags_log(config, Clags_ConfigError, "invalid range definition for argument '%s': expected a maximum bound greater than or equal to the minimum bound, but got [%"PRId64"-%"PRId64"]!", arg_name, range->min.as_int, range->max.as_int);
@@ -2619,15 +2604,15 @@ CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_v
                     return config;
                 }
             } break;
-#endif // !CLAGS_NO_INT_TYPES
-#ifndef CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_INT_TYPES
+#ifndef CLAGS_STRIP_REAL_TYPES
             case Clags_Real:{
                 if (range->min.as_double > range->max.as_double){
                     clags_log(config, Clags_ConfigError, "invalid range definition for argument '%s': expected a maximum bound greater than or equal to the minimum bound, but got [%g-%g]!", arg_name, range->min.as_double, range->max.as_double);
                     return config;
                 }
             } break;
-#endif // !CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_REAL_TYPES
             default:{
                 clags_log(config, Clags_ConfigError, "invalid range type for argument '%s': '%s'!", arg_name, clags__types[range->type].name);
                 return config;
@@ -2648,16 +2633,16 @@ CLAGS_PRIV clags_config_t* clags__validate_uint(clags_config_t *config, const ch
     return clags__validate_range(config, Clags_UInt, arg_name, data);
 }
 
-#endif // !CLAGS_NO_INT_TYPES
+#endif // !CLAGS_STRIP_INT_TYPES
 
-#ifndef CLAGS_NO_REAL_TYPES
+#ifndef CLAGS_STRIP_REAL_TYPES
 
 CLAGS_PRIV clags_config_t* clags__validate_real(clags_config_t *config, const char *arg_name, void *data)
 {
     return clags__validate_range(config, Clags_Real, arg_name, data);
 }
 
-#endif // !CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_REAL_TYPES
 
 CLAGS_PRIV bool clags__validate_value_type(clags_config_t *config, const char *arg_name, clags_value_type_t type)
 {
@@ -3620,7 +3605,7 @@ CLAGS_PRIV void clags__custom_usage(FILE *file, clags_config_t *config, clags_va
     }
 }
 
-#ifndef CLAGS_NO_INT_TYPES
+#ifndef CLAGS_STRIP_INT_TYPES
 
 CLAGS_PRIV void clags__int_usage(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
@@ -3642,9 +3627,9 @@ CLAGS_PRIV void clags__uint_usage(FILE *file, clags_config_t *config, clags_valu
     if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-#endif // !CLAGS_NO_INT_TYPES
+#endif // !CLAGS_STRIP_INT_TYPES
 
-#ifndef CLAGS_NO_REAL_TYPES
+#ifndef CLAGS_STRIP_REAL_TYPES
 
 CLAGS_PRIV void clags__real_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
@@ -3656,7 +3641,7 @@ CLAGS_PRIV void clags__real_usage(FILE* file, clags_config_t *config, clags_valu
     if (default_value) fprintf(file, " (default: %s)", default_value);
 }
 
-#endif // !CLAGS_NO_REAL_TYPES
+#endif // !CLAGS_STRIP_REAL_TYPES
 
 CLAGS_PRIV void clags__default_usage(FILE* file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data)
 {
