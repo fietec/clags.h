@@ -1578,16 +1578,19 @@ CLAGS_PRIV int clags__array_index(void *array, size_t array_count, void *elem, s
 
 CLAGS_API int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcmd)
 {
+    if (!subcmds || !subcmd) return -1;
     return clags__array_index(subcmds->items, subcmds->count, subcmd, sizeof(*subcmd));
 }
 
 CLAGS_API int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice)
 {
+    if (!choices || !choice) return -1;
     return clags__array_index(choices->items, choices->count, choice, sizeof(*choice));
 }
 
 CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg)
 {
+    if (!config || !arg) return -1;
     return clags__array_index(config->args, config->args_count, arg, sizeof(*arg));
 }
 
