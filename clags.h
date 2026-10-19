@@ -2534,6 +2534,13 @@ CLAGS_PRIV clags_config_t* clags__validate_subcmd(clags_config_t *config, const 
             clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand %zu has no name assigned!", arg_name, i);
             return config;
         }
+        for (size_t j=i+1; j<subcmds->count; ++j){
+            clags_subcmd_t other = subcmds->items[j];
+            if (strcmp(subcmd.name, other.name) == 0){
+                clags_log(config, Clags_ConfigError, "duplicate subcommand name '%s' for subcommand %zu of argument '%s' is already used by subcommand %zu!", subcmd.name, j, arg_name, i);
+                return config;
+            }
+        }
         if (child_config == NULL){
             clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Subcommand '%s' has no config assigned!", arg_name, subcmd.name);
             return config;
@@ -2561,9 +2568,17 @@ CLAGS_PRIV clags_config_t* clags__validate_choice(clags_config_t *config, const 
         return config;
     }
     for (size_t i=0; i<choices->count; ++i){
-        if (choices->items[i].value == NULL){
+        clags_choice_t choice = choices->items[i];
+        if (choice.value == NULL){
             clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Choice %zu has no value assigned!", arg_name, i);
             return config;
+        }
+        for (size_t j=i+1; j<choices->count; ++j){
+            clags_choice_t other = choices->items[j];
+            if (other.value && strcmp(choice.value, other.value) == 0){
+                clags_log(config, Clags_ConfigError, "duplicate choice name '%s' for choice %zu of argument '%s' is already used by choice %zu!", other.value, j, arg_name, i);
+                return config;
+            }
         }
     }
     return NULL;

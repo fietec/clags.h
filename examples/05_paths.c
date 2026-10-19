@@ -23,7 +23,7 @@ clags_arg_t args[] = {
 
     // Verify that the provided string is a valid path, no matter whether regular file, dir or other
     clags_option('o', "output", &output_file, "FILE", "the output file or directory", .value_type=Clags_Path),
-    // Verify a size string (like '1.4MB', '10B', '10') and convert to the number of bytes in `clags_fsize_t`
+    // Verify a size string (like '14MB', '10B', '10') and convert to the number of bytes in `clags_fsize_t`
     clags_option('s', "size", &size, "SIZE", "the amount of bytes to read", .value_type=Clags_Size, .default_input="1KB"),
     clags_flag_help(&help),
 };
@@ -47,4 +47,3 @@ int main(int argc, char **argv)
     printf("input: %s, size: %"PRIu64", output: %s (%s)\n", input_file, size, output_file, type_name);
     return 0;
 }
-

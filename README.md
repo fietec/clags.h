@@ -33,7 +33,7 @@ A single-header C99 library for parsing and validating command-line arguments.
     - Parameterized custom types, with possible extension of existing types
 
 - **Modular compile-time configuration**
-  - Fine-grained feature-gating macros (`CLAGS_NO_INT_TYPES`, `CLAGS_NO_PATH_TYPES`, etc.) to completely strip unneeded parsing engines from the binary
+  - Fine-grained feature-gating macros (`CLAGS_STRIP_INT_TYPES`, `CLAGS_STRIP_PATH_TYPES`, etc.) to completely strip unneeded parsing engines from the binary
   - Eliminates external platform dependencies (like `<sys/stat.h>` for path types) if not needed
 
 - **Hierarchical subcommands**

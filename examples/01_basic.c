@@ -13,8 +13,8 @@
 int main(int argc, char **argv)
 {
     // Declare argument variables with optional default values
-    const char *input_file = NULL;
-    const char *output_file = "a.out";
+    char *input_file = NULL;
+    char *output_file = "a.out";
     bool warnings = false;
     bool help = false;
 

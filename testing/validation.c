@@ -208,6 +208,19 @@ bool test_subcmd_validation(clags_sb_t *sb)
     clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
     test(clags_validate("", &parent_config) == &invalid_child_config);
 
+    // duplicate subcmd name
+    clags_subcmd_t duplicate_name_commands[] = {
+        {"aboba", "", NULL},
+        {"test", "", NULL},
+        {"aboba", "", NULL},
+    };
+    clags_subcmds_t duplicate_name_subcmds = clags_subcmds(duplicate_name_commands);
+    clags_arg_t duplicate_name_args[] = {
+        clags_positional(NULL, "", "", .value_type=Clags_Subcmd, .using.subcmds=&duplicate_name_subcmds),
+    };
+    clags_config_t duplicate_name_config = clags_config(duplicate_name_args, GLOBAL_OPTIONS);
+    test(clags_validate("", &duplicate_name_config) == &duplicate_name_config);
+
     return true;
 }
 
@@ -236,6 +249,19 @@ bool test_choice_validation(clags_sb_t *sb)
     };
     clags_config_t null_val_config = clags_config(null_val_args, GLOBAL_OPTIONS);
     test(clags_validate("", &null_val_config) == &null_val_config);
+
+    // duplicate choice value
+    clags_choice_t duplicates[] = {
+        {"aboba", NULL},
+        {"hello", NULL},
+        {"aboba", NULL},
+    };
+    clags_choices_t duplicate_choices = clags_choices(duplicates);
+    clags_arg_t duplicate_args[] = {
+        clags_positional(NULL, "", "", .value_type=Clags_Choice, .using.choices=&duplicate_choices),
+    };
+    clags_config_t duplicate_config = clags_config(duplicate_args, GLOBAL_OPTIONS);
+    test(clags_validate("", &duplicate_config) == &duplicate_config);
 
     return true;
 }

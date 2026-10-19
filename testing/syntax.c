@@ -189,7 +189,7 @@ bool test_inheritance(clags_sb_t *sb)
     clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
 
     char *argv[] = {"prog", "cmd", "--value=input", "pos"};
-    clags_parse(clags_arr_len(argv), argv, &parent_config);
+    test(clags_parse(clags_arr_len(argv), argv, &parent_config) == NULL);
 
     test(subcmd == &commands[0]);
     test(strcmp(value, "input") == 0);
