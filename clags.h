@@ -42,8 +42,8 @@
     int main(int argc, char **argv)
     {
         // Declare argument variables with optional default values
-        const char *input_file;
-        const char *output_file;
+        char *input_file;
+        char *output_file;
         bool warnings = false;
         bool help = false;
 
