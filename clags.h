@@ -3014,6 +3014,8 @@ typedef struct {
     size_t pos_pos;         // the position of the last positional argument
 } clags__parser_t;
 
+CLAGS_PRIV bool clags__parse_ignore_prefix(clags_config_t *config, clags__parser_t *parser, const char *arg, const char *ignore_prefix);
+
 // sort the argument types into their respective pre-allocated containers and track their count
 CLAGS_PRIV void clags__sort_args(clags__args_t *args, clags_config_t *config)
 {
@@ -3154,15 +3156,13 @@ CLAGS_PRIV clags_arg_t* clags__search_short_options_and_flags(clags_config_t *co
 CLAGS_PRIV const char* clags__get_next_arg(clags_config_t *config, clags__parser_t *parser)
 {
     const char *ignore_prefix = config->options.ignore_prefix;
-    size_t ignore_prefix_len = ignore_prefix ? strlen(ignore_prefix) : 0;
     while (true){
         if (parser->index >= parser->argc - 1){
             // not enough arguments
             return NULL;
         }
         const char *arg = parser->argv[++parser->index];
-        if (ignore_prefix == NULL || strncmp(arg, ignore_prefix, ignore_prefix_len) != 0) return arg;
-        parser->args_ignored = true;
+        if (!clags__parse_ignore_prefix(config, parser, arg, ignore_prefix)) return arg;
     }
 }
 

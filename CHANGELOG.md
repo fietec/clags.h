@@ -76,6 +76,7 @@
 - fixed usage of wrong config to handle ignored arguments in `clags__parse_short_options_and_flags`
 - `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occured
 - fixed `clags_log_sb` to work with not yet zero-terminated strings
+- arguments starting with the `.ignore_prefix` now get properly added to the `.ignored_args` when skipped by `clags__get_next_arg`
 
 ---
 
