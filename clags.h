@@ -985,6 +985,19 @@ CLAGS_API int clags_subcmd_index(clags_subcmds_t *subcmds, clags_subcmd_t *subcm
 CLAGS_API int clags_choice_index(clags_choices_t *choices, clags_choice_t *choice);
 
 /*
+  Get the index of an argument declaration within a config.
+
+  Arguments:
+    - config : pointer to the config containing the argument declarations array
+    - arg    : pointer to the argument to find
+
+  Returns:
+    int      : the index of the argument within the argument array
+               or -1 if the argugment was not found or either argument is NULL
+*/
+CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg);
+
+/*
   Duplicate some sized data if string duplication is enabled in the config,
   otherwise return the original data. Usually these should still be string slices,
   but it will work with any data type.
@@ -1307,7 +1320,7 @@ CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
     va_end(args_copy);
 
     if (sb != NULL && n >= 0){
-        size_t reserved = clags__sb_reserve(sb, n + 1);
+        size_t reserved = clags__sb_reserve(sb, (size_t)n + 1);
         if (reserved > 0){
             char *start = sb->items + sb->count;
             int w = vsnprintf(start, reserved, format, args);
@@ -2462,6 +2475,16 @@ CLAGS_PRIV clags_error_type_t clags__set_flag(clags_config_t *config, clags_flag
 
 /* Validation */
 
+CLAGS_PRIV bool clags__validate_value_type(clags_value_type_t type)
+{
+    switch (type){
+#define X(type, verify_func, name, vtype, validate_func, usage_func) case type: return true;
+        CLAGS__VALUE_TYPES
+#undef X
+    }
+    return false;
+}
+
 CLAGS_PRIV bool clags__validate_default(clags_config_t *config, clags_value_type_t value_type, const char *arg_name, const char *value, void *data, bool is_list)
 {
     if (is_list){
@@ -2481,6 +2504,10 @@ CLAGS_PRIV bool clags__validate_list(clags_config_t *config, void *variable, cla
     clags_list_t *list = (clags_list_t*) variable;
     if (list != NULL){
         // ensure "type safety"
+        if (!clags__validate_value_type(list->value_type)){
+            clags_log(config, Clags_ConfigError, "invalid list type for argument '%s': %d! Only use types from `clags_value_type_t`!", arg_name, list->value_type);
+            return false;
+        }
         if (list->value_type != value_type){
             clags_log(config, Clags_ConfigError, "list argument '%s' expects type '%s', but list was created as '%s'!", arg_name, clags__types[value_type].name, clags__types[list->value_type].name);
             return false;
@@ -2606,6 +2633,10 @@ CLAGS_PRIV clags_config_t* clags__validate_range(clags_config_t *config, clags_v
     // check whether the provided range contraint is of the correct type
     clags_range_t *range = (clags_range_t*)data;
     if (range != NULL){
+        if (!clags__validate_value_type(range->type)){
+            clags_log(config, Clags_ConfigError, "invalid range type for argument '%s': %d! Only use types from `clags_value_type_t`!", arg_name, range->type);
+            return config;
+        }
         if (range->type != type){
             clags_log(config, Clags_ConfigError, "incorrect range type for argument '%s': expected range type '%s', but got '%s'!", arg_name, clags__types[type].name, clags__types[range->type].name);
             return config;
@@ -2667,21 +2698,13 @@ CLAGS_PRIV clags_config_t* clags__validate_real(clags_config_t *config, const ch
 
 #endif // !CLAGS_STRIP_REAL_TYPES
 
-CLAGS_PRIV bool clags__validate_value_type(clags_config_t *config, const char *arg_name, clags_value_type_t type)
-{
-    switch (type){
-#define X(type, verify_func, name, vtype, validate_func, usage_func) case type: return true;
-        CLAGS__VALUE_TYPES
-#undef X
-    }
-    clags_log(config, Clags_ConfigError, "invalid `value_type` of argument '%s': %d! Only use types from `clags_value_type_t`!", arg_name, type);
-    return false;
-}
-
 CLAGS_PRIV clags_config_t* clags__validate_positional(clags_config_t *config, clags_positional_t pos)
 {
     // validate the argument's value type and its requirements
-    if (!clags__validate_value_type(config, pos.arg_name, pos.value_type)) return config;
+    if (!clags__validate_value_type(pos.value_type)){
+        clags_log(config, Clags_ConfigError, "invalid `value_type` of argument '%s': %d! Only use types from `clags_value_type_t`!", pos.arg_name, pos.value_type);
+        return config;
+    }
     clags_config_t *failed_config = clags__types[pos.value_type].validate(config, pos.arg_name, pos.using._data);
     if (failed_config != NULL) return failed_config;
     if (pos.is_list && !clags__validate_list(config, pos.variable, pos.value_type, pos.arg_name)) return config;
@@ -2717,7 +2740,10 @@ CLAGS_PRIV clags_config_t* clags__validate_option(clags_config_t *config, clags_
     }
 
     // validate the option's value type and its requirements
-    if (!clags__validate_value_type(config, name, opt.value_type)) return config;
+    if (!clags__validate_value_type(opt.value_type)) {
+        clags_log(config, Clags_ConfigError, "invalid `value_type` of argument '%s': %d! Only use types from `clags_value_type_t`!", opt.arg_name, opt.value_type);
+        return config;
+    }
     if (opt.value_type == Clags_Subcmd){
         clags_log(config, Clags_ConfigError, "option argument '%s' in config '%s' may not be a subcommand!", name, config->name);
         return config;
