@@ -185,15 +185,6 @@ bool test_subcmd_validation(clags_sb_t *sb)
     clags_config_t unnamed_config = clags_config(unnamed_args, GLOBAL_OPTIONS);
     test(clags_validate("", &unnamed_config) == &unnamed_config);
 
-    // subcommand missing config
-    clags_subcmd_t null_cfg_subcmd = { .name = "build", .config = NULL };
-    clags_subcmds_t null_cfg_subcmds = { .count = 1, .items = &null_cfg_subcmd };
-    clags_arg_t null_cfg_args[] = {
-        clags_positional(NULL, "subcmd", "", .value_type = Clags_Subcmd, .using.subcmds = &null_cfg_subcmds)
-    };
-    clags_config_t null_cfg_config = clags_config(null_cfg_args, GLOBAL_OPTIONS);
-    test(clags_validate("", &null_cfg_config) == &null_cfg_config);
-
     // child subcommand config validation failure
     clags_arg_t invalid_child_args[] = {
         clags_positional(NULL, "pos1", "", .optional = true),

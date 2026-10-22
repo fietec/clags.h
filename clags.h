@@ -2570,6 +2570,7 @@ CLAGS_PRIV clags_config_t* clags__validate_subcmd(clags_config_t *config, const 
         }
         if (child_config != NULL){
             child_config->parent = config;
+            // TODO(20261022-091705): detect cyclic validation
             clags_config_t *failed_config = clags_validate(subcmd.name, child_config);
             if (failed_config != NULL) return failed_config;
         }
