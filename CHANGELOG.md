@@ -74,6 +74,7 @@
 - added validation checks to prevent invalid `clags_value_type_t`s and `clags_arg_type_t`s
 - added validation checks to prevent duplicate choice and subcmd names
 - added more thorough validation checks to choice and subcmd arguments
+- added validation check for cyclic config usage
 - fixed usage of wrong config to handle ignored arguments in `clags__parse_short_options_and_flags`
 - `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occured
 - fixed `clags_log_sb` to work with not yet zero-terminated strings

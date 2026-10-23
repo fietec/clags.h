@@ -745,6 +745,7 @@ typedef struct{
 // the definition of config states
 typedef enum {
     Clags_Config_Unvalidated = 0,     // config has not been validated, yet
+    Clags_Config_In_Validation,       // config is currently being validated
     Clags_Config_Valid,               // config has been successfully validated
     Clags_Config_Invalid,             // config is invalid
 } clags_config_state_t;
@@ -2570,7 +2571,6 @@ CLAGS_PRIV clags_config_t* clags__validate_subcmd(clags_config_t *config, const 
         }
         if (child_config != NULL){
             child_config->parent = config;
-            // TODO(20261022-091705): detect cyclic validation
             clags_config_t *failed_config = clags_validate(subcmd.name, child_config);
             if (failed_config != NULL) return failed_config;
         }
@@ -2874,27 +2874,36 @@ CLAGS_API clags_config_t* clags_validate(const char *name, clags_config_t *confi
     if (config == NULL) return NULL;
     if (config->state == Clags_Config_Valid) return NULL;
     if (config->state == Clags_Config_Invalid) return config;
+
     clags_config_t *result = NULL;
+
+    // prevent cyclic validation
+    if (config->state == Clags_Config_In_Validation){
+        clags_log(config, Clags_ConfigError, "detected cyclic config setup! A config must only be used once within a config tree.");
+        clags_return_defer(config);
+    }
+    config->state = Clags_Config_In_Validation;
+
     // set the config name
     if (config->name == NULL) config->name = clags_config_duplicate_string(config, name);
 
     if (config->args == NULL){
-        clags_log(config, Clags_ConfigWarning, "config '%s' does not have any arguments defined! Use the `clags_config(args)` macro to create a config linked to an arguments definition.", config->name);
+        clags_log(config, Clags_ConfigWarning, "config does not have any arguments defined! Use the `clags_config(args)` macro to create a config linked to an arguments definition.");
     }
 
     // validate config options
     if (config->options.list_terminator && strcmp(config->options.list_terminator, "--") == 0){
-        clags_log(config, Clags_ConfigError,"'.list_terminator' of config '%s' may not be '--' because it is reserved for toggling option and flag parsing!", config->name);
+        clags_log(config, Clags_ConfigError,"'.list_terminator' may not be '--' because it is reserved for toggling option and flag parsing!");
         clags_return_defer(config);
     }
     if (config->options.ignore_prefix && strcmp(config->options.ignore_prefix, "--") == 0){
-        clags_log(config, Clags_ConfigError, "'.ignore_prefix' of config '%s' may not be '--' because it is reserved for toggling option and flag parsing!", config->name);
+        clags_log(config, Clags_ConfigError, "'.ignore_prefix' may not be '--' because it is reserved for toggling option and flag parsing!");
         clags_return_defer(config);
     }
     if (config->options.ignored_args){
         clags_list_t *ignored_args = config->options.ignored_args;
         if (ignored_args->value_type != Clags_String || !(ignored_args->item_size == sizeof(char*) || ignored_args->item_size == 0)){
-            clags_log(config, Clags_ConfigError, "'.ignored_args' of config '%s' list is not correctly initialized as a string list!", config->name);
+            clags_log(config, Clags_ConfigError, "'.ignored_args' list is not correctly initialized as a string list!");
             clags_return_defer(config);
         }
     }
