@@ -237,9 +237,10 @@ To integrate with custom allocators (such as arena or pool allocators), override
 
 ## Known Issues and Planned Features
 
-This project uses the [tatr](https://github.com/tsoding/tatr) task and issue tracker.  
-For example, to get the list of all known bugs run:
+In order to not being vendor-locked by github, this project uses the [tatr](https://github.com/tsoding/tatr) task and issue tracker.  
+It stores all tasks as plaintext files in the `tasks` folder.  
+With `tatr` installed you can run queries to e.g. get a list of all the known bugs:
 ```
 tatr ls :bug
 ```
-For more information, see the extensive documentation in the repo's README.
+For more information about `tatr`, see the extensive documentation in their repo's README.
