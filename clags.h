@@ -900,9 +900,11 @@ struct clags_config_t{
 /*
   Parse arguments based on the provided config.
 
-  Calling this on a root configuration automatically validates and initializes
-  the config itself, links all nested sub-configs, and validates all default
-  values across the entire tree.
+  If the root config has not been validated yet, this initializes and validates
+  it, including nested sub-configs and default values. It then parses argv
+  according to the rules defined by the config, validating syntax, checking and
+  converting argument values, and writing the parsed results into the
+  corresponding variables from the config's argument array.
 
   Arguments:
     - argc          : the number of arguments
@@ -945,17 +947,17 @@ CLAGS_API void clags_usage_to_file(FILE *file, const char *program_name, clags_c
 /*
   Manually initialize and validate a configuration tree.
 
-  This traverses the root config to link parent paths and verify that all
-  schema rules (like default values matching bounds) are valid. You only need
-  to call this manually if you intend to interact with a nested sub-config
-  before the root config has been initialized by `clags_parse`.
+  This walks the root config, links each child config to its parent, and checks
+  that all declared arguments and defaults are valid. This is primarily useful
+  when you need to inspect or print help for a nested subcommand before the root
+  config has been processed by `clags_parse`.
 
   Arguments:
     - program_name  : the name of the program
     - config        : pointer to the root config to validate
 
   Returns:
-    clags_config_t* : pointer to the failed config or `NULL` on success.
+    clags_config_t* : pointer to the failed config or `NULL` on success
 */
 CLAGS_API clags_config_t* clags_validate(const char *program_name, clags_config_t *config);
 
@@ -999,9 +1001,13 @@ CLAGS_API int clags_choice_index(clags_choices_t *choices, clags_choice_t *choic
 CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg);
 
 /*
-  Duplicate some sized data if string duplication is enabled in the config,
-  otherwise return the original data. Usually these should still be string slices,
-  but it will work with any data type.
+  Duplicate some sized data if string duplication is enabled for the config,
+  otherwise return the original pointer.
+
+  This is used when `.duplicate_strings` is enabled so that parsed values
+  can outlive the source argv strings. The duplicate is tracked internally
+  by the config and can be released by calling `clags_config_free_allocs`
+  or by cleaning up the config via `clags_config_free` or `clags_free`.
 
   Arguments:
     - config  : pointer to the clags configuration
@@ -1010,14 +1016,15 @@ CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg);
 
   Returns:
     void*     : pointer to the duplicated data if duplication is enabled,
-                otherwise the original data. Memory allocated for duplicates
-                is tracked internally within the config and will be freed when the config is cleaned up.
+                otherwise the original data.
 */
 CLAGS_API void* clags_config_duplicate(clags_config_t *config, const void *data, size_t size);
 
 /*
-  Duplicate a string if string duplication is enabled in the config,
-  otherwise return the original string.
+  Duplicate a string if string duplication is enabled for the config,
+  otherwise return the original pointer.
+
+  This is a convenience wrapper around `clags_config_duplicate` for C strings.
 
   Arguments:
     - config  : pointer to the clags configuration
@@ -1025,8 +1032,7 @@ CLAGS_API void* clags_config_duplicate(clags_config_t *config, const void *data,
 
   Returns:
     char*     : pointer to the duplicated string if duplication is enabled,
-                otherwise the original string. Memory allocated for duplicates
-                is tracked internally within the config and will be freed when the config is cleaned up.
+                otherwise the original string.
 */
 CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char *string);
 
@@ -1048,8 +1054,11 @@ CLAGS_API void clags_list_free(clags_list_t *list);
 CLAGS_API void clags_config_free_allocs(clags_config_t *config);
 
 /*
-  Free all lists and allocated strings of a config.
-  The function does not propagate to child configs.
+  Free all lists and duplicated strings owned by a config.
+
+  This frees the config’s local allocations and any lists attached to its own
+  arguments, but it does not recurse into child configs. Use `clags_free` if
+  you want to clean up the entire config tree.
 
   Arguments:
     - config        : pointer to the config of which to free all strings and lists
@@ -1057,7 +1066,11 @@ CLAGS_API void clags_config_free_allocs(clags_config_t *config);
 CLAGS_API void clags_config_free(clags_config_t *config);
 
 /*
-  Free all lists and allocated strings of a config and all its child configs.
+  Free all lists and duplicated strings owned by a config and all of its child
+  configs.
+
+  This recursively frees the entire config tree, including any nested subcommand
+  configs that were created as part of the CLI definition.
 
   Arguments:
     - config        : pointer to the root config to free along with all its child configs
@@ -1104,7 +1117,11 @@ CLAGS_API const char* clags_path_type_name(clags_path_type_t type);
 /* Logging */
 
 /*
-  Use a config's log handler to log a formatted message.
+  Emit a formatted log message using the config’s configured log handler.
+
+  The message is only emitted if the provided log level is at least as severe as
+  the config’s `min_log_level`. If no custom log handler is configured, the
+  default handler prints to stderr for warnings and errors.
 
   Arguments:
     - config        : the config for which to log using its options
