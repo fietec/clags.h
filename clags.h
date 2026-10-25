@@ -1383,10 +1383,12 @@ CLAGS_PRIV void clags__default_log_handler(clags_config_t *config, clags_log_lev
             fprintf(stderr, "[ERROR] ");
         }break;
         case Clags_ConfigWarning:{
-            fprintf(stderr, "[CONFIG_WARNING] in '%s': ", config->name);
+            fprintf(stderr, "[CONFIG_WARNING] ");
+            if (config) fprintf(stderr, "in '%s': ", config->name);
         }break;
         case Clags_ConfigError:{
-            fprintf(stderr, "[CONFIG_ERROR] in '%s': ", config->name);
+            fprintf(stderr, "[CONFIG_ERROR] ", config->name);
+            if (config) fprintf(stderr, "in '%s': ", config->name);
         }break;
         case Clags_NoLogs: return;
         default:{
