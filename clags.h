@@ -904,7 +904,7 @@ struct clags_config_t{
   it, including nested sub-configs and default values. It then parses argv
   according to the rules defined by the config, validating syntax, checking and
   converting argument values, and writing the parsed results into the
-  corresponding variables from the config's argument array.
+  corresponding variables declared in the config's argument array.
 
   Arguments:
     - argc          : the number of arguments
@@ -996,7 +996,7 @@ CLAGS_API int clags_choice_index(clags_choices_t *choices, clags_choice_t *choic
 
   Returns:
     int      : the index of the argument within the argument array
-               or -1 if the argugment was not found or either argument is NULL
+               or -1 if the argument was not found or either argument is NULL
 */
 CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg);
 
