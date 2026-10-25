@@ -1,6 +1,6 @@
 # clags.h
 
-A single-header C99 library for parsing and validating command-line arguments.
+A declarative single-header C99 library for parsing and validating command-line arguments.
 
 ## Features
 
@@ -9,8 +9,8 @@ A single-header C99 library for parsing and validating command-line arguments.
   - Options with values using `--foo=bar`, `--foo bar`, `-O3` or `-o a.out` syntax
   - Boolean flags, including combined short flags (`-abc`)
   - Variadic positional and option arguments
-  - `--` terminator to disable option parsing (optionally reversible)
   - Configurable list terminators for variadic arguments
+  - `--` terminator to disable option parsing (optionally reversible)
   - Ignore prefixes to skip matching arguments (e.g. `!ignored`)
 
 - **Direct memory binding**
@@ -33,7 +33,7 @@ A single-header C99 library for parsing and validating command-line arguments.
     - Parameterized custom types, with possible extension of existing types
 
 - **Modular compile-time configuration**
-  - Fine-grained feature-gating macros (`CLAGS_STRIP_INT_TYPES`, `CLAGS_STRIP_PATH_TYPES`, etc.) to completely strip unneeded parsing engines from the binary
+  - Fine-grained feature-stripping macros (`CLAGS_STRIP_INT_TYPES`, `CLAGS_STRIP_PATH_TYPES`, etc.) to completely strip unneeded parsing engines from the binary
   - Eliminates external platform dependencies (like `<sys/stat.h>` for path types) if not needed
 
 - **Hierarchical subcommands**
