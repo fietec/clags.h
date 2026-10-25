@@ -234,13 +234,13 @@
 // Feature-stripping configuration
 // All types are included by default
 // Disable individual groups or all at once
-#ifdef CLAGS_STRIP_ALL_TYPES
+#ifdef CLAGS_STRIP_NONCORE_TYPES
 # define CLAGS_STRIP_INT_TYPES
 # define CLAGS_STRIP_REAL_TYPES
 # define CLAGS_STRIP_PATH_TYPES
 # define CLAGS_STRIP_SIZE_TYPES
 # define CLAGS_STRIP_TIME_TYPES
-#endif // CLAGS_STRIP_ALL_TYPES
+#endif // CLAGS_STRIP_NONCORE_TYPES
 
 // Exclude specific groups with the `KEEP` macros
 #ifdef CLAGS_KEEP_INT_TYPES
@@ -365,7 +365,7 @@
 #define CLAGS__VTYPE(type, verify_func, name, value_type, validate_func, usage_func) X(type, verify_func, name, value_type, validate_func, usage_func)
 #define CLAGS__IGNORE_VTYPE(type, verify_func, name, value_type, validate_func, usage_func)
 
-#define CLAGS__BASIC_VTYPE CLAGS__VTYPE
+#define CLAGS__CORE_VTYPE CLAGS__VTYPE
 
 #ifdef CLAGS_STRIP_INT_TYPES
   #define CLAGS__INT_VTYPE CLAGS__IGNORE_VTYPE
@@ -404,11 +404,11 @@
 #define CLAGS__VALUE_TYPES                                                                                                                                                                                   \
  /* Category           Enum Value    Verification Func    Name       Var Type         Validation Func         Usage Func                                                                                  */ \
  /* ================== ============= ==================== ========== ================ ======================= ====================                                                                        */ \
-    CLAGS__BASIC_VTYPE(Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
-    CLAGS__BASIC_VTYPE(Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
-    CLAGS__BASIC_VTYPE(Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
-    CLAGS__BASIC_VTYPE(Clags_Subcmd, clags_verify_subcmd, "subcmd",  clags_subcmd_t*, clags__validate_subcmd, clags__subcmd_usage  ) /* subcommand                                                        */ \
-    CLAGS__BASIC_VTYPE(Clags_Custom, clags_verify_custom, "custom",  void*,           clags__validate_custom, clags__custom_usage  ) /* custom type, defined via custom verification function             */ \
+    CLAGS__CORE_VTYPE (Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
+    CLAGS__CORE_VTYPE (Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
+    CLAGS__CORE_VTYPE (Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
+    CLAGS__CORE_VTYPE (Clags_Subcmd, clags_verify_subcmd, "subcmd",  clags_subcmd_t*, clags__validate_subcmd, clags__subcmd_usage  ) /* subcommand                                                        */ \
+    CLAGS__CORE_VTYPE (Clags_Custom, clags_verify_custom, "custom",  void*,           clags__validate_custom, clags__custom_usage  ) /* custom type, defined via custom verification function             */ \
     CLAGS__INT_VTYPE  (Clags_Int,    clags_verify_int,    "int",     int64_t,         clags__validate_int,    clags__int_usage     ) /* a signed integer within user-defined limits                       */ \
     CLAGS__INT_VTYPE  (Clags_Int8,   clags_verify_int8,   "int8",    int8_t,          clags__validate_none,   clags__default_usage ) /* signed 8-bit integer                                              */ \
     CLAGS__INT_VTYPE  (Clags_Int16,  clags_verify_int16,  "int16",   int16_t,         clags__validate_none,   clags__default_usage ) /* signed 16-bit integer                                             */ \

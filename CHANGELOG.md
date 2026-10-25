@@ -22,7 +22,7 @@
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
-- added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_ALL_TYPES`)
+- added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_NONCORE_TYPES`)
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
@@ -39,7 +39,7 @@
 - `clags_error_t` has been renamed to `clags_error_type_t` while the old name now belongs to the new error struct
 - renamed feature stripping macros 
   - renamed individual stripping macros `CLAGS_NO_<GROUP>_TYPES` -> `CLAGS_STRIP_<GROUP>_TYPES`
-  - renamed `CLAGS_NO_COMPLEX_TYPES` -> `CLAGS_STRIP_ALL_TYPES`  
+  - renamed `CLAGS_NO_COMPLEX_TYPES` -> `CLAGS_STRIP_NONCORE_TYPES`  
   These changes were made because the previous naming was inprecise and this naming works better with the new `CLAGS_KEEP_<GROUP>_TYPES` macros
 
 ### Changes
