@@ -70,9 +70,52 @@ cc -xc -DCLAGS_IMPLEMENTATION -c clags.h
 
 For a detailed showcase of clags's features, see the `examples` directory containing multiple incrementally more advanced examples and documentation.
 
-### Example
+### Examples
 
-This basic example demonstrates handling variadic file lists, range-constrained integers, restricted string choices, and automated help generation.  
+#### Basic
+```c
+#include <stdio.h>
+#include <stdbool.h>
+
+#define CLAGS_IMPLEMENTATION
+#include <clags.h>
+
+int main(int argc, char **argv)
+{
+    // 1. Declare variables to hold the parsed state
+    char *input_file = NULL;
+    char *output_file = "a.out";
+    bool warnings = false;
+    bool help = false;
+
+    // 2. Define the argument schema
+    clags_arg_t args[] = {
+        clags_positional(&input_file, "input_file", "the input file"),
+        clags_option('o', "output", &output_file, "FILE", "the output file"),
+        clags_flag('w', "warnings", &warnings, "print warnings"),
+        clags_flag_help(&help),
+    };
+    // 3. Initialize the config context
+    clags_config_t config = clags_config(args);
+
+    // 4. Parse execution inputs
+    if (clags_parse(argc, argv, &config) != NULL){
+        // Print an automatic usage, based on the defined config
+        clags_usage(argv[0], &config);
+        return 1;
+    }
+    // 5. Use the populated variables
+    if (help){
+        clags_usage(argv[0], &config);
+        return 0;
+    }
+    printf("input: %s, output: %s, warnings:%s\n", input_file, output_file, warnings?"true":"false");
+    return 0;
+}
+```
+
+#### Advanced
+This example demonstrates handling variadic file lists, range-constrained integers, restricted string choices, and automated help generation.  
 ```c
 
 #include <stdio.h>
