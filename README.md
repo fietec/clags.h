@@ -14,6 +14,10 @@ A declarative single-header C99 library for parsing and validating command-line 
   - `--` terminator to disable option parsing (optionally configurable to be reversible)
   - Ignore prefixes to skip matching arguments (e.g. `!ignored`)
 
+- **Declarative definitions**
+  - Arguments are defined as an reusable array of structs
+  - Convenience macros with designated-initializer syntax
+
 - **Direct memory binding**
   - Parses values directly into application variables
   - Performs type conversion and assignment automatically
