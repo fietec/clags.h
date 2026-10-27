@@ -7,10 +7,11 @@ A declarative single-header C99 library for parsing and validating command-line 
 - **Flexible CLI syntax**
   - Positional arguments (required and optional)
   - Options with values using `--foo=bar`, `--foo bar`, `-O3` or `-o a.out` syntax
-  - Boolean flags, including combined short flags (`-abc`)
+  - Boolean, counting and config storing flags using `-v` or `--verbose` syntax
+  - Combined short options and flags (`-abcoa.out` -> `-a -b -c -o a.out`)
   - Variadic positional and option arguments
   - Configurable list terminators for variadic arguments
-  - `--` terminator to disable option parsing (optionally reversible)
+  - `--` terminator to disable option parsing (optionally configurable to be reversible)
   - Ignore prefixes to skip matching arguments (e.g. `!ignored`)
 
 - **Direct memory binding**
@@ -25,6 +26,7 @@ A declarative single-header C99 library for parsing and validating command-line 
   - Verifies parsed values against type constraints and validation rules
   - Built-in support for:
     - Primitive types (`int`, `uint`, `float`, `double`, `bool`, etc.)
+    - Fixed-Width integer types (`uint8`, `uint16`, `int32`, etc.)
     - Numeric ranges
     - Enumerated choices
     - Size units (e.g. `10KiB`, `4GB`)
@@ -33,12 +35,16 @@ A declarative single-header C99 library for parsing and validating command-line 
     - Parameterized custom types, with possible extension of existing types
 
 - **Modular compile-time configuration**
-  - Fine-grained feature-stripping macros (`CLAGS_STRIP_INT_TYPES`, `CLAGS_STRIP_PATH_TYPES`, etc.) to completely strip unneeded parsing engines from the binary
+  - Fine-grained feature-stripping macros (`CLAGS_STRIP_INT_TYPES`, `CLAGS_STRIP_PATH_TYPES`, etc.) to strip unneeded parsing engines from the binary
   - Eliminates external platform dependencies (like `<sys/stat.h>` for path types) if not needed
 
 - **Hierarchical subcommands**
   - Supports deeply nested subcommands
   - Optional inheritance of flags and options throughout the command tree
+
+- **Automatic usage printing**
+  - Automatically generated from the same argument definitions as used for parsing
+  - Detailed type-specific usage (e.g. ranges, default values, choice values with description)
 
 - **Automatic memory tracking**
   - Tracks dynamically allocated lists and duplicated strings
@@ -141,6 +147,7 @@ As you can see, parsing arguments with clags.h follows a simple 6-step sequence:
 4. Pass argc and argv to `clags_parse`. This checks for user syntax errors and populates the bound variables.
 
 5. Use the populated variables
+
 6. Free dynamically populated lists and other internal allocations. This is only necessary when lists were defined in the argument schema or string duplication was enabled. See the [Memory Model](#memory-model) section for more info.
 
 ### Generated Usage
@@ -227,9 +234,9 @@ Instead of freeing resources individually, you can use the provided cleanup help
 
 To integrate with custom allocators (such as arena or pool allocators), override the fallback macros prior to compiling the implementation block. Because low-overhead systems often require explicitly sized free operations, the allocation size is passed to both `CLAGS_REALLOC` and `CLAGS_FREE`:
 ```c
-#define CLAGS_CALLOC(count, size)        my_arena_calloc(count, size)
-#define CLAGS_REALLOC(ptr, oldsz, newsz) my_arena_realloc(ptr, oldsz, newsz)
-#define CLAGS_FREE(ptr, sz)              my_arena_free(ptr, sz)
+#define CLAGS_CALLOC(count, size)            my_arena_calloc(count, size)
+#define CLAGS_REALLOC(ptr, oldsize, newsize) my_arena_realloc(ptr, oldsz, newsize)
+#define CLAGS_FREE(ptr, size)                my_arena_free(ptr, size)
 
 #define CLAGS_IMPLEMENTATION
 #include "clags.h"
