@@ -49,6 +49,7 @@ A declarative single-header C99 library for parsing and validating command-line 
 - **Automatic usage printing**
   - Automatically generated from the same argument definitions as used for parsing
   - Detailed type-specific usage (e.g. ranges, default values, choice values with description)
+  - Automatic alignment and truncation
 
 - **Automatic memory tracking**
   - Tracks dynamically allocated lists and duplicated strings
@@ -78,7 +79,7 @@ For a detailed showcase of clags's features, see the `examples` directory contai
 #include <stdbool.h>
 
 #define CLAGS_IMPLEMENTATION
-#include <clags.h>
+#include "clags.h"
 
 int main(int argc, char **argv)
 {
