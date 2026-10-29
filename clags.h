@@ -2277,8 +2277,7 @@ CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name,
     // parse one time string segment at a time and sum up the results
     clags_time_t result = 0;
     do{
-        // convert leading number string to a double
-        errno = 0;
+        // convert leading number string
         clags_time_t value = clags_strtouint64_s(start, &res, 10);
         if (res.no_digits){
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
@@ -2334,8 +2333,7 @@ CLAGS_API bool clags_verify_time_ns(clags_config_t *config, const char *arg_name
     // parse one time string segment at a time and sum up the results
     clags_time_t result = 0;
     do{
-        // convert leading number string to a double
-        errno = 0;
+        // convert leading number string
         clags_time_t value = clags_strtouint64_s(start, &res, 10);
         if (res.no_digits){
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
