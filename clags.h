@@ -1387,7 +1387,7 @@ CLAGS_PRIV void clags__default_log_handler(clags_config_t *config, clags_log_lev
             if (config) fprintf(stderr, "in '%s': ", config->name);
         }break;
         case Clags_ConfigError:{
-            fprintf(stderr, "[CONFIG_ERROR] ", config->name);
+            fprintf(stderr, "[CONFIG_ERROR] ");
             if (config) fprintf(stderr, "in '%s': ", config->name);
         }break;
         case Clags_NoLogs: return;

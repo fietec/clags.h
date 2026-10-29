@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 ```
 
 #### Advanced
-This example demonstrates handling variadic file lists, range-constrained integers, restricted string choices, and automated help generation.  
+This example demonstrates handling variadic file lists, range-constrained integers and restricted string choices.
 ```c
 
 #include <stdio.h>
