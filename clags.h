@@ -401,33 +401,33 @@
 
 // the definition of all supported value types
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
-#define CLAGS__VALUE_TYPES                                                                                                                                                                                   \
- /* Category           Enum Value    Verification Func    Name       Var Type         Validation Func         Usage Func                                                                                  */ \
- /* ================== ============= ==================== ========== ================ ======================= ====================                                                                        */ \
-    CLAGS__CORE_VTYPE (Clags_String, clags_verify_string, "string",  char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
-    CLAGS__CORE_VTYPE (Clags_Bool,   clags_verify_bool,   "bool",    bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
-    CLAGS__CORE_VTYPE (Clags_Choice, clags_verify_choice, "choice",  clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
-    CLAGS__CORE_VTYPE (Clags_Subcmd, clags_verify_subcmd, "subcmd",  clags_subcmd_t*, clags__validate_subcmd, clags__subcmd_usage  ) /* subcommand                                                        */ \
-    CLAGS__CORE_VTYPE (Clags_Custom, clags_verify_custom, "custom",  void*,           clags__validate_custom, clags__custom_usage  ) /* custom type, defined via custom verification function             */ \
-    CLAGS__INT_VTYPE  (Clags_Int,    clags_verify_int,    "int",     int64_t,         clags__validate_int,    clags__int_usage     ) /* a signed integer within user-defined limits                       */ \
-    CLAGS__INT_VTYPE  (Clags_Int8,   clags_verify_int8,   "int8",    int8_t,          clags__validate_none,   clags__default_usage ) /* signed 8-bit integer                                              */ \
-    CLAGS__INT_VTYPE  (Clags_Int16,  clags_verify_int16,  "int16",   int16_t,         clags__validate_none,   clags__default_usage ) /* signed 16-bit integer                                             */ \
-    CLAGS__INT_VTYPE  (Clags_Int32,  clags_verify_int32,  "int32",   int32_t,         clags__validate_none,   clags__default_usage ) /* signed 32-bit integer                                             */ \
-    CLAGS__INT_VTYPE  (Clags_Int64,  clags_verify_int64,  "int64",   int64_t,         clags__validate_none,   clags__default_usage ) /* signed 64-bit integer                                             */ \
-    CLAGS__INT_VTYPE  (Clags_UInt,   clags_verify_uint,   "uint",    uint64_t,        clags__validate_uint,   clags__uint_usage    ) /* an unsigned integer within user-defined limits                    */ \
-    CLAGS__INT_VTYPE  (Clags_UInt8,  clags_verify_uint8,  "uint8",   uint8_t,         clags__validate_none,   clags__default_usage ) /* unsigned 8-bit integer                                            */ \
-    CLAGS__INT_VTYPE  (Clags_UInt16, clags_verify_uint16, "uint16",  uint16_t,        clags__validate_none,   clags__default_usage ) /* unsigned 16-bit integer                                           */ \
-    CLAGS__INT_VTYPE  (Clags_UInt32, clags_verify_uint32, "uint32",  uint32_t,        clags__validate_none,   clags__default_usage ) /* unsigned 32-bit integer                                           */ \
-    CLAGS__INT_VTYPE  (Clags_UInt64, clags_verify_uint64, "uint64",  uint64_t,        clags__validate_none,   clags__default_usage ) /* unsigned 64-bit integer                                           */ \
-    CLAGS__REAL_VTYPE (Clags_Real,   clags_verify_real,   "real",    double,          clags__validate_real,   clags__real_usage    ) /* a fractional number within user-defined limits                    */ \
-    CLAGS__REAL_VTYPE (Clags_Float,  clags_verify_float,  "float",   float,           clags__validate_none,   clags__default_usage ) /* a single-precision fractional number                              */ \
-    CLAGS__REAL_VTYPE (Clags_Double, clags_verify_double, "double",  double,          clags__validate_none,   clags__default_usage ) /* a double-precision fractional number                              */ \
-    CLAGS__PATH_VTYPE (Clags_Path,   clags_verify_path,   "path",    char*,           clags__validate_none,   clags__default_usage ) /* valid filesystem path                                             */ \
-    CLAGS__PATH_VTYPE (Clags_File,   clags_verify_file,   "file",    char*,           clags__validate_none,   clags__default_usage ) /* path to a regular file                                            */ \
-    CLAGS__PATH_VTYPE (Clags_Dir,    clags_verify_dir,    "dir",     char*,           clags__validate_none,   clags__default_usage ) /* path to a directory                                               */ \
-    CLAGS__SIZE_VTYPE (Clags_Size,   clags_verify_size,   "size",    clags_fsize_t,   clags__validate_none,   clags__default_usage ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
-    CLAGS__TIME_VTYPE (Clags_TimeS,  clags_verify_time_s, "time",    clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
-    CLAGS__TIME_VTYPE (Clags_TimeNS, clags_verify_time_ns,"time_ns", clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
+#define CLAGS__VALUE_TYPES                                                                                                                                                                                      \
+ /* Category           Enum Value    Verification Func    Name          Var Type         Validation Func         Usage Func                                                                                  */ \
+ /* ================== ============= ==================== ============= ================ ======================= ====================                                                                        */ \
+    CLAGS__CORE_VTYPE (Clags_String, clags_verify_string, "string",     char*,           clags__validate_none,   clags__default_usage ) /* string value                                                      */ \
+    CLAGS__CORE_VTYPE (Clags_Bool,   clags_verify_bool,   "bool",       bool,            clags__validate_none,   clags__default_usage ) /* boolean value                                                     */ \
+    CLAGS__CORE_VTYPE (Clags_Choice, clags_verify_choice, "choice",     clags_choice_t*, clags__validate_choice, clags__choice_usage  ) /* selects one value from a set of choices                           */ \
+    CLAGS__CORE_VTYPE (Clags_Subcmd, clags_verify_subcmd, "subcommand", clags_subcmd_t*, clags__validate_subcmd, clags__subcmd_usage  ) /* subcommand                                                        */ \
+    CLAGS__CORE_VTYPE (Clags_Custom, clags_verify_custom, "custom",     void*,           clags__validate_custom, clags__custom_usage  ) /* custom type, defined via custom verification function             */ \
+    CLAGS__INT_VTYPE  (Clags_Int,    clags_verify_int,    "int",        int64_t,         clags__validate_int,    clags__int_usage     ) /* a signed integer within user-defined limits                       */ \
+    CLAGS__INT_VTYPE  (Clags_Int8,   clags_verify_int8,   "int8",       int8_t,          clags__validate_none,   clags__default_usage ) /* signed 8-bit integer                                              */ \
+    CLAGS__INT_VTYPE  (Clags_Int16,  clags_verify_int16,  "int16",      int16_t,         clags__validate_none,   clags__default_usage ) /* signed 16-bit integer                                             */ \
+    CLAGS__INT_VTYPE  (Clags_Int32,  clags_verify_int32,  "int32",      int32_t,         clags__validate_none,   clags__default_usage ) /* signed 32-bit integer                                             */ \
+    CLAGS__INT_VTYPE  (Clags_Int64,  clags_verify_int64,  "int64",      int64_t,         clags__validate_none,   clags__default_usage ) /* signed 64-bit integer                                             */ \
+    CLAGS__INT_VTYPE  (Clags_UInt,   clags_verify_uint,   "uint",       uint64_t,        clags__validate_uint,   clags__uint_usage    ) /* an unsigned integer within user-defined limits                    */ \
+    CLAGS__INT_VTYPE  (Clags_UInt8,  clags_verify_uint8,  "uint8",      uint8_t,         clags__validate_none,   clags__default_usage ) /* unsigned 8-bit integer                                            */ \
+    CLAGS__INT_VTYPE  (Clags_UInt16, clags_verify_uint16, "uint16",     uint16_t,        clags__validate_none,   clags__default_usage ) /* unsigned 16-bit integer                                           */ \
+    CLAGS__INT_VTYPE  (Clags_UInt32, clags_verify_uint32, "uint32",     uint32_t,        clags__validate_none,   clags__default_usage ) /* unsigned 32-bit integer                                           */ \
+    CLAGS__INT_VTYPE  (Clags_UInt64, clags_verify_uint64, "uint64",     uint64_t,        clags__validate_none,   clags__default_usage ) /* unsigned 64-bit integer                                           */ \
+    CLAGS__REAL_VTYPE (Clags_Real,   clags_verify_real,   "real",       double,          clags__validate_real,   clags__real_usage    ) /* a fractional number within user-defined limits                    */ \
+    CLAGS__REAL_VTYPE (Clags_Float,  clags_verify_float,  "float",      float,           clags__validate_none,   clags__default_usage ) /* a single-precision fractional number                              */ \
+    CLAGS__REAL_VTYPE (Clags_Double, clags_verify_double, "double",     double,          clags__validate_none,   clags__default_usage ) /* a double-precision fractional number                              */ \
+    CLAGS__PATH_VTYPE (Clags_Path,   clags_verify_path,   "path",       char*,           clags__validate_none,   clags__default_usage ) /* valid filesystem path                                             */ \
+    CLAGS__PATH_VTYPE (Clags_File,   clags_verify_file,   "file",       char*,           clags__validate_none,   clags__default_usage ) /* path to a regular file                                            */ \
+    CLAGS__PATH_VTYPE (Clags_Dir,    clags_verify_dir,    "dir",        char*,           clags__validate_none,   clags__default_usage ) /* path to a directory                                               */ \
+    CLAGS__SIZE_VTYPE (Clags_Size,   clags_verify_size,   "size",       clags_fsize_t,   clags__validate_none,   clags__default_usage ) /* size in bytes (supports suffixes like KiB/MB)                     */ \
+    CLAGS__TIME_VTYPE (Clags_TimeS,  clags_verify_time_s, "time",       clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in seconds (supports suffixes s/m/h/d)              */ \
+    CLAGS__TIME_VTYPE (Clags_TimeNS, clags_verify_time_ns,"time",       clags_time_t,    clags__validate_none,   clags__default_usage ) /* time duration in nanoseconds (supports suffixes ns/us/ms/s/m/h/d) */ \
 
 // the definition of all flag types
 #define CLAGS__FLAG_TYPES                                                                                                                       \
@@ -2266,11 +2266,17 @@ CLAGS_API bool clags_verify_size(clags_config_t *config, const char *arg_name, c
 
 #ifndef CLAGS_STRIP_TIME_TYPES
 
-CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+typedef struct{
+    const char *name;
+    clags_time_t factor;
+} clags__time_unit_t;
+
+CLAGS_PRIV bool clags__verify_time(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data, bool allow_sub_second_units)
 {
     (void) data;
     clags_strtoint_res_t res;
     const char *start = arg;
+    const char *const base_unit = allow_sub_second_units? "s": "ns";
 
     // skip spaces
     while (isspace((unsigned char)*start)) start++;
@@ -2283,35 +2289,79 @@ CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name,
             clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
             return false;
         }
-        // find end of unit string
-        const char *unit_end = res.endptr;
+        // find unit string
+        const char *unit_start = res.endptr;
+        const char *unit_end = unit_start;
         while (isalpha((unsigned char) *unit_end)) unit_end++;
+        size_t unit_len = unit_end - unit_start;
+
+        // unit tables for both modes
+        static const clags__time_unit_t sub_sec_units[] = {
+            {"ns",                            1ULL},
+            {"us",                         1000ULL},
+            {"ms",                      1000000ULL},
+            {"s",                    1000000000ULL},
+            {"m",            60ULL * 1000000000ULL},
+            {"h",          3600ULL * 1000000000ULL},
+            {"d",  24ULL * 3600ULL * 1000000000ULL},
+        };
+        const size_t sub_sec_units_len = clags_arr_len(sub_sec_units);
+
+        static const clags__time_unit_t sec_units[] = {
+            {"ns",         0ULL}, // zero means recognized but not accepted
+            {"us",         0ULL},
+            {"ms",         0ULL},
+            {"s",          1ULL},
+            {"m",         60ULL},
+            {"h",       3600ULL},
+            {"d", 24ULL*3600ULL},
+        };
+        const size_t sec_units_len = clags_arr_len(sec_units);
+
+        // choose unit table
+        const clags__time_unit_t *const units = allow_sub_second_units ?     sub_sec_units :     sec_units;
+        const size_t units_len                = allow_sub_second_units ? sub_sec_units_len : sec_units_len;
 
         // convert unit string to a factor
         clags_time_t factor;
-        size_t unit_len = unit_end - res.endptr;
-        if (unit_len == 0 || clags__strslice_casecmp(res.endptr, unit_len, "s") == 0) factor =       1;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "m")  == 0)            factor =      60;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "h")  == 0)            factor =    3600;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "d")  == 0)            factor = 24*3600;
-        else {
-            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, res.endptr);
+        bool unit_found = false;
+
+        if (unit_len == 0){
+            factor = units[0].factor;
+            unit_found = true;
+        } else{
+            for (size_t i=0; i<units_len; ++i){
+                if (clags__strslice_casecmp(unit_start, unit_len, units[i].name) == 0){
+                    if (units[i].factor == 0){
+                        clags_log(config, Clags_Error, "Sub-second time unit not accepted for second-based argument '%s': '%.*s'!", arg_name, (int) unit_len, unit_start);
+                        return false;
+                    }
+                    factor = units[i].factor;
+                    unit_found = true;
+                    break;
+                }
+            }
+        }
+        if (!unit_found){
+            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, unit_start);
             return false;
         }
+
         // range check for the factor
         if (res.out_of_range || value > UINT64_MAX/factor || res.negative){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-start), start);
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0%s to %"PRIu64"%s) for argument part '%s': '%.*s'!", base_unit, UINT64_MAX, base_unit, arg_name, (int)(unit_end-start), start);
             return false;
         }
+
         // range check for the temporary result
-        clags_time_t value_in_s = value * factor;
-        if (result > UINT64_MAX - value_in_s){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"s) for argument part '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
+        clags_time_t value_in_base = value * factor;
+        if (result > UINT64_MAX - value_in_base){
+            clags_log(config, Clags_Error, "clags_time_t value out of range (0%s to %"PRIu64"%s) for argument '%s': '%.*s'!", base_unit, UINT64_MAX, base_unit, arg_name, (int)(unit_end-arg), arg);
             return false;
         }
 
         // add to the result
-        result += value_in_s;
+        result += value_in_base;
 
         // advance reading pointer to next segment if existing
         start = unit_end;
@@ -2322,63 +2372,14 @@ CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name,
     return true;
 }
 
+CLAGS_API bool clags_verify_time_s(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+{
+    return clags__verify_time(config, arg_name, arg, variable, data, false); // do not allow sub-second units
+}
+
 CLAGS_API bool clags_verify_time_ns(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
-    (void) data;
-    clags_strtoint_res_t res;
-    const char *start = arg;
-
-    // skip spaces
-    while (isspace((unsigned char)*start)) start++;
-    // parse one time string segment at a time and sum up the results
-    clags_time_t result = 0;
-    do{
-        // convert leading number string
-        clags_time_t value = clags_strtouint64_s(start, &res, 10);
-        if (res.no_digits){
-            clags_log(config, Clags_Error, "No leading number in time argument '%s': '%s'!", arg_name, start);
-            return false;
-        }
-        // find end of unit string
-        const char *unit_end = res.endptr;
-        while (isalpha((unsigned char) *unit_end)) unit_end++;
-
-        // convert unit string to a factor
-        clags_time_t factor;
-        size_t unit_len = unit_end - res.endptr;
-        if (unit_len == 0 || clags__strslice_casecmp(res.endptr, unit_len, "ns") == 0)   factor = 1;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "us") == 0)               factor = 1000ULL;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "ms") == 0)               factor = 1000000ULL;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "s") == 0)                factor = 1000000000ULL;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "m") == 0)                factor = 60ULL * 1000000000ULL;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "h") == 0)                factor = 3600ULL * 1000000000ULL;
-        else if (clags__strslice_casecmp(res.endptr, unit_len, "d") == 0)                factor = 24ULL * 3600ULL * 1000000000ULL;
-        else {
-            clags_log(config, Clags_Error, "Invalid time unit for argument '%s': '%.*s'!", arg_name, (int) unit_len, res.endptr);
-            return false;
-        }
-        // range check for the factor
-        if (res.out_of_range || value > UINT64_MAX/factor || res.negative){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument part '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-start), start);
-            return false;
-        }
-        // range check for the temporary result
-        clags_time_t value_in_s = value * factor;
-        if (result > UINT64_MAX - value_in_s){
-            clags_log(config, Clags_Error, "clags_time_t value out of range (0s to %"PRIu64"ns) for argument '%s': '%.*s'!", UINT64_MAX, arg_name, (int)(unit_end-arg), arg);
-            return false;
-        }
-
-        // add to the result
-        result += value_in_s;
-
-        // advance reading pointer to next segment if existing
-        start = unit_end;
-        while (isspace((unsigned char)*start)) start++;
-    } while(*start != '\0');
-
-    if (variable) *(clags_time_t*)variable = result;
-    return true;
+    return clags__verify_time(config, arg_name, arg, variable, data, true); // allow sub-second units
 }
 
 #endif // !CLAGS_STRIP_TIME_TYPES

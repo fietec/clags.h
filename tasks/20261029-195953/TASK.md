@@ -1,6 +1,6 @@
 # Improve time verifier error messages
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 70
 - TAGS:release,improvement
 
