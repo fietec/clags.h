@@ -2276,7 +2276,7 @@ CLAGS_PRIV bool clags__verify_time(clags_config_t *config, const char *arg_name,
     (void) data;
     clags_strtoint_res_t res;
     const char *start = arg;
-    const char *const base_unit = allow_sub_second_units? "s": "ns";
+    const char *const base_unit = allow_sub_second_units? "ns": "s";
 
     // skip spaces
     while (isspace((unsigned char)*start)) start++;
