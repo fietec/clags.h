@@ -2327,7 +2327,7 @@ CLAGS_PRIV bool clags__verify_time(clags_config_t *config, const char *arg_name,
         bool unit_found = false;
 
         if (unit_len == 0){
-            factor = units[0].factor;
+            factor = 1ULL;
             unit_found = true;
         } else{
             for (size_t i=0; i<units_len; ++i){

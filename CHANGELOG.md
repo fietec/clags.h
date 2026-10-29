@@ -59,6 +59,8 @@
 - `clags_usage` and `clags_usage_to_file` now exit gracefully when an invalid config is passed
 - `clags_usage` and `clags_usage_to_file` no longer automatically validate a config. This change was made make these function side-effect free and to strengthen the usability of `clags_validate`
 - removed the `clags__stat_struct`, `clags__stat_func` abstraction layer. On Windows, `clags_path_type` now uses winapi directly.
+- renamed usage type names `subcmd` -> `subcommand`, `time_ns` -> `time`
+- generalized time parsing so that both `clags_verify_time` and `clags_verify_time_ns` now share the same backend
 
 ### Fixes
 - removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version
@@ -79,6 +81,7 @@
 - `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occured
 - fixed `clags_log_sb` to work with not yet zero-terminated strings
 - arguments starting with the `.ignore_prefix` now get properly added to the `.ignored_args` when skipped by `clags__get_next_arg`
+- added error message for using a sub-second time unit with a `Clags_TimeS` argument
 
 ---
 
