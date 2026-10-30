@@ -23,6 +23,7 @@
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
 - added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_NONCORE_TYPES`)
+- new `clags_path_type_with_message` function wrapper of `clags_path_type` to additionally write an error message to a provided buffer
 
 ### Breaking Changes
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
@@ -82,6 +83,7 @@
 - fixed `clags_log_sb` to work with not yet zero-terminated strings
 - arguments starting with the `.ignore_prefix` now get properly added to the `.ignored_args` when skipped by `clags__get_next_arg`
 - added error message for using a sub-second time unit with a `Clags_TimeS` argument
+- fixed incorrect usage of `errno` for path error message printing on Windows
 
 ---
 

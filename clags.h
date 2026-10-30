@@ -1102,6 +1102,20 @@ CLAGS_API const char* clags_error_description(clags_error_type_t error);
 CLAGS_API clags_path_type_t clags_path_type(const char *path);
 
 /*
+  Return the type of a path.
+  Write an error message into the provided buffer if the type is `Clags_Path_Invalid`.
+
+  Arguments:
+    - path            : the path to check
+    - buffer          : the buffer to write the message into
+    - buffer_size     : the size of the buffer in bytes
+
+  Returns:
+    clags_path_type_t : the type of the provided path. See `CLAGS__PATH_TYPES` for a list of all available types.
+*/
+CLAGS_API clags_path_type_t clags_path_type_with_message(const char *path, char *buffer, size_t buffer_size);
+
+/*
   Return the name of the provided path type.
 
   Arguments:
@@ -1248,6 +1262,8 @@ static clags__type_t clags__types[] = {
 #define CLAGS__USAGE_TEMP_BUFFER_SIZE(alignment) ((alignment)-4)
 #define CLAGS__USAGE_ALIGNMENT_FROM_BUFFER_SIZE(size) ((size)+4)
 #define CLAGS__USAGE_TRUNCATION_ELLIPSIS "..."
+
+#define CLAGS__PATH_ERROR_BUFFER_SIZE 256
 
 /* String Utilities */
 
@@ -1556,12 +1572,20 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
 
     DWORD attrs = GetFileAttributesW(wpath);
+    DWORD err = 0;
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        err = GetLastError();
+    }
 
     if (use_heap) {
         CLAGS_FREE(wpath, wlen*sizeof(WCHAR));
     }
 
-    if (attrs == INVALID_FILE_ATTRIBUTES) return Clags_Path_Invalid;
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        SetLastError(err);
+        return Clags_Path_Invalid;
+    }
+
     if (attrs & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
     if (attrs & FILE_ATTRIBUTE_REPARSE_POINT) return Clags_Path_Other;
     return Clags_Path_Reg;
@@ -1572,6 +1596,41 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
     return Clags_Path_Other;
 #endif
+}
+
+CLAGS_API clags_path_type_t clags_path_type_with_message(const char *path, char *buffer, size_t buffer_size)
+{
+    clags_path_type_t type = clags_path_type(path);
+    if (type == Clags_Path_Invalid && buffer != NULL && buffer_size > 0) {
+#ifdef _WIN32
+        DWORD error_code = GetLastError();
+        DWORD chars_written = FormatMessageA(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL,
+            error_code,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            buffer,
+            (DWORD)buffer_size,
+            NULL
+        );
+
+        if (chars_written == 0) {
+            snprintf(buffer, buffer_size, "Unknown error: %lu", error_code);
+            return Clags_Path_Invalid;
+        }
+        if (chars_written >= 2 && buffer[chars_written - 2] == '\r' && buffer[chars_written - 1] == '\n') {
+            buffer[chars_written - 2] = '\0';
+            chars_written -= 2;
+        } else if (chars_written >= 1 && (buffer[chars_written - 1] == '\n' || buffer[chars_written - 1] == '\r')) {
+            buffer[chars_written - 1] = '\0';
+            chars_written -= 1;
+        }
+#else
+        (void)strncpy(buffer, strerror(errno), buffer_size);
+        buffer[buffer_size - 1] = '\0';
+#endif // _WIN32
+    }
+    return type;
 }
 
 CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
@@ -2172,9 +2231,10 @@ CLAGS_API bool clags_verify_double(clags_config_t *config, const char *arg_name,
 CLAGS_API bool clags_verify_path(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
-    clags_path_type_t type = clags_path_type(arg);
+    char path_error_buffer[CLAGS__PATH_ERROR_BUFFER_SIZE];
+    clags_path_type_t type = clags_path_type_with_message(arg, path_error_buffer, sizeof(path_error_buffer));
     if (type == Clags_Path_Invalid){
-        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
+        clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, path_error_buffer);
         return false;
     }
     if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
@@ -2184,10 +2244,11 @@ CLAGS_API bool clags_verify_path(clags_config_t *config, const char *arg_name, c
 CLAGS_API bool clags_verify_file(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
-    clags_path_type_t type = clags_path_type(arg);
+    char path_error_buffer[CLAGS__PATH_ERROR_BUFFER_SIZE];
+    clags_path_type_t type = clags_path_type_with_message(arg, path_error_buffer, sizeof(path_error_buffer));
     switch (type){
         case Clags_Path_Invalid:{
-            clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
+            clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, path_error_buffer);
             return false;
         } break;
         case Clags_Path_Reg:{
@@ -2204,10 +2265,11 @@ CLAGS_API bool clags_verify_file(clags_config_t *config, const char *arg_name, c
 CLAGS_API bool clags_verify_dir(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void) data;
-    clags_path_type_t type = clags_path_type(arg);
+    char path_error_buffer[CLAGS__PATH_ERROR_BUFFER_SIZE];
+    clags_path_type_t type = clags_path_type_with_message(arg, path_error_buffer, sizeof(path_error_buffer));
     switch (type){
         case Clags_Path_Invalid:{
-            clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, strerror(errno));
+            clags_log(config, Clags_Error, "Invalid path for argument '%s': '%s' : %s!", arg_name, arg, path_error_buffer);
             return false;
         } break;
         case Clags_Path_Dir:{
