@@ -500,7 +500,7 @@ typedef uint64_t clags_time_t;
    - config   : the config currently being parsed, mostly useful for logging
    - arg_name : the name of the argument currently being parsed, useful for logging
    - arg      : the argument currently being parsed
-   - variable : the pointer of the variable to set
+   - variable : the pointer of the variable to set (may be null)
    - data     : additional custom data
 
  Returns:
@@ -516,7 +516,7 @@ typedef clags_verify_func_def_t *clags_verify_func_t; // the function pointer ty
  Arguments:
    - config          : the config of the argument, mostly useful for logging
    - arg_name        : the name of the argument, useful for logging
-   - data            : additional data belonging to the type to validate
+   - data            : additional data belonging to the type to validate (may be null)
 
  Returns:
    - clags_config_t* : NULL on success, the pointer to the invalid argument's config on error
@@ -535,7 +535,7 @@ typedef clags_validate_func_def_t *clags_validate_func_t; // the function pointe
    - config        : the current config
    - type          : the type of the current argument
    - is_list       : `true` if the current argument write to a list
-   - default_value : the default value to print (can be NULL)
+   - default_value : the default value to print (may be NULL)
    - data          : additional data belonging to the type
 */
 typedef void (clags_usage_func_def_t)(FILE *file, clags_config_t *config, clags_value_type_t type, bool is_list, const char *default_value, void *data);
@@ -547,7 +547,7 @@ typedef clags_usage_func_def_t *clags_usage_func_t; // the function pointer type
 
  Arguments:
    - config        : the current config
-   - variable      : the variable to set
+   - variable      : the variable to set (may be null)
 */
 typedef clags_error_type_t (clags_flag_func_def_t)(clags_config_t *config, void *variable);
 typedef clags_flag_func_def_t *clags_flag_func_t;   // the function pointer type of flag setters
@@ -568,7 +568,7 @@ typedef enum{
   For an example implementation, see `clags__default_log_handler`.
 
   Arguments:
-    - config  : the current config
+    - config  : the current config (may be null)
     - level   : the log level of the message
     - format  : a 'printf'-like format string
     - args    : the variadic arguments for the format string
@@ -1124,7 +1124,7 @@ CLAGS_API const char* clags_path_type_name(clags_path_type_t type);
   default handler prints to stderr for warnings and errors.
 
   Arguments:
-    - config        : the config for which to log using its options
+    - config        : the config for which to log using its options (may be null)
     - level         : the log level of the message, if less than the configs minimal log level, nothing will be logged
     - format        : the printf-style format of the message
     - ...           : the variadic format arguments

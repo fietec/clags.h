@@ -1,6 +1,6 @@
 # improve parameter documentation
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 40
 - TAGS:documentation,release
 
