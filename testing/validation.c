@@ -13,8 +13,8 @@ bool test_null_and_state_guards(clags_sb_t *sb)
 {
     test(clags_validate("null_config", NULL) == NULL);
 
-    clags_arg_t args[] = { clags_positional(NULL, "arg", "") };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_arg_t args[] = { clags_positional(NULL, "arg", "",), };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
     config.state = Clags_Config_Valid;
     test(clags_validate("already_valid", &config) == NULL);
 
@@ -27,10 +27,10 @@ bool test_valid_config(clags_sb_t *sb)
     int64_t *quality;
     clags_range_t quality_range = clags_int_range(0, 100);
     clags_arg_t args[] = {
-        clags_positional(&input_file, "", ""),
-        clags_option('q', "quality", &quality, "", "", .value_type = Clags_Int, .using.range = &quality_range),
+        clags_positional(&input_file, "", "",),
+        clags_option('q', "quality", &quality, "", "", .value_type = Clags_Int, .using.range = &quality_range,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
     clags_config_t *result = clags_validate("", &config);
     test(result == NULL);
 
@@ -39,28 +39,28 @@ bool test_valid_config(clags_sb_t *sb)
 
 bool test_invalid_options(clags_sb_t *sb)
 {
-    clags_arg_t args[] = {};
+    clags_arg_t args[1] = {0};
     clags_config_t config;
     clags_config_t *result;
 
-    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .list_terminator = "--");
+    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .list_terminator = "--",);
     result = clags_validate("", &config);
     test(result == &config);
 
-    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .ignore_prefix = "--");
+    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .ignore_prefix = "--",);
     result = clags_validate("", &config);
     test(result == &config);
 
     clags_list_t ignored_args = clags_list(Clags_Bool);
-    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .ignored_args = &ignored_args);
+    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .ignored_args = &ignored_args,);
     result = clags_validate("", &config);
     test(result == &config);
 
-    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .min_usage_alignment = 10);
+    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .min_usage_alignment = 10,);
     result = clags_validate("", &config);
     test(result == &config);
 
-    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .min_usage_alignment = 50, .max_usage_alignment = 40);
+    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS, .min_usage_alignment = 50, .max_usage_alignment = 40,);
     result = clags_validate("", &config);
     test(result == &config);
 
@@ -70,31 +70,31 @@ bool test_invalid_options(clags_sb_t *sb)
 bool test_positional_validation(clags_sb_t *sb)
 {
     clags_arg_t optional_args[] = {
-        clags_positional(NULL, "", "", .optional = true),
-        clags_positional(NULL, "", ""),
+        clags_positional(NULL, "", "", .optional = true,),
+        clags_positional(NULL, "", "",),
     };
-    clags_config_t optional_config = clags_config(optional_args, GLOBAL_OPTIONS);
+    clags_config_t optional_config = clags_config(optional_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &optional_config) == &optional_config);
 
     clags_arg_t subcmd_args[] = {
-        clags_positional(NULL, "", "", .value_type = Clags_Subcmd),
-        clags_positional(NULL, "", ""),
+        clags_positional(NULL, "", "", .value_type = Clags_Subcmd,),
+        clags_positional(NULL, "", "",),
     };
-    clags_config_t subcmd_config = clags_config(subcmd_args, GLOBAL_OPTIONS);
+    clags_config_t subcmd_config = clags_config(subcmd_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &subcmd_config) == &subcmd_config);
 
     clags_arg_t list_args[] = {
-        clags_positional(NULL, "", "", .is_list = true),
-        clags_positional(NULL, "", ""),
+        clags_positional(NULL, "", "", .is_list = true,),
+        clags_positional(NULL, "", "",),
     };
-    clags_config_t list_config = clags_config(list_args, GLOBAL_OPTIONS);
+    clags_config_t list_config = clags_config(list_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &list_config) == &list_config);
 
     // invalid value_type enum
     clags_arg_t invalid_type_args[] = {
-        clags_positional(NULL, "invalid_type", "", .value_type = (clags_value_type_t)999)
+        clags_positional(NULL, "invalid_type", "", .value_type = (clags_value_type_t)999,)
     };
-    clags_config_t invalid_type_config = clags_config(invalid_type_args, GLOBAL_OPTIONS);
+    clags_config_t invalid_type_config = clags_config(invalid_type_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &invalid_type_config) == &invalid_type_config);
 
     return true;
@@ -187,16 +187,16 @@ bool test_subcmd_validation(clags_sb_t *sb)
 
     // child subcommand config validation failure
     clags_arg_t invalid_child_args[] = {
-        clags_positional(NULL, "pos1", "", .optional = true),
-        clags_positional(NULL, "pos2", ""),
+        clags_positional(NULL, "pos1", "", .optional = true,),
+        clags_positional(NULL, "pos2", "",),
     };
-    clags_config_t invalid_child_config = clags_config(invalid_child_args, GLOBAL_OPTIONS);
+    clags_config_t invalid_child_config = clags_config(invalid_child_args, GLOBAL_OPTIONS,);
     clags_subcmd_t failed_child_subcmd = { .name = "failing_child", .config = &invalid_child_config };
     clags_subcmds_t failed_child_subcmds = { .count = 1, .items = &failed_child_subcmd };
     clags_arg_t parent_args[] = {
-        clags_positional(NULL, "subcmd", "", .value_type = Clags_Subcmd, .using.subcmds = &failed_child_subcmds)
+        clags_positional(NULL, "subcmd", "", .value_type = Clags_Subcmd, .using.subcmds = &failed_child_subcmds,)
     };
-    clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
+    clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &parent_config) == &invalid_child_config);
 
     // duplicate subcmd name
@@ -207,9 +207,9 @@ bool test_subcmd_validation(clags_sb_t *sb)
     };
     clags_subcmds_t duplicate_name_subcmds = clags_subcmds(duplicate_name_commands);
     clags_arg_t duplicate_name_args[] = {
-        clags_positional(NULL, "", "", .value_type=Clags_Subcmd, .using.subcmds=&duplicate_name_subcmds),
+        clags_positional(NULL, "", "", .value_type=Clags_Subcmd, .using.subcmds=&duplicate_name_subcmds,),
     };
-    clags_config_t duplicate_name_config = clags_config(duplicate_name_args, GLOBAL_OPTIONS);
+    clags_config_t duplicate_name_config = clags_config(duplicate_name_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &duplicate_name_config) == &duplicate_name_config);
 
     return true;
@@ -219,26 +219,26 @@ bool test_choice_validation(clags_sb_t *sb)
 {
     // missing choice definition data
     clags_arg_t null_choice_args[] = {
-        clags_option('c', "choice", NULL, "", "", .value_type = Clags_Choice)
+        clags_option('c', "choice", NULL, "", "", .value_type = Clags_Choice,)
     };
-    clags_config_t null_choice_config = clags_config(null_choice_args, GLOBAL_OPTIONS);
+    clags_config_t null_choice_config = clags_config(null_choice_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &null_choice_config) == &null_choice_config);
 
     // NULL items array when count > 0
     clags_choices_t null_items_choices = { .count = 1, .items = NULL };
     clags_arg_t null_items_args[] = {
-        clags_option('c', "choice", NULL, "", "", .value_type = Clags_Choice, .using.choices = &null_items_choices)
+        clags_option('c', "choice", NULL, "", "", .value_type = Clags_Choice, .using.choices = &null_items_choices,)
     };
-    clags_config_t null_items_config = clags_config(null_items_args, GLOBAL_OPTIONS);
+    clags_config_t null_items_config = clags_config(null_items_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &null_items_config) == &null_items_config);
 
     // choice item with NULL value
     clags_choice_t null_val_choice = { .value = NULL };
     clags_choices_t null_val_choices = { .count = 1, .items = &null_val_choice };
     clags_arg_t null_val_args[] = {
-        clags_option('c', "choice", NULL, "", "", .value_type = Clags_Choice, .using.choices = &null_val_choices)
+        clags_option('c', "choice", NULL, "", "", .value_type = Clags_Choice, .using.choices = &null_val_choices,)
     };
-    clags_config_t null_val_config = clags_config(null_val_args, GLOBAL_OPTIONS);
+    clags_config_t null_val_config = clags_config(null_val_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &null_val_config) == &null_val_config);
 
     // duplicate choice value
@@ -247,11 +247,11 @@ bool test_choice_validation(clags_sb_t *sb)
         {"hello", NULL},
         {"aboba", NULL},
     };
-    clags_choices_t duplicate_choices = clags_choices(duplicates);
+    clags_choices_t duplicate_choices = clags_choices(duplicates,);
     clags_arg_t duplicate_args[] = {
-        clags_positional(NULL, "", "", .value_type=Clags_Choice, .using.choices=&duplicate_choices),
+        clags_positional(NULL, "", "", .value_type=Clags_Choice, .using.choices=&duplicate_choices,),
     };
-    clags_config_t duplicate_config = clags_config(duplicate_args, GLOBAL_OPTIONS);
+    clags_config_t duplicate_config = clags_config(duplicate_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &duplicate_config) == &duplicate_config);
 
     return true;
@@ -318,31 +318,31 @@ bool test_duplicates(clags_sb_t *sb)
 {
     // local duplicate short flag in same config
     clags_arg_t local_short_args[] = {
-        clags_flag('o', "output", NULL, ""),
-        clags_flag('o', "other", NULL, ""),
+        clags_flag('o', "output", NULL, "",),
+        clags_flag('o', "other", NULL, "",),
     };
-    clags_config_t local_short_config = clags_config(local_short_args, GLOBAL_OPTIONS);
+    clags_config_t local_short_config = clags_config(local_short_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &local_short_config) == &local_short_config);
 
     // local duplicate long flag in same config
     clags_arg_t local_long_args[] = {
-        clags_flag('a', "output", NULL, ""),
-        clags_flag('b', "output", NULL, ""),
+        clags_flag('a', "output", NULL, "",),
+        clags_flag('b', "output", NULL, "",),
     };
-    clags_config_t local_long_config = clags_config(local_long_args, GLOBAL_OPTIONS);
+    clags_config_t local_long_config = clags_config(local_long_args, GLOBAL_OPTIONS,);
     test(clags_validate("", &local_long_config) == &local_long_config);
 
     // inherited duplicate short/long flag conflict across parent and child
     clags_arg_t parent_args[] = {
-        clags_option('o', "output", NULL, "", "", .inherit = true),
-        clags_flag(0, "output", NULL, ""),
+        clags_option('o', "output", NULL, "", "", .inherit = true,),
+        clags_flag(0, "output", NULL, "",),
     };
-    clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
+    clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS,);
 
     clags_arg_t child_args[] = {
         clags_flag('o', "overwrite", NULL, "", ""),
     };
-    clags_config_t child_config = clags_config(child_args, GLOBAL_OPTIONS);
+    clags_config_t child_config = clags_config(child_args, GLOBAL_OPTIONS,);
     child_config.parent = &parent_config;
 
     test(clags_validate("", &child_config) == &child_config);
@@ -354,9 +354,9 @@ bool test_duplicates(clags_sb_t *sb)
 bool test_default_input_type_mismatch(clags_sb_t *sb)
 {
     clags_arg_t args[] = {
-        clags_option('n', "num", NULL, "N", "number", .value_type = Clags_Int, .default_input = "notanumber")
+        clags_option('n', "num", NULL, "N", "number", .value_type = Clags_Int, .default_input = "notanumber",)
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_validate("", &config) == &config);
     return true;
@@ -370,9 +370,9 @@ bool test_cyclic_config_setup(clags_sb_t *sb)
     };
     clags_subcmds_t subcmds = clags_subcmds(commands);
     clags_arg_t args[] = {
-        clags_positional(NULL, "", "", .value_type=Clags_Subcmd, .using.subcmds=&subcmds),
+        clags_positional(NULL, "", "", .value_type=Clags_Subcmd, .using.subcmds=&subcmds,),
     };
-    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS);
+    config = (clags_config_t)clags_config(args, GLOBAL_OPTIONS,);
     test(clags_validate("", &config) == &config);
     return true;
 }

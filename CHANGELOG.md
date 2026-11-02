@@ -28,7 +28,7 @@
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
 - added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_NONCORE_TYPES`)
 - new `clags_path_type_with_message` function wrapper of `clags_path_type` to additionally write an error message to a provided buffer
-- added `clags_sb_vappendf`
+- added `clags_sb_vappendf` as a non-variadic version of `clags_sb_appendf`
 
 ### Breaking Changes
 - `clags_parse` now returns `clags_error_t` instead of a config pointer.
@@ -72,6 +72,7 @@
 - removed the `clags__stat_struct`, `clags__stat_func` abstraction layer. On Windows, `clags_path_type` now uses winapi directly.
 - renamed usage type names `subcmd` -> `subcommand`, `time_ns` -> `time`
 - generalized time parsing so that both `clags_verify_time` and `clags_verify_time_ns` now share the same backend
+- rewrote test suite
 
 ### Fixes
 - removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version

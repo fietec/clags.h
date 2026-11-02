@@ -42,7 +42,7 @@ bool test_feature_stripping(clags_sb_t *sb)
                 cmd_append(&cmd, "-D", stripping_macros[j]);
             }
         }
-        test_msg(cmd_run(&cmd), "failed running %.*s", (int)current_cmd.count, current_cmd.items);
+        test_msg(cmd_run(&cmd,), "failed running %.*s", (int)current_cmd.count, current_cmd.items);
     }
     return true;
 }

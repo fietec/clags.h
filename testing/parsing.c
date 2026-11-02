@@ -27,9 +27,9 @@ bool test_value_string(clags_sb_t *sb)
     char *val = NULL;
     char *argv[] = {"", "hello"};
     clags_arg_t args[] = {
-        clags_positional(&val, "str", "a string"),
+        clags_positional(&val, "str", "a string",),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     clags_error_t error = clags_parse(arr_len(argv), argv, &config);
     test(error.type == Clags_Error_Ok);
@@ -42,9 +42,9 @@ bool test_value_bool(clags_sb_t *sb)
     bool b = false;
     char *argv[] = {"", "--bool", "true"};
     clags_arg_t args[] = {
-        clags_option('\0', "bool", &b, "BOOL", "boolean option", .value_type=Clags_Bool),
+        clags_option('\0', "bool", &b, "BOOL", "boolean option", .value_type=Clags_Bool,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(b == true);
@@ -159,14 +159,14 @@ bool test_value_choice(clags_sb_t *sb)
         { "green", "color green" },
         { "blue", "color blue" },
     };
-    clags_choices_t choices = clags_choices(choices_arr);
+    clags_choices_t choices = clags_choices(choices_arr,);
     clags_choice_t *sel = NULL;
 
     char *argv[] = {"", "green"};
     clags_arg_t args[] = {
-        clags_positional(&sel, "color", "choose color", .value_type=Clags_Choice, .using.choices=&choices),
+        clags_positional(&sel, "color", "choose color", .value_type=Clags_Choice, .using.choices=&choices,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(sel != NULL);
@@ -179,9 +179,9 @@ bool test_value_subcmd(clags_sb_t *sb)
     /* child config that expects a single positional string */
     char *child_val = NULL;
     clags_arg_t child_args[] = {
-        clags_positional(&child_val, "inner", "inner positional"),
+        clags_positional(&child_val, "inner", "inner positional",),
     };
-    clags_config_t child_config = clags_config(child_args, .description="child");
+    clags_config_t child_config = clags_config(child_args, .description="child",);
 
     /* top-level subcmd array */
     clags_subcmd_t subs[] = {
@@ -193,9 +193,9 @@ bool test_value_subcmd(clags_sb_t *sb)
 
     char *argv[] = {"", "do", "work"};
     clags_arg_t args[] = {
-        clags_positional(&selected, "cmd", "subcommand", .value_type=Clags_Subcmd, .using.subcmds=&subwrap),
+        clags_positional(&selected, "cmd", "subcommand", .value_type=Clags_Subcmd, .using.subcmds=&subwrap,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     /* after parsing, child_config should have been used and child_val set */
@@ -300,12 +300,12 @@ bool test_value_time_s_time_ns(clags_sb_t *sb)
 bool test_value_custom(clags_sb_t *sb)
 {
     char *out = NULL;
-    clags_custom_t custom = clags_custom("mycust", custom_verifier);
+    clags_custom_t custom = clags_custom("mycust", custom_verifier,);
     char *argv[] = {"", "C:payload"};
     clags_arg_t args[] = {
-        clags_positional(&out, "cust", "custom", .value_type=Clags_Custom, .using.custom=&custom),
+        clags_positional(&out, "cust", "custom", .value_type=Clags_Custom, .using.custom=&custom,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(out != NULL && strcmp(out, "payload") == 0);
@@ -317,9 +317,9 @@ bool test_int_list(clags_sb_t *sb)
     char *argv[] = {"", "-l123", "--list", "-120"};
     clags_list_t list = clags_list(Clags_Int);
     clags_arg_t args[] = {
-        clags_option('l', "list", &list, "", "", .is_list=true, .value_type=Clags_Int),
+        clags_option('l', "list", &list, "", "", .is_list=true, .value_type=Clags_Int,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     clags_error_t error = clags_parse(arr_len(argv), argv, &config);
     test(error.type == Clags_Error_Ok);
@@ -334,11 +334,11 @@ bool test_custom_list(clags_sb_t *sb)
 {
     char *argv[] = {"", "-lC:/Users", "--list=C:/clags.h","--list", "potato"};
     clags_list_t list = clags_custom_list(sizeof(char*));
-    clags_custom_t custom = clags_custom("mycust", custom_verifier);
+    clags_custom_t custom = clags_custom("mycust", custom_verifier,);
     clags_arg_t args[] = {
-        clags_option('l', "list", &list, "", "", .is_list=true, .value_type=Clags_Custom, .using.custom=&custom),
+        clags_option('l', "list", &list, "", "", .is_list=true, .value_type=Clags_Custom, .using.custom=&custom,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     clags_error_t error = clags_parse(arr_len(argv), argv, &config);
     test(error.type == Clags_Error_InvalidValue);
@@ -354,9 +354,9 @@ bool test_real_scientific(clags_sb_t *sb)
     double r = 0.0;
     char *argv[] = {"", "--r", "1e3"};
     clags_arg_t args[] = {
-        clags_option('\0', "r", &r, "R", "real", .value_type = Clags_Real),
+        clags_option('\0', "r", &r, "R", "real", .value_type = Clags_Real,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(r == 1000.0);
@@ -370,10 +370,10 @@ bool test_size_variants(clags_sb_t *sb)
     clags_fsize_t s1 = 0;
     clags_fsize_t s2 = 0;
     clags_arg_t args[] = {
-        clags_option('\0', "s1", &s1, "SIZE", "size raw", .value_type = Clags_Size),
-        clags_option('\0', "s2", &s2, "SIZE", "size kib", .value_type = Clags_Size),
+        clags_option('\0', "s1", &s1, "SIZE", "size raw", .value_type = Clags_Size,),
+        clags_option('\0', "s2", &s2, "SIZE", "size kib", .value_type = Clags_Size,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     char *argv[] = {"", "--s1", "1024", "--s2", "1KiB"};
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
@@ -388,9 +388,9 @@ bool test_default_value_applied(clags_sb_t *sb)
 {
     char *val = NULL;
     clags_arg_t args[] = {
-        clags_option('\0', "opt", &val, "VAL", "defaulted", .value_type = Clags_String, .default_input = "defval"),
+        clags_option('\0', "opt", &val, "VAL", "defaulted", .value_type = Clags_String, .default_input = "defval",),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     char *argv[] = {"prog"};
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
@@ -406,14 +406,14 @@ bool test_choice_invalid_value(clags_sb_t *sb)
         { "a", "" },
         { "b", "" },
     };
-    clags_choices_t choices = clags_choices(choices_arr);
+    clags_choices_t choices = clags_choices(choices_arr,);
     clags_choice_t *sel = NULL;
 
     char *argv[] = {"", "z"};
     clags_arg_t args[] = {
-        clags_positional(&sel, "ch", "choice", .value_type = Clags_Choice, .using.choices = &choices),
+        clags_positional(&sel, "ch", "choice", .value_type = Clags_Choice, .using.choices = &choices,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_InvalidValue);
 
@@ -424,13 +424,13 @@ bool test_choice_invalid_value(clags_sb_t *sb)
 bool test_custom_verifier_failure(clags_sb_t *sb)
 {
     char *out = NULL;
-    clags_custom_t custom = clags_custom("mycust", custom_verifier);
+    clags_custom_t custom = clags_custom("mycust", custom_verifier,);
 
     char *argv[] = {"", "badpayload"};
     clags_arg_t args[] = {
-        clags_positional(&out, "cust", "custom", .value_type = Clags_Custom, .using.custom = &custom),
+        clags_positional(&out, "cust", "custom", .value_type = Clags_Custom, .using.custom = &custom,),
     };
-    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_InvalidValue);
 

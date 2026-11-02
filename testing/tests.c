@@ -3,8 +3,6 @@
 #include "tests.h"
 #define CLAGS_IMPLEMENTATION
 #include "../clags.h"
-#define NOB_IMPLEMENTATION
-#include "nob.h"
 
 bool string_list_matches(clags_list_t list, const char *strings[], size_t count)
 {
