@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     
     // Act based on which subcommand was selected
     // This function returns the index of the subcommand within the definition above.
-    // Pointer comparision can of course also be used.
+    // Pointer comparison can of course also be used.
     int subcmd_index = clags_subcmd_index(&my_subcmds, selected_subcmd);
     switch (subcmd_index){
         case 0:{

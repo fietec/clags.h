@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>

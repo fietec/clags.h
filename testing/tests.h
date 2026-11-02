@@ -25,6 +25,7 @@ typedef struct{
 } TestSection;
 
 #define TEST_SECTIONS     \
+    X(building_section)   \
     X(syntax_section)     \
     X(parsing_section)    \
     X(validation_section) \

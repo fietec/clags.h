@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <stdarg.h>
 
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>

@@ -237,7 +237,7 @@ produces the following descriptive error message:
 ```
 
 When an error occurs, `clags_parse()` returns an error struct with the `type` field set accordingly
-and pointer to the config where the error occurred.
+and a pointer to the config where the error occurred.
 This allows error handling and usage reporting to be performed at the appropriate subcommand level.
 
 ## Memory Model

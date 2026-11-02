@@ -150,7 +150,7 @@ int main(int argc, char **argv)
             printf("  Quality    : %" PRId64 "\n", convert_quality);
             printf("  Warnings   : %s\n", convert_warnings ? "true" : "false");
 
-            // convertion implementation goes here
+            // conversion implementation goes here
 
         } break;
         case Resize:{

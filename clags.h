@@ -907,7 +907,7 @@ struct clags_config_t{
   Parameters:
     arguments : array of `clags_arg_t` defining the positionals, options, and flags
     ...       : optional designated initializers for `clags_options_t` fields
-                (e.g. .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true, etc.),
+                (e.g. .ignore_prefix="!", .list_terminator="::", .string_duplications=&allocs, etc.),
                 see `clags_options_t` for all available fields.
 */
 #define clags_config(arguments, ...) {.args=(arguments), .args_count=clags_arr_len(arguments), .options={._reserved=NULL, __VA_ARGS__}}
