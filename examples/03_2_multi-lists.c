@@ -129,7 +129,7 @@ defer:
     clags_list_free(&ignored_list);
 
     // This frees all the allocated strings
-    clags_allocs_free(&config);
+    clags_allocs_free(&allocs);
 #endif
     return result;
 }

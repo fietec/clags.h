@@ -3526,7 +3526,7 @@ CLAGS_PRIV bool clags__parse_list_terminator(clags__parser_t *parser, const char
 
 CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *config)
 {
-    if (config == NULL || argc < 1 || argv == NULL) return clags_error(Clags_Error_Ok, config, NULL, NULL);
+    if (config == NULL) return clags_error(Clags_Error_Ok, NULL, NULL, NULL);
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
         clags_config_t *failed_config = clags_validate(argv[0], config);
@@ -3554,7 +3554,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
 
     clags__parser_t parser = {
         .args={.positionals=positionals, .options=NULL, .flags=NULL},
-        .argc = (size_t) argc,
+        .argc = (argc >=0 && argv != NULL)? (size_t) argc : 0, // we treat both argc<0 and argv==NULL as no arguments provided
         .argv = argv,
         .args_ignored = false,
         .in_list = false,
@@ -4029,7 +4029,7 @@ CLAGS_API void clags_allocs_free(clags_allocs_t *allocs)
         (void) alloc; // to prevent `Wunused-variable` if freeing is disabled
     }
     // free the allocs container itself
-    CLAGS_FREE(allocs->items, allocs->capacity*allocs->sizeof(*allocs->items));
+    CLAGS_FREE(allocs->items, allocs->capacity*sizeof(*allocs->items));
     allocs->items = NULL;
     allocs->count = allocs->capacity = 0;
 }
