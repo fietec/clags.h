@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     
     clags_error_t error = clags_parse(argc, argv, &config);
     if (error.type != Clags_Error_Ok){
-        clags_usage(program_name, error.config);
+        clags_usage(program_name, &config);
         return 1;
     }
     if (help){

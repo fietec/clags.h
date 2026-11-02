@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-// We use Tsoding's `arena` as the exemplary custom allocator
+// We use an arena as the exemplary custom allocator
 #define ARENA_IMPLEMENTATION
 #include "11_arena.h"
 
@@ -16,8 +16,10 @@ static Arena arena = {0};
 // Redefine the internal allocation functions
 #define CLAGS_CALLOC(count, size) arena_zalloc(&arena, count*size)
 #define CLAGS_REALLOC(ptr, oldsz, newsz) arena_realloc(&arena, ptr, oldsz, newsz)
+
 // The arena implementation used here does not have support of indiviual deallocation
 #define CLAGS_FREE(ptr, sz)
+
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>
 

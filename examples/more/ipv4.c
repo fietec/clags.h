@@ -56,9 +56,9 @@ int main(int argc, char *argv[])
     clags_config_t config = clags_config(args);
 
     const char *name = argv[0];
-    clags_config_t *failed = clags_parse(argc, argv, &config);
-    if (failed){
-        clags_usage(name, failed);
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
+        clags_usage(name, error.config);
         return 1;
     }
     if (help){

@@ -23,19 +23,13 @@ clags_arg_t args[] = {
     clags_flag_help(&help),
 };
 
-// Optional argument-ignore feature.
-// Set `.ignore_prefix` to enable ignoring of arguments that begin with the
-// specified prefix. Any argument whose string starts with this prefix will be
-// skipped by the parser and not added to the argument list.
-//
-// This can be useful when repeatedly invoking the same command and temporarily
-// disabling specific arguments without removing them.
-clags_config_t config = clags_config(args, .ignore_prefix="!");
+clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
-    if (clags_parse(argc, argv, &config).type != Clags_Error_Ok){
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
         clags_usage(program_name, &config);
         return 1;
     }

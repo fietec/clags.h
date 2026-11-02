@@ -100,7 +100,8 @@ int main(int argc, char **argv)
     clags_config_t config = clags_config(args);
 
     // 4. Parse execution inputs
-    if (clags_parse(argc, argv, &config) != NULL){
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
         // Print an automatic usage, based on the defined config
         clags_usage(argv[0], &config);
         return 1;
@@ -147,8 +148,8 @@ int main(int argc, char **argv)
     clags_arg_t args[] = {
         clags_positional(&inputs, "files", "input files to process", .is_list=true, .value_type=Clags_File),
         clags_option('o', "output", &output, "FILE", "the file to output", .default_input="a.out"),
-        clags_option('O', "opt", &optimization, "LEVEL", "optimization level", .value_type=Clags_Int, .range=&opt_range, .default_input="1"),
-        clags_option('f', "format", &format, "FMT", "output format", .value_type=Clags_Choice, .choices=&formats, .default_input="elf"),
+        clags_option('O', "opt", &optimization, "LEVEL", "optimization level", .value_type=Clags_Int, .using.range=&opt_range, .default_input="1"),
+        clags_option('f', "format", &format, "FMT", "output format", .value_type=Clags_Choice, .using.choices=&formats, .default_input="elf"),
         clags_flag('v', "verbose", &verbose, "enable verbose output"),
         clags_flag_help(&help),
     };
@@ -157,10 +158,10 @@ int main(int argc, char **argv)
     clags_config_t config = clags_config(args, .ignore_prefix="!");
 
     // 4. Parse execution inputs
-    clags_config_t* failed_config = clags_parse(argc, argv, &config);
-    if (failed_config != NULL) {
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok) {
         // Returns a pointer to the specific subcommand config context that encountered the error
-        clags_usage(argv[0], failed_config);
+        clags_usage(argv[0], error.config);
         clags_config_free(&config);
         return 1;
     }
@@ -179,7 +180,7 @@ int main(int argc, char **argv)
         printf("  - %s\n", clags_list_element(inputs, char*, i));
     }
 
-    // 6. Free list structures and allocations
+    // 6. Free list structures
     clags_config_free(&config);
     return 0;
 }
@@ -235,8 +236,8 @@ produces the following descriptive error message:
 [ERROR] int out of range [0-3] for argument '-O4': '4'!
 ```
 
-When an error occurs, `clags_parse()` returns a pointer to the config where the error occurred,
-with the `.error` field indicating the type of failure.
+When an error occurs, `clags_parse()` returns an error struct with the `type` field set accordingly
+and pointer to the config where the error occurred.
 This allows error handling and usage reporting to be performed at the appropriate subcommand level.
 
 ## Memory Model
@@ -260,23 +261,27 @@ By default, string arguments are **not** copied. Instead, `char *` targets are a
 If independent ownership is required, enable string duplication:
 
 ```c
+clags_allocs_t allocs = {0};
 clags_config_t config = clags_config(args,
-    .duplicate_strings = true
+    .string_duplications=&allocs
 );
 ```
 
-Duplicated strings are tracked by the owning `clags_config_t` and can be released with:
+Duplicated strings are tracked by the provided `clags_allocs_t` and can be released with:
 
 ```c
-clags_config_free_allocs(&config);
+clags_allocs_free(&allocs);
 ```
 
 ### Convenience Cleanup
 
 Instead of freeing resources individually, you can use the provided cleanup helpers:
 
-- `clags_config_free(&config)` frees all duplicated strings and lists owned by the specified config.
+- `clags_config_free(&config)` frees all duplicated strings of the set `clags_allocs_t` and lists owned by the specified config.
 - `clags_free(&config)` performs the same cleanup recursively for the config and all of its child subcommands.
+
+It is safe to use the same `clags_allocs_t` for multiple configs, yet note that calling one of the above functions on one of them will
+lead to the allocated data being invalid for all others as well.
 
 ### Custom Allocator Overrides
 

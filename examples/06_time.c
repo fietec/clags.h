@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 
     clags_error_t error = clags_parse(argc, argv, &config);
     if (error.type != Clags_Error_Ok){
-        clags_usage(argv[0], error.config);
+        clags_usage(argv[0], &config);
         return 1;
     }
     if (help){

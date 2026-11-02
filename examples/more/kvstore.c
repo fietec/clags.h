@@ -56,8 +56,9 @@ struct{
     size_t verbosity;
     uint64_t timeout;
     clags_config_t *help_config;
+    clags_allocs_t allocs;
 } global = {0};
-#define GLOBAL_OPTIONS .ignore_prefix="!", .duplicate_strings=true
+#define GLOBAL_OPTIONS .ignore_prefix="!", .string_duplications=&global.allocs
 
 // --- Put Config ---
 struct{
@@ -261,9 +262,9 @@ int main(int argc, char *argv[])
     int result = 0;
     const char *name = argv[0];
 
-    clags_config_t *failed_config = clags_parse(argc, argv, &root_config);
-    if (failed_config){
-        clags_usage(name, failed_config);
+    clags_error_t error = clags_parse(argc, argv, &root_config);
+    if (error.type != Clags_Error_Ok){
+        clags_usage(name, error.config);
         clags_return_defer(1);
     }
     if (global.help_config){

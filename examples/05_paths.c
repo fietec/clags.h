@@ -32,7 +32,8 @@ clags_config_t config = clags_config(args);
 
 int main(int argc, char **argv)
 {
-    if (clags_parse(argc, argv, &config).type != Clags_Error_Ok){
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
         clags_usage(argv[0], &config);
         return 1;
     }

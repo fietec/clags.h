@@ -11,6 +11,7 @@
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>
 
+// The container for duplicated strings.
 clags_allocs_t allocs = {0};
 
 /* Global arguments*/

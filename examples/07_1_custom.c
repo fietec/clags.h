@@ -29,7 +29,7 @@ bool verify_lower_case(clags_config_t *config, const char *arg_name, const char 
         }
     }
     // Set the variable to the current arg since we are operating on strings here
-    // Note: `clags_config_duplicate_string` does not duplicate the string in this example, since the `duplicate_strings` option in the config is not set.
+    // Note: `clags_config_duplicate_string` does not duplicate the string in this example, since the `string_duplications` option in the config is not set.
     //       But using the function nethertheless makes it easy to change this behaviour without having to edit all your custom verifiers.
     if (variable) *(char**)variable = clags_config_duplicate_string(config, arg);
     // `arg` matches criteria, return success
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     const char *program_name = argv[0];
     clags_error_t error = clags_parse(argc, argv, &config);
     if (error.type != Clags_Error_Ok){
-        clags_usage(program_name, error.config);
+        clags_usage(program_name, &config);
         return 1;
     }
     if (help){

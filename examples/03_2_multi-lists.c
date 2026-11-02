@@ -17,6 +17,7 @@ clags_list_t file_list = clags_list(Clags_String);
 clags_list_t extra_list = clags_list(Clags_String);
 clags_list_t ignored_list = clags_list(Clags_String);
 
+// An allocation container for storing all duplicated strings
 clags_allocs_t allocs = {0};
 
 bool help = false;
@@ -39,14 +40,20 @@ clags_arg_t args[] = {
 // A `clags_config_t` is the parsing context for a specific (sub-)command containing:
 //  - the argument declarations (args)
 //  - parsing options (see `clags_options_t`)
-//  - parsing state (these fields are set during config validation and should not be touched)
+//  - validation state (these fields are set during config validation and should not be touched)
 //
 // Having multiple lists or, in fact, any other required arguments directly after a list,
 // requires for a delimeter that terminates the list. Set the `.list_terminator` field to define one.
 //
-// When `.duplicate_strings` is true, clags duplicates all strings. 
+// When `.string_duplications` is provided, clags duplicates all strings. 
 // This is necessary if the original argument strings may go out of scope before the parsed values are used.
-// The allocations are tracked inside of the config. Use `clags_config_free_allocs` to free them (see below).
+// The allocations are tracked inside the provided allocs container. Use `clags_allocs_free` to free them (see below).
+//
+// Set `.ignore_prefix` to enable ignoring of arguments that begin with the
+// specified prefix. Any argument whose string starts with this prefix will be
+// skipped by the parser.
+// This can be useful when repeatedly invoking the same command and temporarily
+// disabling specific arguments without removing them.
 //
 // Set `.ignored_args` to a list pointer to instruct clags to collect all ignored arguments
 // in the provided list. The `.ignore_prefix` is removed from all arguments.
@@ -68,7 +75,8 @@ int main(int argc, char **argv)
     int result = 0;
     const char *program_name = argv[0];
 
-    if (clags_parse(argc, argv, &config).type != Clags_Error_Ok){
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
         clags_usage(program_name, &config);
         // This makes working with lists way more convenient
         // It sets the `result` variable to the provided value and jumps to the `defer` label.
@@ -120,8 +128,8 @@ defer:
     clags_list_free(&file_list);
     clags_list_free(&ignored_list);
 
-    // The config stores all the duplicated strings. You can free them like this
-    clags_config_free_allocs(&config);
+    // This frees all the allocated strings
+    clags_allocs_free(&config);
 #endif
     return result;
 }

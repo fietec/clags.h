@@ -26,7 +26,6 @@ void custom_log_handler(clags_config_t *config, clags_log_level_t level, const c
     (void) config;
     switch(level){
         case Clags_Info:
-            // should never occur since `min_log_level` is set to `Clags_Warning`
             printf("INFO: ");
             vprintf(format, args);
             printf("\n");
@@ -71,7 +70,6 @@ clags_config_t config = clags_config(
     args,
     .log_handler = custom_log_handler,   // instruct clags to use the custom log handler for logging
     .min_log_level = Clags_NoLogs,       // do not print any logs of a lower level, here: disable all logging
-    .description = "Add two numbers with enhanced logging"
 );
 
 int main(int argc, char **argv)
@@ -80,19 +78,31 @@ int main(int argc, char **argv)
 
     clags_error_t error = clags_parse(argc, argv, &config);
     if (error.type != Clags_Error_Ok){
-        // re-enable logging
+        // Re-enable logging
         error.config->options.min_log_level = Clags_Info;
 
-        // act based on error type
+        // Act based on error type
         if (error.type == Clags_Error_InvalidValue){
             clags_log(error.config, Clags_Info, "Invalid number detected. Using defaults (lhs=0, rhs=0).");
             lhs = 0;
             rhs = 0;
         } else {
             // fatal: print detailed usage and exit
-            clags_log(error.config, Clags_Error, "error in '%s': %s",
-                    error.config->name,
-                    clags_error_type_name(error.type));
+            // Check whether the error struct contains information about a specifc failed argument.
+            // This depends on the error type. See the `CLAGS__ERROR_TYPES` macro for a complete list.
+            if (clags_error_has_arg(error)){
+                clags_log(error.config, Clags_Error, "error in '%s' while parsing argument %d of subcommand '%s': '%s'!",
+                     error.config->name,
+                     clags_arg_index(error.arg.config, error.arg.pointer), // this retrives the index within the configs `clags_arg_t` array
+                     error.arg.config->name,
+                     clags_error_type_name(error.type)
+                );
+            } else{
+                clags_log(error.config, Clags_Error, "error in '%s': '%s'!",
+                     error.config->name,
+                     clags_error_type_name(error.type)
+                );
+            }
             clags_usage(program_name, error.config);
             return 1;
         }

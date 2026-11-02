@@ -1021,10 +1021,11 @@ CLAGS_API int clags_arg_index(clags_config_t *config, clags_arg_t *arg);
   Duplicate some sized data if string duplication is enabled for the config,
   otherwise return the original pointer.
 
-  This is used when `.duplicate_strings` is enabled so that parsed values
-  can outlive the source argv strings. The duplicate is tracked internally
-  by the config and can be released by calling `clags_config_free_allocs`
-  or by cleaning up the config via `clags_config_free` or `clags_free`.
+  This is used when `.string_duplications` is set so that parsed values
+  can outlive the source argv strings. The duplicate is tracked by the
+  allocs container passed to the above option and can be released
+  by calling `clags_allocs_free` on said container or by cleaning up
+  the config via `clags_config_free` or `clags_free`.
 
   Arguments:
     - config  : pointer to the clags configuration
@@ -1062,13 +1063,13 @@ CLAGS_API char* clags_config_duplicate_string(clags_config_t *config, const char
 CLAGS_API void clags_list_free(clags_list_t *list);
 
 /*
-  Free all memory allocated for strings duplicated during parsing.
-  This only applies if `.duplicate_strings` was enabled in the config.
+  Free all memory tracked by an allocs container
+  which wasallocated for strings duplicated during parsing.
 
   Arguments:
-    - config        : pointer to the clags_config_t whose duplicated strings should be freed
+    - allocs        : pointer to the clags_allocs_t whose duplicated strings should be freed
 */
-CLAGS_API void clags_config_free_allocs(clags_config_t *config);
+CLAGS_API void clags_allocs_free(clags_allocs_t *allocs);
 
 /*
   Free all lists and duplicated strings owned by a config.
