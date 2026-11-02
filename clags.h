@@ -1186,8 +1186,8 @@ CLAGS_API void clags_log_sb(clags_config_t *config, clags_log_level_t level, cla
 CLAGS_API void clags_propagate_log_level(clags_config_t *config, clags_log_level_t level);
 
 /* String Builder */
-CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
-CLAGS_API int clags_sb_vappendf(clags_sb_t *sb, const char *format, va_list args);
+CLAGS_API int  clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
+CLAGS_API int  clags_sb_vappendf(clags_sb_t *sb, const char *format, va_list args);
 CLAGS_API void clags_sb_append_null(clags_sb_t *sb);
 CLAGS_API void clags_sb_free(clags_sb_t *sb);
 

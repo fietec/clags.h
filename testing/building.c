@@ -29,7 +29,7 @@ bool test_feature_stripping(clags_sb_t *sb)
     mkdir_if_not_exists("build");
     size_t nsubsets = 1 << stripping_count;
     for (size_t i=0; i<nsubsets; ++i){
-        cmd_append(&cmd, "cc");
+        nob_cc(&cmd);
         cmd_append(&cmd, "-Wall", "-Wextra", "-Werror", "-pedantic", "-std=c99");
         cmd_append(&cmd, "-x", "c");
         cmd_append(&cmd, "-o", "build/test_feature_stripped.o");

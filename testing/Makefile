@@ -27,4 +27,4 @@ $(NOB_OBJ): nob.h
 
 .PHONY: clean
 clean:
-	rm -rf build $(TARGET)
+	rm -rf build $(TARGET) *.gch

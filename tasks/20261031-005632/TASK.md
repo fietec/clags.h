@@ -1,8 +1,8 @@
 # Shared configs not detected in all cases
 
 - STATUS: OPEN
-- PRIORITY: 100
-- TAGS:validation,release
+- PRIORITY: 30
+- TAGS:validation
 
 A setup like this:
 ```
@@ -13,4 +13,3 @@ root
     |-- shared-config
 ```
 is currently not recognized. 
-Maybe it is even worth rethinking the whole concept of config re-use completely.
