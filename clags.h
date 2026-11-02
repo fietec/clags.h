@@ -1187,6 +1187,7 @@ CLAGS_API void clags_propagate_log_level(clags_config_t *config, clags_log_level
 
 /* String Builder */
 CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...) CLAGS__PRINTF_FORMAT(2, 3);
+CLAGS_API int clags_sb_vappendf(clags_sb_t *sb, const char *format, va_list args);
 CLAGS_API void clags_sb_append_null(clags_sb_t *sb);
 CLAGS_API void clags_sb_free(clags_sb_t *sb);
 
@@ -1372,11 +1373,9 @@ CLAGS_PRIV size_t clags__sb_reserve(clags_sb_t *sb, size_t nbytes)
     return nbytes;
 }
 
-CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
+CLAGS_API int clags_sb_vappendf(clags_sb_t *sb, const char *format, va_list args)
 {
-    va_list args, args_copy;
-
-    va_start(args, format);
+    va_list args_copy;
     va_copy(args_copy, args);
 
     int n = vsnprintf(NULL, 0, format, args_copy);
@@ -1390,6 +1389,14 @@ CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
             if (w > 0) sb->count += reserved - 1;
         }
     }
+    return n;
+}
+
+CLAGS_API int clags_sb_appendf(clags_sb_t *sb, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int n = clags_sb_vappendf(sb, format, args);
     va_end(args);
     return n;
 }

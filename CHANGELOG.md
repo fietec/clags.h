@@ -28,6 +28,7 @@
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
 - added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_NONCORE_TYPES`)
 - new `clags_path_type_with_message` function wrapper of `clags_path_type` to additionally write an error message to a provided buffer
+- added `clags_sb_vappendf`
 
 ### Breaking Changes
 - `clags_parse` now returns `clags_error_t` instead of a config pointer.

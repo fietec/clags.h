@@ -12,9 +12,20 @@ static const char *stripping_macros[] = {
 };
 const size_t stripping_count = arr_len(stripping_macros);
 
+static clags_sb_t current_cmd;
+
+void custom_log_handler(Nob_Log_Level level, const char *fmt, va_list args)
+{
+    if (level == INFO){
+        current_cmd.count = 0;
+        clags_sb_vappendf(&current_cmd, fmt, args);
+    }
+}
+
 bool test_feature_stripping(clags_sb_t *sb)
 {
     Cmd cmd = {0};
+    set_log_handler(custom_log_handler);
     mkdir_if_not_exists("build");
     size_t nsubsets = 1 << stripping_count;
     for (size_t i=0; i<nsubsets; ++i){
@@ -31,7 +42,7 @@ bool test_feature_stripping(clags_sb_t *sb)
                 cmd_append(&cmd, "-D", stripping_macros[j]);
             }
         }
-        test(cmd_run(&cmd));
+        test_msg(cmd_run(&cmd), "failed running %.*s", (int)current_cmd.count, current_cmd.items);
     }
     return true;
 }
