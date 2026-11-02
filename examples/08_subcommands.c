@@ -77,8 +77,8 @@ int main(int argc, char **argv)
     // `clags_parse` returns the config that failed.
     // In basic examples this will always be the config provided to `clags_parse` or `NULL`.
     // But since we have nested configs here, this can be used to determine which subcommand failed
-    clags_config_t* failed_config = clags_parse(argc, argv, &main_config);
-    if (failed_config) {
+    clags_error_t error = clags_parse(argc, argv, &main_config);
+    if (error.type != Clags_Error_Ok) {
         // Print the usage for the failed subcommand
         // Note: Printing the usage for a sub-config here will correctly print all inherited arguments and
         //       the subcommand path (e.g. 'Usage: ./08_subcommands copy').
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
         //           other fields, such as the name, usage-alignment etc.
         //       For this reason if you want to print the usage for some child config, you first have to pass the
         //       root config to `clags_parse` or `clags_validate`. Otherwise `clags_usage` will exit without printing anything.
-        clags_usage(argv[0], failed_config);
+        clags_usage(argv[0], error.config);
         return 1;
     }
 

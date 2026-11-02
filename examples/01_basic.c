@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     clags_config_t config = clags_config(args);
 
     // Parse the arguments using the previously defined rules, returns the config on error
-    if (clags_parse(argc, argv, &config) != NULL){
+    if (clags_parse(argc, argv, &config).type != Clags_Error_Ok){
         // Print an automatic usage, based on the defined config
         clags_usage(argv[0], &config);
         return 1;

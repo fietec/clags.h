@@ -38,9 +38,9 @@ int main(int argc, char *argv[])
     int result = 0;
     
     const char *program_name = argv[0];
-    clags_config_t *failed = clags_parse(argc, argv, &config);
-    if (failed){
-        clags_usage(program_name, failed);
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
+        clags_usage(program_name, error.config);
         clags_return_defer(1);
     }
     if (help){

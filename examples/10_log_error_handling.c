@@ -78,22 +78,22 @@ int main(int argc, char **argv)
 {
     const char *program_name = argv[0];
 
-    clags_config_t *failed_config = clags_parse(argc, argv, &config);
-    if (failed_config){
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
         // re-enable logging
-        failed_config->options.min_log_level = Clags_Info;
+        error.config->options.min_log_level = Clags_Info;
 
         // act based on error type
-        if (failed_config->error.type == Clags_Error_InvalidValue){
-            clags_log(failed_config, Clags_Info, "Invalid number detected. Using defaults (lhs=0, rhs=0).");
+        if (error.type == Clags_Error_InvalidValue){
+            clags_log(error.config, Clags_Info, "Invalid number detected. Using defaults (lhs=0, rhs=0).");
             lhs = 0;
             rhs = 0;
         } else {
             // fatal: print detailed usage and exit
-            clags_log(failed_config, Clags_Error, "error in '%s': %s",
-                    failed_config->name,
-                    clags_error_description(failed_config->error.type));
-            clags_usage(program_name, failed_config);
+            clags_log(error.config, Clags_Error, "error in '%s': %s",
+                    error.config->name,
+                    clags_error_type_name(error.type));
+            clags_usage(program_name, error.config);
             return 1;
         }
     }

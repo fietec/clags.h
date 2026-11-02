@@ -17,6 +17,8 @@ clags_list_t file_list = clags_list(Clags_String);
 clags_list_t extra_list = clags_list(Clags_String);
 clags_list_t ignored_list = clags_list(Clags_String);
 
+clags_allocs_t allocs = {0};
+
 bool help = false;
 
 clags_arg_t args[] = {
@@ -55,7 +57,7 @@ clags_arg_t args[] = {
 clags_config_t config = clags_config(
     args,
     .list_terminator="::",
-    .duplicate_strings=true,
+    .string_duplications = &allocs,
     .ignore_prefix="!",
     .ignored_args=&ignored_list,
     .allow_option_parsing_toggle=true,
@@ -66,7 +68,7 @@ int main(int argc, char **argv)
     int result = 0;
     const char *program_name = argv[0];
 
-    if (clags_parse(argc, argv, &config) != NULL){
+    if (clags_parse(argc, argv, &config).type != Clags_Error_Ok){
         clags_usage(program_name, &config);
         // This makes working with lists way more convenient
         // It sets the `result` variable to the provided value and jumps to the `defer` label.

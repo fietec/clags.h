@@ -11,12 +11,14 @@
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>
 
+clags_allocs_t allocs = {0};
+
 /* Global arguments*/
 clags_config_t *help = NULL;
 bool version = false;
 
 // With a macro like this you can reduce duplicated config options
-#define GLOBAL_OPTIONS .ignore_prefix="!", .list_terminator="::", .duplicate_strings=true
+#define GLOBAL_OPTIONS .ignore_prefix="!", .list_terminator="::", .string_duplications=&allocs
 
 /* Convert subcommand config */
 
@@ -119,10 +121,10 @@ int main(int argc, char **argv)
     const char *program_name = argv[0];
 
     // parsing
-    clags_config_t *failed_config = clags_parse(argc, argv, &parent_config);
-    if (failed_config){
+    clags_error_t error = clags_parse(argc, argv, &parent_config);
+    if (error.type != Clags_Error_Ok){
         // print usage for failed subcommand
-        clags_usage(program_name, failed_config);
+        clags_usage(program_name, error.config);
         clags_return_defer(1);
     }
     if (help){

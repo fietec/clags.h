@@ -12,6 +12,10 @@
 	- `.usage`: a custom usage printing function of type `clags_usage_func_t`
 	- `.validate`: a custom validation function of type `clags_validate_func_t`
   - added `clags_custom(name, verify, ...)` macro for easier creation of `clags_custom_t`
+- new `.string_duplications` options field. Settings this enables string duplication and stores
+  all duplclicates in the provided `clags_allocs_t` struct
+- new `clags_allocs_t` struct. A specialized dynamic array of `clags_alloc_t`s to store allocations.
+  Free with the new `clags_allocs_free` function.
 - new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
 - new redefinable `CLAGS_API` and `CLAGS_PRIV` macros for function visibility customization
 - new helper function `clags_arg_index` to get the index of an argument within a config's argument declaration array
@@ -26,6 +30,11 @@
 - new `clags_path_type_with_message` function wrapper of `clags_path_type` to additionally write an error message to a provided buffer
 
 ### Breaking Changes
+- `clags_parse` now returns `clags_error_t` instead of a config pointer.
+  This allows for more detailed error reporting and removes parsing state from the config. Together with the next change,
+  this makes `clags_config_t` just a wrapper around an args array with validation state.
+- removed `.duplicate_strings` options field and the config-owned allocs list. This was done in favor of the new `.string_duplications` field
+- removed `clags_config_free_allocs` in favor of the new `clags_allocs_free`
 - added the `using` member name to the previously unnamed type-specific data unions in `clags_positional_t` and `clags_option_t`
   - this was required for full ISO-C99 compatibility, as unnamed members are not supported by the standard
   - type-specific data must now be accessed through `.using`, for example:

@@ -29,9 +29,9 @@ int main(int argc, char *argv[])
     };
     clags_config_t config = clags_config(args);
 
-    clags_config_t *failed = clags_parse(argc, argv, &config);
-    if (failed){
-        clags_usage(argv[0], failed);
+    clags_error_t error = clags_parse(argc, argv, &config);
+    if (error.type != Clags_Error_Ok){
+        clags_usage(argv[0], error.config);
         return 1;
     }
     if (help){
