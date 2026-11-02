@@ -31,7 +31,8 @@ bool test_value_string(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    clags_error_t error = clags_parse(arr_len(argv), argv, &config);
+    test(error.type == Clags_Error_Ok);
     test(val && strcmp(val, "hello") == 0);
     return true;
 }
@@ -45,7 +46,7 @@ bool test_value_bool(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(b == true);
     return true;
 }
@@ -59,7 +60,7 @@ bool test_value_int(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(v == -42);
     return true;
 }
@@ -73,9 +74,8 @@ bool test_int_range(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *failed = clags_parse(arr_len(argv), argv, &config);
-    test(failed != NULL);
-    test(failed->error.type == Clags_Error_InvalidValue);
+    clags_error_t error = clags_parse(arr_len(argv), argv, &config);
+    test(error.type == Clags_Error_InvalidValue);
 
     return true;
 }
@@ -96,7 +96,7 @@ bool test_value_int8_int16_int32_int64(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(i8  == 127);
     test(i16 == -32000);
     test(i32 == 2147483);
@@ -122,7 +122,7 @@ bool test_value_uint_uint8_uint16_uint32_uint64(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(u  == 42);
     test(u8 == 255);
     test(u16 == 65000);
@@ -145,7 +145,7 @@ bool test_value_real_float_double(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(r > 3.139 && r < 3.141);
     test(f > -1.501f && f < -1.499f);
     test(d > 2.71827 && d < 2.71829);
@@ -168,7 +168,7 @@ bool test_value_choice(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(sel != NULL);
     test(strcmp(sel->value, "green") == 0);
     return true;
@@ -197,7 +197,7 @@ bool test_value_subcmd(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     /* after parsing, child_config should have been used and child_val set */
     test(child_val != NULL && strcmp(child_val, "work") == 0);
     return true;
@@ -254,7 +254,7 @@ bool test_value_path_file_dir(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(path_var != NULL && strcmp(path_var, tmpfile) == 0);
     test(file_var != NULL && strcmp(file_var, tmpfile) == 0);
     test(dir_var  != NULL && strcmp(dir_var,  tmpdir) == 0);
@@ -274,7 +274,7 @@ bool test_value_size(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(sval == (clags_fsize_t)(10ULL << 10)); /* 10KiB == 10240 */
     return true;
 }
@@ -291,7 +291,7 @@ bool test_value_time_s_time_ns(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(ts == 62); /* 1 minute + 2 seconds */
     test(tns == 1000000000ULL); /* 1s == 1_000_000_000 ns */
     return true;
@@ -307,7 +307,7 @@ bool test_value_custom(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(out != NULL && strcmp(out, "payload") == 0);
     return true;
 }
@@ -321,8 +321,8 @@ bool test_int_list(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *failed = clags_parse(arr_len(argv), argv, &config);
-    test(failed == NULL);
+    clags_error_t error = clags_parse(arr_len(argv), argv, &config);
+    test(error.type == Clags_Error_Ok);
 
     int64_t values[] = {123, -120};
     test(int_list_matches(list, values, arr_len(values)));
@@ -340,8 +340,8 @@ bool test_custom_list(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *failed = clags_parse(arr_len(argv), argv, &config);
-    test(failed == &config);
+    clags_error_t error = clags_parse(arr_len(argv), argv, &config);
+    test(error.type == Clags_Error_InvalidValue);
 
     const char * values[] = {"/Users", "/clags.h"};
     test(string_list_matches(list, values, arr_len(values)));
@@ -358,7 +358,7 @@ bool test_real_scientific(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(r == 1000.0);
 
     clags_config_free(&config);
@@ -376,7 +376,7 @@ bool test_size_variants(clags_sb_t *sb)
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
     char *argv[] = {"", "--s1", "1024", "--s2", "1KiB"};
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(s1 == 1024);
     test(s2 == 1024);
 
@@ -393,7 +393,7 @@ bool test_default_value_applied(clags_sb_t *sb)
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
     char *argv[] = {"prog"};
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(val != NULL && strcmp(val, "defval") == 0);
 
     clags_config_free(&config);
@@ -415,8 +415,7 @@ bool test_choice_invalid_value(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *res = clags_parse(arr_len(argv), argv, &config);
-    test(res != NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_InvalidValue);
 
     clags_config_free(&config);
     return true;
@@ -433,8 +432,7 @@ bool test_custom_verifier_failure(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *res = clags_parse(arr_len(argv), argv, &config);
-    test(res != NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_InvalidValue);
 
     clags_config_free(&config);
     return true;
@@ -448,9 +446,7 @@ bool test_nonexistent_file_fails(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *res = clags_parse(arr_len(argv), argv, &config);
-    test(res != NULL);
-
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_InvalidValue);
     clags_config_free(&config);
     return true;
 }

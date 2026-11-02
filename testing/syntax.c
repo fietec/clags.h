@@ -15,7 +15,7 @@ bool test_positional(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(strcmp(arg1, "foo") == 0);
     test(strcmp(arg2, "bar") == 0);
     return true;
@@ -33,7 +33,7 @@ bool test_options(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(strcmp(single, "a") == 0);
     test(files.count == 3);
     test(strcmp(clags_list_element(files, char*, 0), "one") == 0);
@@ -56,7 +56,7 @@ bool test_flags(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(warnings == true);
     test(help == &config);
     test(verbose_count == 2);
@@ -74,7 +74,7 @@ bool test_ignore_prefix(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, .ignore_prefix = "!", .ignored_args = &ignored, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(val && strcmp(val, "value") == 0);
     test(ignored.count == 1);
     test(strcmp(clags_list_element(ignored, char*, 0), "skip") == 0);
@@ -93,7 +93,7 @@ bool test_double_dash_disable(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(a == false);
     test(strcmp(pos, "-a") == 0);
     return true;
@@ -109,7 +109,7 @@ bool test_double_dash_reenable(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, .allow_option_parsing_toggle = true, GLOBAL_OPTIONS);
 
-    test(clags_parse(arr_len(argv), argv, &config) == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
     test(a == true);
     return true;
 }
@@ -123,8 +123,7 @@ bool test_positional_list(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *failed = clags_parse(arr_len(argv), argv, &config);
-    test(failed == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
 
     test(string_list_matches(list, (const char **)argv + 1, arr_len(argv) - 1));
 
@@ -140,8 +139,7 @@ bool test_option_list(clags_sb_t *sb)
     };
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
-    clags_config_t *failed = clags_parse(arr_len(argv), argv, &config);
-    test(failed == NULL);
+    test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
 
     const char *strings[] = {"foo", "bar", "baz", "aboba"};
     test(string_list_matches(list, strings, arr_len(strings)));
@@ -158,9 +156,7 @@ bool test_missing_required(clags_sb_t *sb)
     clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
 
     char *argv[] = {"prog"};
-    clags_parse(1, argv, &config);
-
-    test(config.error.type == Clags_Error_TooFewArguments);
+    test(clags_parse(1, argv, &config).type == Clags_Error_TooFewArguments);
 
     clags_config_free(&config);
     return true;
@@ -189,7 +185,7 @@ bool test_inheritance(clags_sb_t *sb)
     clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
 
     char *argv[] = {"prog", "cmd", "--value=input", "pos"};
-    test(clags_parse(clags_arr_len(argv), argv, &parent_config) == NULL);
+    test(clags_parse(clags_arr_len(argv), argv, &parent_config).type == Clags_Error_Ok);
 
     test(subcmd == &commands[0]);
     test(strcmp(value, "input") == 0);
