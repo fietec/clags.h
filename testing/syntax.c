@@ -4,6 +4,17 @@
 #include "../clags.h"
 #include "tests.h"
 
+bool test_empty_args(clags_sb_t *sb)
+{
+    clags_config_t config;
+    char *argv[] = {"name"};
+    test(clags_parse(1, argv, NULL).type == Clags_Error_Ok);
+    test(clags_parse(1, NULL, &config).type == Clags_Error_TooFewArguments);
+    test(clags_parse(0, argv, &config).type == Clags_Error_TooFewArguments);
+
+    return true;
+}
+
 bool test_positional(clags_sb_t *sb)
 {
     char *argv[] = {"", "foo", "bar"};
@@ -195,6 +206,7 @@ bool test_inheritance(clags_sb_t *sb)
 }
 
 static Test syntax_tests[] = {
+    {"empty args", test_empty_args},
     {"positional arguments", test_positional},
     {"missing required argument", test_missing_required},
     {"options", test_options},

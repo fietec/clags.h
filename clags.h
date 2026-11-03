@@ -3538,6 +3538,10 @@ CLAGS_PRIV bool clags__parse_list_terminator(clags__parser_t *parser, const char
 CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *config)
 {
     if (config == NULL) return clags_error(Clags_Error_Ok, NULL, NULL, NULL);
+    if (argc < 1 || argv == NULL){
+        clags_log(config, Clags_ConfigError, "missing program name; cannot parse arguments!");
+        return clags_error(Clags_Error_TooFewArguments, config, NULL, NULL);
+    }
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
         clags_config_t *failed_config = clags_validate(argv[0], config);
@@ -3548,7 +3552,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
     }
     if (config->state != Clags_Config_Valid){
         clags_log(config, Clags_ConfigError, "passed config is invalid!");
-        return clags_error(Clags_Error_Ok, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidConfig, config, NULL, NULL);
     }
 
     clags_error_t default_error = clags__set_defaults(config);
@@ -3565,7 +3569,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
 
     clags__parser_t parser = {
         .args={.positionals=positionals, .options=NULL, .flags=NULL},
-        .argc = (argc >=0 && argv != NULL)? (size_t) argc : 0, // we treat both argc<0 and argv==NULL as no arguments provided
+        .argc = (size_t) argc,
         .argv = argv,
         .args_ignored = false,
         .in_list = false,
