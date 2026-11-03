@@ -13,7 +13,7 @@
 	- `.validate`: a custom validation function of type `clags_validate_func_t`
   - added `clags_custom(name, verify, ...)` macro for easier creation of `clags_custom_t`
 - new `.string_duplications` options field. Settings this enables string duplication and stores
-  all duplclicates in the provided `clags_allocs_t` struct
+  all duplicates in the provided `clags_allocs_t` struct
 - new `clags_allocs_t` struct. A specialized dynamic array of `clags_alloc_t`s to store allocations.
   Free with the new `clags_allocs_free` function.
 - new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
@@ -52,7 +52,7 @@
 - renamed feature stripping macros 
   - renamed individual stripping macros `CLAGS_NO_<GROUP>_TYPES` -> `CLAGS_STRIP_<GROUP>_TYPES`
   - renamed `CLAGS_NO_COMPLEX_TYPES` -> `CLAGS_STRIP_NONCORE_TYPES`  
-  These changes were made because the previous naming was inprecise and this naming works better with the new `CLAGS_KEEP_<GROUP>_TYPES` macros
+  These changes were made because the previous naming was imprecise and this naming works better with the new `CLAGS_KEEP_<GROUP>_TYPES` macros
 
 ### Changes
 - clags is now fully ISO-C99 compatible
@@ -84,7 +84,7 @@
 - fixed multiple typos in error messages
 - fixed capacity overflows in list reallocations
 - disallowed `NaN` input for all verifiers using `CLAGS_STRTOD`
-- fixed overflow check in time verfiers
+- fixed overflow check in time verifiers
 - added validation check to prevent an `item_size` of a custom list from being `0`
 - added validation check to prevent a range minimum to be greater than the maximum
 - added validation checks to prevent invalid `clags_value_type_t`s and `clags_arg_type_t`s
@@ -92,7 +92,7 @@
 - added more thorough validation checks to choice and subcmd arguments
 - added validation check for cyclic config usage
 - fixed usage of wrong config to handle ignored arguments in `clags__parse_short_options_and_flags`
-- `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occured
+- `clags_parse` now always correctly reports `Clags_Error_Ok` if no error occurred
 - fixed `clags_log_sb` to work with not yet zero-terminated strings
 - arguments starting with the `.ignore_prefix` now get properly added to the `.ignored_args` when skipped by `clags__get_next_arg`
 - added error message for using a sub-second time unit with a `Clags_TimeS` argument
@@ -116,7 +116,7 @@
 - use O(1) address comparison for `clags_choice_index`
 
 ### Fixes
-- check for pointer misallignment in `clags_subcmd_index` and `clags_choice_index`
+- check for pointer misalignment in `clags_subcmd_index` and `clags_choice_index`
 
 ---
 
@@ -139,7 +139,7 @@
 	- error flags: `invalid_base`, `no_digits`, `out_of_range`
 ### Changes
 - all internal verifiers now use the new `clags_strtoint..` functions instead of `strtoll` and `strtoull`
-- improved integer verfication error messages
+- improved integer verification error messages
 - deprecated `CLAGS_STRTOLL` and `CLAGS_STRTOULL` redefinable macros since they are obsolete now
 
 ---
@@ -160,7 +160,7 @@
 
 ## [v3.3.2] - 12.06.2026
 ### Added
-- new example `06_time` to demonstrate the the `Clags_TimeS` and `Clags_TimeNS` types
+- new example `06_time` to demonstrate the `Clags_TimeS` and `Clags_TimeNS` types
 
 ### Changes
 - renamed all examples starting with `06_1_custom` to `07_1_custom` and so on to make room for the time example
