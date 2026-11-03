@@ -377,6 +377,25 @@ bool test_cyclic_config_setup(clags_sb_t *sb)
     return true;
 }
 
+bool test_shared_config_setup(clags_sb_t *sb)
+{
+    clags_config_t a = {0};
+
+    clags_subcmd_t commands[] = {
+        {"foo", "", &a},
+        {"bar", "", &a},
+    };
+    clags_subcmds_t subcmds = clags_subcmds(commands);
+    clags_arg_t args[] = {
+        clags_positional(NULL, "", "", .value_type=Clags_Subcmd, .using.subcmds=&subcmds),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS);
+    clags_propagate_log_level(&config, Clags_NoLogs);
+
+    test(clags_validate("", &config) == &config);
+    return true;
+}
+
 Test validation_tests[] = {
     {"null and state guards", test_null_and_state_guards},
     {"valid config", test_valid_config},
@@ -391,7 +410,8 @@ Test validation_tests[] = {
     {"custom verifier", test_custom_validation},
     {"inherited duplicates", test_duplicates},
     {"default input type mismatch", test_default_input_type_mismatch},
-    {"cylic config setup", test_cyclic_config_setup}
+    {"cylic config setup", test_cyclic_config_setup},
+    {"shared config setup", test_shared_config_setup},
 };
 
 TestSection validation_section = {

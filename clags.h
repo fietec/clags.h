@@ -2698,6 +2698,10 @@ CLAGS_PRIV clags_config_t* clags__validate_subcmd(clags_config_t *config, const 
             }
         }
         if (child_config != NULL){
+            if (child_config->state == Clags_Config_Valid && child_config->parent != NULL){
+                clags_log(config, Clags_ConfigError, "detected shared config setup! Config for subcommand '%s' is already used by config '%s'! A config must only be used once within a config tree.", subcmd.name, child_config->parent->name);
+                return config;
+            }
             child_config->parent = config;
             clags_config_t *failed_config = clags_validate(subcmd.name, child_config);
             if (failed_config != NULL) return failed_config;

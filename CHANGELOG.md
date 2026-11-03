@@ -20,10 +20,10 @@
 - new redefinable `CLAGS_API` and `CLAGS_PRIV` macros for function visibility customization
 - new helper function `clags_arg_index` to get the index of an argument within a config's argument declaration array
 - new error type `clags_error_t`: the error returned by `clags_parse` (see below) besides already known type also contains:
-  - a pointer to the config that failed during parsing
-  - a struct with pointers to the arg that failed and to the config to which that arg belongs. This is not populated for all error types. Check with:
+- a pointer to the config that failed during parsing
+  - a struct with pointers to the arg that failed and to the config to which that arg belongs. This is not populated for all error types. Check with `clags_error_has_arg`.
 - new `clags_error_has_arg` function to check whether an error has the `.arg` struct populated
-- added `clags_error(type, arg, config)` macro for easier error creation
+- added `clags_error(type, config, arg, arg_config)` macro for easier error creation
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
