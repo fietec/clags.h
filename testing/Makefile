@@ -4,7 +4,7 @@ OBJS   = $(SRCS:%.c=build/%.o)
 
 BUILD_OBJ = build/building.o
 NOB_OBJ   = build/nob.o
-HEADER    = ../clags.h
+HEADER    = ../clags.h tests.h
 
 CFLAGS          = -Wall -Wextra -Werror -std=c99 -g
 PEDANTIC_CFLAGS = $(CFLAGS) -pedantic
