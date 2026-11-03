@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
 
 jobs:
   test:
@@ -29,3 +29,26 @@ jobs:
           cd testing
           make CC=${{ matrix.cc }}
           ./tests
+
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+
+      - name: Build and Run Tests
+        shell: msys2 {0}
+        run: |
+          cd testing
+          make CC=gcc
+          ./tests.exe
