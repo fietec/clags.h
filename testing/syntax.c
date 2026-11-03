@@ -9,8 +9,8 @@ bool test_empty_args(clags_sb_t *sb)
     clags_config_t config;
     char *argv[] = {"name"};
     test(clags_parse(1, argv, NULL).type == Clags_Error_Ok);
-    test(clags_parse(1, NULL, &config).type == Clags_Error_TooFewArguments);
-    test(clags_parse(0, argv, &config).type == Clags_Error_TooFewArguments);
+    test(clags_parse(1, NULL, &config).type == Clags_Error_InvalidParams);
+    test(clags_parse(0, argv, &config).type == Clags_Error_InvalidParams);
 
     return true;
 }

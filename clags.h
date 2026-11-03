@@ -443,6 +443,7 @@
  /*   ============================= =========================================================== ========  */ \
     X(Clags_Error_Ok,               "no error",                                                 false   )    \
     X(Clags_Error_InvalidConfig,    "configuration is invalid",                                 false   )    \
+    X(Clags_Error_InvalidParams,    "passed arguments are invalid",                             false   )    \
     X(Clags_Error_InvalidDefault,   "failed to set a default value",                            true    )    \
     X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria",  true    )    \
     X(Clags_Error_InvalidOption,    "unrecognized option or flag syntax",                       false   )    \
@@ -3540,7 +3541,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
     if (config == NULL) return clags_error(Clags_Error_Ok, NULL, NULL, NULL);
     if (argc < 1 || argv == NULL){
         clags_log(config, Clags_ConfigError, "missing program name; cannot parse arguments!");
-        return clags_error(Clags_Error_TooFewArguments, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidParams, config, NULL, NULL);
     }
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
