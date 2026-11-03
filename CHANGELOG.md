@@ -19,9 +19,10 @@
 - new `CLAGS_SB_INIT_CAPACITY` macro, separate from `CLAGS_LIST_INIT_CAPACITY`
 - new redefinable `CLAGS_API` and `CLAGS_PRIV` macros for function visibility customization
 - new helper function `clags_arg_index` to get the index of an argument within a config's argument declaration array
-- new error type `clags_error_t`: the error set inside a config may now alongside the already known type also contain:
-  - a pointer to the argument that failed
-  - a pointer to the config to which that argument belongs
+- new error type `clags_error_t`: the error returned by `clags_parse` (see below) besides already known type also contains:
+  - a pointer to the config that failed during parsing
+  - a struct with pointers to the arg that failed and to the config to which that arg belongs. This is not populated for all error types. Check with:
+- new `clags_error_has_arg` function to check whether an error has the `.arg` struct populated
 - added `clags_error(type, arg, config)` macro for easier error creation
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
@@ -73,6 +74,7 @@
 - renamed usage type names `subcmd` -> `subcommand`, `time_ns` -> `time`
 - generalized time parsing so that both `clags_verify_time` and `clags_verify_time_ns` now share the same backend
 - rewrote test suite
+- config option `.description` is now no longer used by `clags_usage`. Technically. it is now obsolete but you can still use it yourself e.g. for logging
 
 ### Fixes
 - removed unnecessary struct casts in creation macros to fix compiler errors in some older gcc version

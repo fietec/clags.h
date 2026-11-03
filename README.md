@@ -296,7 +296,7 @@ lead to the allocated data being invalid for all others as well.
 To integrate with custom allocators (such as arena or pool allocators), override the fallback macros prior to compiling the implementation block. Because low-overhead systems often require explicitly sized free operations, the allocation size is passed to both `CLAGS_REALLOC` and `CLAGS_FREE`:
 ```c
 #define CLAGS_CALLOC(count, size)            my_arena_calloc(count, size)
-#define CLAGS_REALLOC(ptr, oldsize, newsize) my_arena_realloc(ptr, oldsz, newsize)
+#define CLAGS_REALLOC(ptr, oldsize, newsize) my_arena_realloc(ptr, oldsize, newsize)
 #define CLAGS_FREE(ptr, size)                my_arena_free(ptr, size)
 
 #define CLAGS_IMPLEMENTATION
