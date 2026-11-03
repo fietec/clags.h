@@ -55,6 +55,14 @@ A declarative single-header C99 library for parsing and validating command-line 
   - Tracks dynamically allocated lists and duplicated strings
   - Releases all internally managed allocations with a single cleanup call (see the [Memory Model](#memory-model))
 
+## Supported Platforms
+
+- Linux: GCC and Clang
+- macOS: Clang
+- Windows: MinGW-w64 GCC under MSYS2/UCRT64
+
+Other platforms may work, but have not been tested thoroughly.
+
 ## Integration
 
 clags.h uses the [stb-style](https://github.com/nothings/stb#how-do-i-use-these-libraries) single-header implementation pattern. Include the header normally to access types and function declarations. In exactly one C source file, define `CLAGS_IMPLEMENTATION` before including the file to compile the function implementations.
