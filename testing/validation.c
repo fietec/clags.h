@@ -303,13 +303,21 @@ bool test_custom_validation(clags_sb_t *sb)
     clags_config_t null_custom_config = clags_config(null_custom_args, GLOBAL_OPTIONS);
     test(clags_validate("", &null_custom_config) == &null_custom_config);
 
-    // custom validate callback returns error config
-    clags_custom_t custom_struct = { .validate = mock_failed_custom_validate };
-    clags_arg_t failed_custom_args[] = {
-        clags_option('c', "custom", NULL, "", "", .value_type = Clags_Custom, .using.custom = &custom_struct)
+    // incomplete setup
+    clags_custom_t custom1 = {0};
+    clags_arg_t failed_custom_args1[] = {
+        clags_option('c', "custom", NULL, "", "", .value_type = Clags_Custom, .using.custom = &custom1)
     };
-    clags_config_t failed_custom_config = clags_config(failed_custom_args, GLOBAL_OPTIONS);
-    test(clags_validate("", &failed_custom_config) == &failed_custom_config);
+    clags_config_t failed_custom_config1 = clags_config(failed_custom_args1, GLOBAL_OPTIONS);
+    test(clags_validate("", &failed_custom_config1) == &failed_custom_config1);
+
+    // custom validate callback fails
+    clags_custom_t custom2 = { .validate = mock_failed_custom_validate };
+    clags_arg_t failed_custom_args2[] = {
+        clags_option('c', "custom", NULL, "", "", .value_type = Clags_Custom, .using.custom = &custom2)
+    };
+    clags_config_t failed_custom_config2 = clags_config(failed_custom_args2, GLOBAL_OPTIONS);
+    test(clags_validate("", &failed_custom_config2) == &failed_custom_config2);
 
     return true;
 }

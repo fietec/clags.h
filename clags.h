@@ -2673,7 +2673,7 @@ CLAGS_PRIV clags_config_t* clags__validate_subcmd(clags_config_t *config, const 
 {
     // a subcommand argument should be provided with a valid `clags_subcmds_t` 
     if (data == NULL){
-        clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Define `.subcmds` for subcommand verification!", arg_name);
+        clags_log(config, Clags_ConfigError, "incomplete subcommand definition for argument '%s'! Specify a subcommand definition via the `.using.subcmds` field!", arg_name);
         return config;
     }
 
@@ -2716,7 +2716,7 @@ CLAGS_PRIV clags_config_t* clags__validate_choice(clags_config_t *config, const 
     // a choice argument should be provided with a valid `clags_choices_t`
     clags_choices_t* choices = (clags_choices_t*) data;
     if (choices == NULL){
-        clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Define `.choices` for choice verification!", arg_name);
+        clags_log(config, Clags_ConfigError, "incomplete choice definition for argument '%s'! Specify a choice definition via the `.using.choices` field!", arg_name);
         return config;
     }
     if (choices->count == 0){
@@ -2747,7 +2747,15 @@ CLAGS_PRIV clags_config_t* clags__validate_custom(clags_config_t *config, const 
     // a custom argument should be provided with a valid `clags_custom_t`
     clags_custom_t *custom = (clags_custom_t*) data;
     if (custom == NULL){
-        clags_log(config, Clags_ConfigError, "incomplete custom verifier definition for argument '%s'! Define `.custom` for custom verification!", arg_name);
+        clags_log(config, Clags_ConfigError, "incomplete definition for custom argument '%s'! Specify a custom type via `.using.custom`!", arg_name);
+        return config;
+    }
+    if (custom->name == NULL){
+        clags_log(config, Clags_ConfigError, "incomplete custom type for argument '%s'! Specify the type name via the `.name` field!", arg_name);
+        return config;
+    }
+    if (custom->verify == NULL){
+        clags_log(config, Clags_ConfigError, "incomplete custom type '%s' for argument '%s'! Specify a custom verifier via the `.verify` field!", custom->name, arg_name);
         return config;
     }
     // call the custom validator if specified
