@@ -312,3 +312,7 @@ With `tatr` installed you can run queries to e.g. get a list of all the known bu
 tatr ls :bug
 ```
 For more information about `tatr`, see the extensive documentation in their repo's README.
+
+> [!NOTE]
+> `tatr` is currently Linux-only.
+> Until the author adds Windows support, you can use [this fork](https://github.com/fietec/tatr) which includes basic Windows compatibility.
