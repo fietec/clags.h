@@ -25,17 +25,8 @@ bool version = false;
 // You can define custom ranges for the `Clags_Int`, `Clags_UInt` and `Clags_Real` types (use the corresponding `clags_<type>_range` macros)
 clags_range_t compression_range = clags_uint_range(0, 100);
 
-// Note: As shown below, many struct creation macros support optional arguments via the designated initializer syntax.
-//       This makes for very readable and extensible definitions since you don't have to change the entire macro to add a new field.
-//       The only downside is that technically, standard C before ISO-C23 does not support empty variadic arguments in macros (sigh).
-//       Although basically every compiler has an extension for this, if you really want to compile to the standard
-//       you have to add a trailing comma to the macro. This will fix all warnings.
-//           clags_positional(&input_file, "input_file", "the file to read",),
-//                                                                         |
-//                                                                   trailing comma
-//       Alternatively, you can always construct the structs manually, of course.
 clags_arg_t args[] = {
-    clags_positional(&input_file, "input_file", "the file to read"),
+    clags_positional(&input_file, "input_file", "the file to read",),
 
     // You can provide a string that will be used as the argument's value if the user
     // does not supply it on the command line. This is specified via the `.default_input` field.
@@ -62,14 +53,14 @@ clags_arg_t args[] = {
     // For example, use `Clags_Int` together with the `.using.range` field for custom number ranges.
     clags_option('c', "compression", &compression, "NUM", "compression value of the output file", .value_type=Clags_UInt, .using.range=&compression_range, .default_input="0"),
 
-    clags_flag('w', "warnings", &warnings, "print warnings"),
+    clags_flag('w', "warnings", &warnings, "print warnings",),
     
     // This is how you create a flag that exits the parsing on occurrence, just like with `clags_flag_help`
     clags_flag('v', "version", &version, "print the version", .exit=true),
     clags_flag_help(&help),
 };
 
-clags_config_t config = clags_config(args);
+clags_config_t config = clags_config(args,);
 
 int main(int argc, char **argv)
 {

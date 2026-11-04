@@ -48,8 +48,8 @@ bool verify_addr(clags_config_t *config, const char *arg_name, const char *arg, 
     return clags_verify_string(config, arg_name, arg, variable, data);
 }
 
-clags_custom_t dict_type = clags_custom("key-value", verify_dict);
-clags_custom_t addr_type = clags_custom("ip:port", verify_addr);
+clags_custom_t dict_type = clags_custom("key-value", verify_dict,);
+clags_custom_t addr_type = clags_custom("ip:port", verify_addr,);
 
 // --- Global Definitions ---
 struct{
@@ -72,8 +72,8 @@ struct{
 };
 
 clags_arg_t put_args[] = {
-    clags_positional(&put.key, "key", "the key of the entry to update"),
-    clags_positional(&put.value, "value", "the value the entry should be set to"),
+    clags_positional(&put.key, "key", "the key of the entry to update",),
+    clags_positional(&put.value, "value", "the value the entry should be set to",),
     clags_option(0, "ttl", &put.ttl, "SECS", "time to live in seconds", .value_type=Clags_UInt),
     clags_option(0, "tag", &put.tags, "TAG", "tags to add", .value_type=Clags_Custom, .using.custom=&dict_type, .is_list=true),
 };
@@ -103,7 +103,7 @@ struct{
 } query = {0};
 
 clags_arg_t query_args[] = {
-    clags_positional(&query.query, "query", "the query to search for"),
+    clags_positional(&query.query, "query", "the query to search for",),
     clags_option(0, "max-mem", &query.mem_size, "SIZE", "the mamimum amount of memory to use", .value_type=Clags_Size),
     clags_option(0, "window", &query.window, "TIME", "the maximum amount of time to spend", .value_type=Clags_TimeS),
 };
@@ -140,7 +140,7 @@ struct{
 } set = {0};
 
 clags_arg_t set_args[] = {
-    clags_positional(&set.environment, "environment", "the name of the target environment"),
+    clags_positional(&set.environment, "environment", "the name of the target environment",),
     clags_option('l', "listen-addr", &set.addr, "ADDR", "the address to listen for", .value_type=Clags_Custom, .using.custom=&addr_type),
     clags_option('b', "backoff", &set.backoff, "INTERVAL", "the retry multiplier interval", .value_type=Clags_Float),
 };
@@ -153,8 +153,8 @@ struct{
 } export = {0};
 
 clags_arg_t export_args[] = {
-    clags_flag(0, "json", &export.json, "output in the json format"),
-    clags_flag(0, "include-secrets", &export.secrets, "include api keys in the export"),
+    clags_flag(0, "json", &export.json, "output in the json format",),
+    clags_flag(0, "include-secrets", &export.secrets, "include api keys in the export",),
 };
 clags_config_t export_config = clags_config(export_args, GLOBAL_OPTIONS);
 

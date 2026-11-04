@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     bool help = false;
 
     clags_arg_t args[] = {
-        clags_positional(&host, "host", "the host to connect to"),
+        clags_positional(&host, "host", "the host to connect to",),
         // Verify a time string (like '1h', '1h25m18s')
         // `Clags_TimeS` supports these units (case-insensitively): 'd', 'h', 'm', 's' and yields the input converted to seconds
         // `Clags_TimeNS` supports all the above and additionally: 'ns', 'us', 'ms' and yields the input converted to nanoseconds
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
         clags_option('i', "interval", &interval, "TIME", "delay between connection attempts", .value_type=Clags_TimeNS, .default_input="10ms"),
         clags_flag_help(&help),
     };
-    clags_config_t config = clags_config(args);
+    clags_config_t config = clags_config(args,);
 
     clags_error_t error = clags_parse(argc, argv, &config);
     if (error.type != Clags_Error_Ok){

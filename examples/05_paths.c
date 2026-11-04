@@ -28,7 +28,7 @@ clags_arg_t args[] = {
     clags_flag_help(&help),
 };
 
-clags_config_t config = clags_config(args);
+clags_config_t config = clags_config(args,);
 
 int main(int argc, char **argv)
 {

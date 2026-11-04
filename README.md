@@ -99,13 +99,14 @@ int main(int argc, char **argv)
 
     // 2. Define the argument schema
     clags_arg_t args[] = {
-        clags_positional(&input_file, "input_file", "the input file"),
-        clags_option('o', "output", &output_file, "FILE", "the output file"),
-        clags_flag('w', "warnings", &warnings, "print warnings"),
+        // trailing commas are only needed when compiling with strict -pedantic and -std < c23
+        clags_positional(&input_file, "input_file", "the input file",),
+        clags_option('o', "output", &output_file, "FILE", "the output file",),
+        clags_flag('w', "warnings", &warnings, "print warnings",),
         clags_flag_help(&help),
     };
     // 3. Initialize the config context
-    clags_config_t config = clags_config(args);
+    clags_config_t config = clags_config(args,);
 
     // 4. Parse execution inputs
     clags_error_t error = clags_parse(argc, argv, &config);
@@ -127,7 +128,6 @@ int main(int argc, char **argv)
 #### Advanced
 This example demonstrates handling variadic file lists, range-constrained integers and restricted string choices.
 ```c
-
 #include <stdio.h>
 #include <stdint.h>
 
@@ -151,14 +151,14 @@ int main(int argc, char **argv)
         {"bin", "a binary blob"}, 
         {"hex", "binary values as hex strings"}
     };
-    clags_choices_t formats = clags_choices(format_choices);
+    clags_choices_t formats = clags_choices(format_choices,);
 
     clags_arg_t args[] = {
         clags_positional(&inputs, "files", "input files to process", .is_list=true, .value_type=Clags_File),
         clags_option('o', "output", &output, "FILE", "the file to output", .default_input="a.out"),
         clags_option('O', "opt", &optimization, "LEVEL", "optimization level", .value_type=Clags_Int, .using.range=&opt_range, .default_input="1"),
         clags_option('f', "format", &format, "FMT", "output format", .value_type=Clags_Choice, .using.choices=&formats, .default_input="elf"),
-        clags_flag('v', "verbose", &verbose, "enable verbose output"),
+        clags_flag('v', "verbose", &verbose, "enable verbose output",),
         clags_flag_help(&help),
     };
 

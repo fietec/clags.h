@@ -23,10 +23,10 @@ char *copy_dest   = NULL;
 
 clags_arg_t copy_args[] = {
     clags_positional(&copy_source, "source", "Source file path", .value_type=Clags_File),
-    clags_positional(&copy_dest, "dest", "Destination file path"),
+    clags_positional(&copy_dest, "dest", "Destination file path",),
 };
 
-clags_config_t copy_config = clags_config(copy_args);
+clags_config_t copy_config = clags_config(copy_args,);
 
 // === DELETE subcommand ===
 char *delete_target = NULL;
@@ -34,10 +34,10 @@ bool delete_force   = false;
 
 clags_arg_t delete_args[] = {
     clags_positional(&delete_target, "target", "Target file to delete", .value_type=Clags_File),
-    clags_flag('f', "force", &delete_force, "Force deletion"),
+    clags_flag('f', "force", &delete_force, "Force deletion",),
 };
 
-clags_config_t delete_config = clags_config(delete_args);
+clags_config_t delete_config = clags_config(delete_args,);
 
 // === Main config ===
 // -- Subcommands ---
@@ -70,7 +70,7 @@ clags_arg_t main_args[] = {
     clags_flag('h', "help", &help, "print this help dialog", .exit=true, .type=Clags_ConfigFlag, .inherit=true),
 };
 
-clags_config_t main_config = clags_config(main_args);
+clags_config_t main_config = clags_config(main_args,);
 
 int main(int argc, char **argv)
 {

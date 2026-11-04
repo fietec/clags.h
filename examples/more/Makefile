@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS = -Wall -Wextra -Werror --std=c99 -I../..
+CFLAGS = -Wall -Wextra -Werror -pedantic --std=c99 -I../..
 
 SRC = $(wildcard *.c)
 EXE = $(SRC:.c=)

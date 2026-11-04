@@ -34,7 +34,7 @@ clags_choices_t choices = clags_choices(choice_values, .case_insensitive=true);
 clags_choice_t *choice = NULL;
 
 clags_arg_t args[] = {
-    clags_positional(&input, "input_file", "the input file"),
+    clags_positional(&input, "input_file", "the input file",),
 
     clags_option('o', "output", &output, "FILE", "the output file", .default_input="output.pdf"),
 
@@ -42,11 +42,11 @@ clags_arg_t args[] = {
     clags_option('a', "algorithm", &choice, "ALG", "the algorithm to use", .value_type=Clags_Choice, .using.choices=&choices, .default_input="LIFO"),
     clags_option('q', "quality", &quality, "LEVEL", "the sample quality", .value_type=Clags_UInt8, .default_input="100"),
 
-    clags_flag('w', NULL, &warnings, "print warnings"),
+    clags_flag('w', NULL, &warnings, "print warnings",),
     clags_flag_help(&help),
 };
 
-clags_config_t config = clags_config(args);
+clags_config_t config = clags_config(args,);
 
 int main(int argc, char **argv)
 {

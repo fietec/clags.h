@@ -47,13 +47,13 @@ int main(int argc, char *argv[])
     union ipv4_t ip;
     bool help = false;
 
-    clags_custom_t ip_type = clags_custom("ipv4", verify_ipv4);
+    clags_custom_t ip_type = clags_custom("ipv4", verify_ipv4,);
     
     clags_arg_t args[] = {
         clags_positional(&ip, "address", "the ip address to connect to", .value_type=Clags_Custom, .using.custom=&ip_type),
         clags_flag_help(&help),
     };
-    clags_config_t config = clags_config(args);
+    clags_config_t config = clags_config(args,);
 
     const char *name = argv[0];
     clags_error_t error = clags_parse(argc, argv, &config);
