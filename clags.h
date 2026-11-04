@@ -1602,31 +1602,61 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
 
     WCHAR stack_buf[512];
     WCHAR *wpath = stack_buf;
-    int use_heap = (wlen > 512);
-    if (use_heap){
+    bool use_heap = (wlen > 512);
+
+    if (use_heap) {
         wpath = (WCHAR *)CLAGS_CALLOC(wlen, sizeof(WCHAR));
         clags_assert(wpath != NULL, "Out of memory!");
     }
 
-    MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
-
-    DWORD attrs = GetFileAttributesW(wpath);
-    DWORD err = 0;
-    if (attrs == INVALID_FILE_ATTRIBUTES) {
-        err = GetLastError();
-    }
-
-    if (use_heap) {
-        CLAGS_FREE(wpath, wlen*sizeof(WCHAR));
-    }
-
-    if (attrs == INVALID_FILE_ATTRIBUTES) {
+    int converted = MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
+    if (converted == 0) {
+        DWORD err = GetLastError();
+        if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
         SetLastError(err);
         return Clags_Path_Invalid;
     }
 
-    if (attrs & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
-    if (attrs & FILE_ATTRIBUTE_REPARSE_POINT) return Clags_Path_Other;
+    DWORD attrs = GetFileAttributesW(wpath);
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        DWORD err = GetLastError();
+        if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+        SetLastError(err);
+        return Clags_Path_Invalid;
+    }
+
+    if (!(attrs & FILE_ATTRIBUTE_REPARSE_POINT)) {
+        if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+        if (attrs & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
+        return Clags_Path_Reg;
+    }
+
+    HANDLE handle = CreateFileW(
+        wpath,
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS,
+        NULL
+    );
+
+    if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+
+    if (handle == INVALID_HANDLE_VALUE) return Clags_Path_Invalid;
+
+    BY_HANDLE_FILE_INFORMATION info;
+    BOOL success = GetFileInformationByHandle(handle, &info);
+    DWORD err = success ? ERROR_SUCCESS : GetLastError();
+
+    CloseHandle(handle);
+
+    if (!success) {
+        SetLastError(err);
+        return Clags_Path_Invalid;
+    }
+
+    if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
     return Clags_Path_Reg;
 #else
     struct stat attrs;
