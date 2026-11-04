@@ -245,7 +245,7 @@ bool test_choice_validation(clags_sb_t *sb)
     clags_choice_t duplicates[] = {
         {"aboba", NULL},
         {"hello", NULL},
-        {"aboba", NULL},
+        {"Aboba", NULL},
     };
     clags_choices_t duplicate_choices = clags_choices(duplicates,);
     clags_arg_t duplicate_args[] = {

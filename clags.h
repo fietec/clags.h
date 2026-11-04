@@ -2733,7 +2733,7 @@ CLAGS_PRIV clags_config_t* clags__validate_choice(clags_config_t *config, const 
         }
         for (size_t j=i+1; j<choices->count; ++j){
             clags_choice_t other = choices->items[j];
-            if (other.value && strcmp(choice.value, other.value) == 0){
+            if (other.value && clags__strcasecmp(choice.value, other.value) == 0){
                 clags_log(config, Clags_ConfigError, "duplicate choice name '%s' for choice %zu of argument '%s' is already used by choice %zu!", other.value, j, arg_name, i);
                 return config;
             }
