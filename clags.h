@@ -1603,6 +1603,7 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     WCHAR stack_buf[512];
     WCHAR *wpath = stack_buf;
     bool use_heap = (wlen > 512);
+    DWORD error;
 
     if (use_heap) {
         wpath = (WCHAR *)CLAGS_CALLOC(wlen, sizeof(WCHAR));
@@ -1611,58 +1612,31 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
 
     int converted = MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
     if (converted == 0) {
-        DWORD err = GetLastError();
+        error = GetLastError();
         if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
-        SetLastError(err);
+        SetLastError(error);
         return Clags_Path_Invalid;
     }
 
-    DWORD attrs = GetFileAttributesW(wpath);
-    if (attrs == INVALID_FILE_ATTRIBUTES) {
-        DWORD err = GetLastError();
+    WIN32_FILE_ATTRIBUTE_DATA attrs_data;
+    if (!GetFileAttributesExW(wpath, GetFileExInfoStandard, &attrs_data)) {
+        error = GetLastError();
         if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
-        SetLastError(err);
+        SetLastError(error);
         return Clags_Path_Invalid;
     }
-
-    if (!(attrs & FILE_ATTRIBUTE_REPARSE_POINT)) {
-        if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
-        if (attrs & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
-        return Clags_Path_Reg;
-    }
-
-    HANDLE handle = CreateFileW(
-        wpath,
-        0,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS,
-        NULL
-    );
 
     if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
 
-    if (handle == INVALID_HANDLE_VALUE) return Clags_Path_Invalid;
-
-    BY_HANDLE_FILE_INFORMATION info;
-    BOOL success = GetFileInformationByHandle(handle, &info);
-    DWORD err = success ? ERROR_SUCCESS : GetLastError();
-
-    CloseHandle(handle);
-
-    if (!success) {
-        SetLastError(err);
-        return Clags_Path_Invalid;
+    if (attrs_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        return Clags_Path_Dir;
     }
-
-    if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) return Clags_Path_Dir;
     return Clags_Path_Reg;
 #else
     struct stat attrs;
     if (stat(path, &attrs) == -1) return Clags_Path_Invalid;
-    if (S_ISDIR(attrs.st_mode)) return Clags_Path_Dir;
-    if (S_ISREG(attrs.st_mode)) return Clags_Path_Reg;
+    if (S_ISDIR(attrs.st_mode))   return Clags_Path_Dir;
+    if (S_ISREG(attrs.st_mode))   return Clags_Path_Reg;
     return Clags_Path_Other;
 #endif
 }
@@ -1670,34 +1644,37 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
 CLAGS_API clags_path_type_t clags_path_type_with_message(const char *path, char *buffer, size_t buffer_size)
 {
     clags_path_type_t type = clags_path_type(path);
-    if (type == Clags_Path_Invalid && buffer != NULL && buffer_size > 0) {
+    if (buffer != NULL && buffer_size > 0){
+        buffer[0] = '\0';
+        if (type == Clags_Path_Invalid) {
 #ifdef _WIN32
-        DWORD error_code = GetLastError();
-        DWORD chars_written = FormatMessageA(
-            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL,
-            error_code,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            buffer,
-            (DWORD)buffer_size,
-            NULL
-        );
+            DWORD error_code = GetLastError();
+            DWORD chars_written = FormatMessageA(
+                FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL,
+                error_code,
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                buffer,
+                (DWORD)buffer_size,
+                NULL
+                );
 
-        if (chars_written == 0) {
-            snprintf(buffer, buffer_size, "Unknown error: %lu", error_code);
-            return Clags_Path_Invalid;
-        }
-        if (chars_written >= 2 && buffer[chars_written - 2] == '\r' && buffer[chars_written - 1] == '\n') {
-            buffer[chars_written - 2] = '\0';
-            chars_written -= 2;
-        } else if (chars_written >= 1 && (buffer[chars_written - 1] == '\n' || buffer[chars_written - 1] == '\r')) {
-            buffer[chars_written - 1] = '\0';
-            chars_written -= 1;
-        }
+            if (chars_written == 0) {
+                snprintf(buffer, buffer_size, "Unknown error: %lu", error_code);
+                return Clags_Path_Invalid;
+            }
+            if (chars_written >= 2 && buffer[chars_written - 2] == '\r' && buffer[chars_written - 1] == '\n') {
+                buffer[chars_written - 2] = '\0';
+                chars_written -= 2;
+            } else if (chars_written >= 1 && (buffer[chars_written - 1] == '\n' || buffer[chars_written - 1] == '\r')) {
+                buffer[chars_written - 1] = '\0';
+                chars_written -= 1;
+            }
 #else
-        (void)strncpy(buffer, strerror(errno), buffer_size);
-        buffer[buffer_size - 1] = '\0';
+            (void)strncpy(buffer, strerror(errno), buffer_size);
+            buffer[buffer_size - 1] = '\0';
 #endif // _WIN32
+        }
     }
     return type;
 }
