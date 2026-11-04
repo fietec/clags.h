@@ -1065,7 +1065,7 @@ CLAGS_API void clags_list_free(clags_list_t *list);
 
 /*
   Free all memory tracked by an allocs container
-  which wasallocated for strings duplicated during parsing.
+  which was allocated for strings duplicated during parsing.
 
   Arguments:
     - allocs        : pointer to the clags_allocs_t whose duplicated strings should be freed
