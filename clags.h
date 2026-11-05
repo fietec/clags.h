@@ -1604,20 +1604,26 @@ CLAGS_API clags_path_type_t clags_path_type(const char *path)
     int converted = MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
     if (converted == 0) {
         error = GetLastError();
-        if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
         SetLastError(error);
+        if (use_heap) {
+            CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+        }
         return Clags_Path_Invalid;
     }
 
     WIN32_FILE_ATTRIBUTE_DATA attrs_data;
     if (!GetFileAttributesExW(wpath, GetFileExInfoStandard, &attrs_data)) {
         error = GetLastError();
-        if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+        if (use_heap) {
+            CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+        }
         SetLastError(error);
         return Clags_Path_Invalid;
     }
 
-    if (use_heap) CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+    if (use_heap) {
+        CLAGS_FREE(wpath, wlen * sizeof(WCHAR));
+    }
 
     if (attrs_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         return Clags_Path_Dir;
