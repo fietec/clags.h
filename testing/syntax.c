@@ -205,6 +205,48 @@ bool test_inheritance(clags_sb_t *sb)
     return true;
 }
 
+bool verify_always_fail(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
+{
+    (void) config; (void) arg_name;(void) arg; (void) variable; (void) data;
+    return false;
+}
+
+bool test_failed_inheritance(clags_sb_t *sb)
+{
+    clags_arg_t child_args[] = {
+        // dummy arg
+        clags_positional(NULL, "", "", .optional=true),
+    };
+    clags_config_t child_config = clags_config(child_args, GLOBAL_OPTIONS);
+
+    clags_subcmd_t *subcmd;
+    char *value = NULL;
+
+    clags_subcmd_t commands[] = {
+        {"cmd", "", &child_config},
+    };
+    clags_subcmds_t subcmds = clags_subcmds(commands);
+
+    clags_custom_t failing_type = clags_custom("failing", verify_always_fail,);
+
+    clags_arg_t parent_args[] = {
+        clags_positional(&subcmd, "command", "", .value_type=Clags_Subcmd, .using.subcmds=&subcmds,),
+        clags_option('v', "value", &value, "VAL", "", .inherit=true, .value_type=Clags_Custom, .using.custom=&failing_type),
+    };
+    clags_config_t parent_config = clags_config(parent_args, GLOBAL_OPTIONS);
+
+    char *argv[] = {"prog", "cmd", "--value=something"};
+
+    clags_error_t error = clags_parse(arr_len(argv), argv, &parent_config);
+    test(error.type == Clags_Error_InvalidValue);
+    test(error.config == &child_config);
+    test(error.has_arg == true);
+    test(error.arg.pointer == &parent_args[1]);
+    test(error.arg.config == &parent_config);
+
+    return true;
+}
+
 static Test syntax_tests[] = {
     {"empty args", test_empty_args},
     {"positional arguments", test_positional},
@@ -217,6 +259,7 @@ static Test syntax_tests[] = {
     {"positional lists", test_positional_list},
     {"option lists", test_option_list},
     {"inheritance", test_inheritance},
+    {"failed inheritance", test_failed_inheritance},
 };
 
 TestSection syntax_section = {

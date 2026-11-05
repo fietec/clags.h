@@ -20,12 +20,7 @@
 #define TEST_RMDIR(path) rmdir(path)
 #endif
 
-static bool parse_test_custom_verify(
-    clags_config_t *config,
-    const char *arg_name,
-    const char *arg,
-    void *variable,
-    void *data)
+static bool parse_test_custom_verify(clags_config_t *config, const char *arg_name, const char *arg, void *variable, void *data)
 {
     (void)data;
 
@@ -87,11 +82,13 @@ bool test_value_bool(clags_sb_t *sb)
     test(b == true);
 
     char *argv3[] = {"", "-a", "trues"};
-    test(clags_parse(arr_len(argv3), argv3, &config).type == Clags_Error_InvalidValue);
+    clags_error_t error = clags_parse(arr_len(argv3), argv3, &config);
+    test(error.type == Clags_Error_InvalidValue);
+    test(error.has_arg == true);
+    test(error.arg.pointer == &args[0]);
 
     return true;
 }
-
 
 bool test_value_choice(clags_sb_t *sb)
 {
