@@ -56,7 +56,7 @@ clags_arg_t main_args[] = {
     // With `.using.subcmds` you set the subcommand parsing verifier
     clags_positional(&selected_subcmd, "command", "Subcommand to run", .value_type=Clags_Subcmd, .using.subcmds=&my_subcmds),
     // With the `.type` field, we specify how the flag stores its result.
-    // A full list of available storage types can be found in the `clags_flag_type_t` enum.
+    // A full list of available storage types can be found in `CLAGS__FLAG_TYPES`.
     // The default is `Clags_BoolFlag`, a normal boolean flag.
     // `.type = Clags_CountFlag` instructs the parser to track how many times
     // this flag was encountered. The associated variable must be of type `size_t`.

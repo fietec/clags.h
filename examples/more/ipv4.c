@@ -5,6 +5,7 @@
 #define CLAGS_IMPLEMENTATION
 #include <clags.h>
 
+// not a portable design, just for demonstration
 union ipv4_t{
     uint32_t addr;
     uint8_t segs[4];
