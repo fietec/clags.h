@@ -438,18 +438,18 @@
     X(Clags_CountFlag,  clags__set_count_flag  ) /* tracks how many times the flag was encountered; variable type: size_t                    */ \
 
 // the definition of all error types
-#define CLAGS__ERROR_TYPES                                                                                   \
- /*   Enum Value                    Description                                                 Has Arg?  */ \
- /*   ============================= =========================================================== ========  */ \
-    X(Clags_Error_Ok,               "no error",                                                 false   )    \
-    X(Clags_Error_InvalidConfig,    "configuration is invalid",                                 false   )    \
-    X(Clags_Error_InvalidParams,    "passed arguments are invalid",                             false   )    \
-    X(Clags_Error_InvalidDefault,   "failed to set a default value",                            true    )    \
-    X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria",  true    )    \
-    X(Clags_Error_InvalidOption,    "unrecognized option or flag syntax",                       false   )    \
-    X(Clags_Error_TooManyArguments, "too many positional arguments provided",                   false   )    \
-    X(Clags_Error_TooFewArguments,  "required positional arguments missing",                    true    )    \
-    X(Clags_Error_ListOverflow,     "a list reached its maximum capacity",                      true    )    \
+#define CLAGS__ERROR_TYPES                                                                      \
+ /*   Enum Value                    Description                                              */ \
+ /*   ============================= ======================================================== */ \
+    X(Clags_Error_Ok,               "no error"                                                ) \
+    X(Clags_Error_InvalidConfig,    "configuration is invalid"                                ) \
+    X(Clags_Error_InvalidParams,    "passed arguments are invalid"                            ) \
+    X(Clags_Error_InvalidDefault,   "failed to set a default value"                           ) \
+    X(Clags_Error_InvalidValue,     "argument value does not match expected type or criteria" ) \
+    X(Clags_Error_InvalidOption,    "unrecognized option or flag syntax"                      ) \
+    X(Clags_Error_TooManyArguments, "too many positional arguments provided"                  ) \
+    X(Clags_Error_TooFewArguments,  "required positional arguments missing"                   ) \
+    X(Clags_Error_ListOverflow,     "a list reached its maximum capacity"                     ) \
 
 // the definition of all path types
 // Note: these are NOT value types but only used internally and together with the `clags_path_type` function
@@ -469,7 +469,7 @@ typedef enum{
 #undef X
 
 // an auto-generated enum of all error types
-#define X(type, desc, arg) type,
+#define X(type, desc) type,
 typedef enum{
     CLAGS__ERROR_TYPES
 } clags_error_type_t;
@@ -726,7 +726,8 @@ typedef struct{
 typedef struct{
     clags_error_type_t type;          // the error type that occured. See `CLAGS__ERROR_TYPES` for a full list.
     clags_config_t *config;           // a pointer to the config for which parsing failed
-    struct{                           // this is only populated by certain error types. Check with `clags_error_has_arg(error)`.
+    bool has_arg;                     // set if the `.arg` struct is populated
+    struct{                           // this is only populated by certain error types
         clags_arg_t *pointer;         // a pointer to the arg that failed
         clags_config_t *config;       // a pointer to the config to which the arg belongs. Due to inheritance this may be different to the failed config field above.
     } arg;
@@ -844,7 +845,8 @@ struct clags_config_t{
 #define clags_custom(type_name, verifier, ...) {.name=(type_name), .verify=(verifier), __VA_ARGS__}
 
 // macro for a `clags_error_t` struct
-#define clags_error(type, config, arg, arg_config) (clags_error_t){(type), (config), {(arg), (arg_config)}}
+#define clags_error(type, config) (clags_error_t){(type), (config), false, {0}}
+#define clags_error_with_arg(type, config, arg, arg_config) (clags_error_t){(type), (config), true, {(arg), (arg_config)}}
 
 /* Argument Constructors */
 
@@ -1106,17 +1108,6 @@ CLAGS_API void clags_free(clags_config_t *config);
     const char*     : a string description of the provided error type
 */
 CLAGS_API const char* clags_error_type_name(clags_error_type_t error);
-
-/*
-  Return whether an error has the `.arg` field populated.
-
-  Arguments:
-    - error         : the error struct
-
-  Returns:
-    bool            : whether the `.arg` field is populated
-*/
-CLAGS_API bool clags_error_has_arg(clags_error_t error);
 
 #ifndef CLAGS_STRIP_PATH_TYPES
 
@@ -1694,20 +1685,10 @@ CLAGS_API const char* clags_path_type_name(clags_path_type_t type)
 CLAGS_API const char* clags_error_type_name(clags_error_type_t error)
 {
     switch(error){
-#define X(type, desc, has_arg) case (type): return (desc);
+#define X(type, desc) case (type): return (desc);
         CLAGS__ERROR_TYPES
 #undef X
         default: return "unknown error";
-    }
-}
-
-CLAGS_API bool clags_error_has_arg(clags_error_t error)
-{
-    switch (error.type){
-#define X(type, desc, has_arg) case (type): return (has_arg);
-        CLAGS__ERROR_TYPES
-#undef X
-        default: return false;
     }
 }
 
@@ -3253,7 +3234,7 @@ CLAGS_PRIV clags_error_t clags__set_defaults(clags_config_t *config)
                 clags_positional_t pos = arg->as.pos;
                 if (pos.optional && pos.default_input != NULL){
                     clags_assert(!pos.is_list, "list arguments may not have default values!");
-                    if (clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, false) != Clags_Error_Ok) return clags_error(Clags_Error_InvalidDefault, config, arg, config);
+                    if (clags__set_arg(config, pos.value_type, pos.arg_name, pos.default_input, pos.variable, pos.using._data, false) != Clags_Error_Ok) return clags_error_with_arg(Clags_Error_InvalidDefault, config, arg, config);
                 }
             } break;
             case Clags_Option:{
@@ -3262,13 +3243,13 @@ CLAGS_PRIV clags_error_t clags__set_defaults(clags_config_t *config)
                     clags_assert(!opt.is_list, "list arguments may not have default values!");
                     char buf[3] = {'-', '\0', '\0'};
                     const char *name = opt.long_flag ? opt.long_flag : (opt.short_flag ? (buf[1] = opt.short_flag, buf) : "(unnamed)");
-                    if (clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, false) != Clags_Error_Ok) return clags_error(Clags_Error_InvalidDefault, config, arg, config);
+                    if (clags__set_arg(config, opt.value_type, name, opt.default_input, opt.variable, opt.using._data, false) != Clags_Error_Ok) return clags_error_with_arg(Clags_Error_InvalidDefault, config, arg, config);
                 }
             } break;
             default: continue;
         }
     }
-    return clags_error(Clags_Error_Ok, config, NULL, NULL);
+    return clags_error(Clags_Error_Ok, config);
 }
 
 CLAGS_PRIV clags_arg_t* clags__search_long_options_and_flags(clags_config_t *config, const char *long_flag, clags_config_t **found_in)
@@ -3396,7 +3377,7 @@ CLAGS_PRIV clags_error_t clags__parse_long_options_and_flags(clags_config_t *con
     const char *flag_name = arg + 2; // skip `--`
     if (*flag_name == '\0'){
         clags_log(config, Clags_Error, "Missing flag name: '%s'!", arg);
-        return clags_error(Clags_Error_InvalidOption, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidOption, config);
     }
     // search for option or flag in config and all ancestors
     clags_config_t *arg_config = NULL; // the config a matching flag was found in even it not reachable
@@ -3408,19 +3389,19 @@ CLAGS_PRIV clags_error_t clags__parse_long_options_and_flags(clags_config_t *con
         } else{
             clags_log(config, Clags_Error, "Unknown long flag '%s'!", arg);
         }
-        return clags_error(Clags_Error_InvalidOption, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidOption, config);
     }
     if (parg->type == Clags_Option){
         const char *value = flag_name + strlen(parg->as.opt.long_flag);
         clags_error_type_t error = clags__parse_option(config, parser, value, &parg->as.opt, true);
-        if (error != Clags_Error_Ok) return clags_error(error, config, parg, arg_config);
+        if (error != Clags_Error_Ok) return clags_error_with_arg(error, config, parg, arg_config);
     } else if (parg->type == Clags_Flag){
         clags_error_type_t error = clags__parse_flag(config, &parg->as.flag, do_exit);
-        if (error != Clags_Error_Ok) return clags_error(error, config, parg, arg_config);
+        if (error != Clags_Error_Ok) return clags_error_with_arg(error, config, parg, arg_config);
     } else {
         clags_unreachable("arg type has changed");
     }
-    return clags_error(Clags_Error_Ok, config, NULL, NULL);
+    return clags_error(Clags_Error_Ok, config);
 }
 
 CLAGS_PRIV clags_error_t clags__parse_short_options_and_flags(clags_config_t *config, clags__parser_t *parser, bool *do_exit)
@@ -3431,7 +3412,7 @@ CLAGS_PRIV clags_error_t clags__parse_short_options_and_flags(clags_config_t *co
     size_t flag_len = strlen(rest);
     if (flag_len == 0){
         clags_log(config, Clags_Error, "Missing flag or option name: '-'!");
-        return clags_error(Clags_Error_InvalidOption, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidOption, config);
     }
     // iterate over each character of the flag group
     for (const char *c=rest; c<rest+flag_len; ++c){
@@ -3442,11 +3423,11 @@ CLAGS_PRIV clags_error_t clags__parse_short_options_and_flags(clags_config_t *co
             if (parg->type == Clags_Option){
                 // parse option
                 clags_error_type_t error = clags__parse_option(config, parser, c+1, &parg->as.opt, false);
-                if (error != Clags_Error_Ok) return clags_error(error, config, parg, arg_config);
+                if (error != Clags_Error_Ok) return clags_error_with_arg(error, config, parg, arg_config);
                 break;
             } else if (parg->type == Clags_Flag){
                 clags_error_type_t error = clags__parse_flag(config, &parg->as.flag, do_exit);
-                if (error != Clags_Error_Ok) return clags_error(error, config, parg, arg_config);
+                if (error != Clags_Error_Ok) return clags_error_with_arg(error, config, parg, arg_config);
                 if (*do_exit) break;
             } else {
                 clags_unreachable("arg type has changed");
@@ -3458,7 +3439,7 @@ CLAGS_PRIV clags_error_t clags__parse_short_options_and_flags(clags_config_t *co
             } else{
                 clags_log(config, Clags_Error, "Unknown short flag '-%c'! Did you mean to use it with the '%s' subcommand?", *c, arg_config->name);
             }
-            return clags_error(Clags_Error_InvalidOption, config, NULL, NULL);
+            return clags_error(Clags_Error_InvalidOption, config);
         } else {
             // could not find a matching argument definition
             if (flag_len > 1){
@@ -3466,10 +3447,10 @@ CLAGS_PRIV clags_error_t clags__parse_short_options_and_flags(clags_config_t *co
             } else{
                 clags_log(config, Clags_Error, "Unknown short flag '-%c'!", *c);
             }
-            return clags_error(Clags_Error_InvalidOption, config, NULL, NULL);
+            return clags_error(Clags_Error_InvalidOption, config);
         }
     }
-    return clags_error(Clags_Error_Ok, config, NULL, NULL);
+    return clags_error(Clags_Error_Ok, config);
 }
 
 CLAGS_PRIV clags_error_t clags__parse_positional(clags_config_t *config, clags__parser_t *parser, bool *do_exit)
@@ -3478,7 +3459,7 @@ CLAGS_PRIV clags_error_t clags__parse_positional(clags_config_t *config, clags__
     const char *arg = parser->argv[parser->index];
     if (parser->pos_count >= parser->args.positional_count){
         clags_log(config, Clags_Error, "Unknown additional argument (%zu/%zu): '%s'!", parser->pos_count+1, parser->args.positional_count, arg);
-        return clags_error(Clags_Error_TooManyArguments, config, NULL, NULL);
+        return clags_error(Clags_Error_TooManyArguments, config);
     }
     clags_arg_t *parg = parser->args.positionals[parser->pos_count];
     clags_positional_t pos = parg->as.pos;
@@ -3487,7 +3468,7 @@ CLAGS_PRIV clags_error_t clags__parse_positional(clags_config_t *config, clags__
 
         clags_subcmd_t *selected_subcmd = NULL; // catch the selected subcommand
         clags_error_type_t error = clags__set_arg(config, pos.value_type, pos.arg_name, arg, &selected_subcmd, pos.using.subcmds, false);
-        if (error != Clags_Error_Ok) return clags_error(error, config, parg, config);
+        if (error != Clags_Error_Ok) return clags_error_with_arg(error, config, parg, config);
 
         if (pos.variable){
             *(clags_subcmd_t**) pos.variable = selected_subcmd;
@@ -3505,9 +3486,9 @@ CLAGS_PRIV clags_error_t clags__parse_positional(clags_config_t *config, clags__
     parser->parsing_optionals = pos.optional;
 
     clags_error_type_t error = clags__set_arg(config, pos.value_type, pos.arg_name, arg, pos.variable, pos.using._data, pos.is_list);
-    if (error != Clags_Error_Ok) return clags_error(error, config, parg, config);
+    if (error != Clags_Error_Ok) return clags_error_with_arg(error, config, parg, config);
 
-    return clags_error(Clags_Error_Ok, config, NULL, NULL);
+    return clags_error(Clags_Error_Ok, config);
 }
 
 CLAGS_PRIV bool clags__parse_option_toggle(clags_config_t *config, clags__parser_t *parser, const char *arg)
@@ -3553,22 +3534,22 @@ CLAGS_PRIV bool clags__parse_list_terminator(clags__parser_t *parser, const char
 
 CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *config)
 {
-    if (config == NULL) return clags_error(Clags_Error_Ok, NULL, NULL, NULL);
+    if (config == NULL) return clags_error(Clags_Error_Ok, NULL);
     if (argc < 1 || argv == NULL){
         clags_log(config, Clags_ConfigError, "missing program name; cannot parse arguments!");
-        return clags_error(Clags_Error_InvalidParams, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidParams, config);
     }
     // validate the config
     if (config->state == Clags_Config_Unvalidated){
         clags_config_t *failed_config = clags_validate(argv[0], config);
         if (failed_config){
             clags_log(config, Clags_ConfigError, "validation of config '%s' failed!", failed_config->name);
-            return clags_error(Clags_Error_InvalidConfig, failed_config, NULL, NULL);
+            return clags_error(Clags_Error_InvalidConfig, failed_config);
         }
     }
     if (config->state != Clags_Config_Valid){
         clags_log(config, Clags_ConfigError, "passed config is invalid!");
-        return clags_error(Clags_Error_InvalidConfig, config, NULL, NULL);
+        return clags_error(Clags_Error_InvalidConfig, config);
     }
 
     clags_error_t default_error = clags__set_defaults(config);
@@ -3577,7 +3558,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
         return default_error;
     }
 
-    clags_error_t result = clags_error(Clags_Error_Ok, config, NULL, NULL);
+    clags_error_t result = clags_error(Clags_Error_Ok, config);
 
     // sort arguments by type
     clags_arg_t **positionals = CLAGS_CALLOC(config->args_count, sizeof(*positionals));
@@ -3626,7 +3607,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
         }
 
         if (error.type != Clags_Error_Ok) clags_return_defer(error);
-        if (exit) clags_return_defer(clags_error(Clags_Error_Ok, config, NULL, NULL));
+        if (exit) clags_return_defer(clags_error(Clags_Error_Ok, config));
     }
     if (parser.in_list){
         // terminate last positional argument
@@ -3647,7 +3628,7 @@ CLAGS_API clags_error_t clags_parse(int argc, char *argv[], clags_config_t *conf
         clags_log_sb(config, Clags_Error, &sb);
         clags_sb_free(&sb);
 
-        clags_error_t error = clags_error(Clags_Error_TooFewArguments, config, parser.args.positionals[parser.pos_count], config);
+        clags_error_t error = clags_error_with_arg(Clags_Error_TooFewArguments, config, parser.args.positionals[parser.pos_count], config);
         clags_return_defer(error);
     }
 

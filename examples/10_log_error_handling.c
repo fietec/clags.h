@@ -91,7 +91,7 @@ int main(int argc, char **argv)
             // fatal: print detailed usage and exit
             // Check whether the error struct contains information about a specifc failed argument.
             // This depends on the error type. See the `CLAGS__ERROR_TYPES` macro for a complete list.
-            if (clags_error_has_arg(error)){
+            if (error.has_arg){
                 clags_log(error.config, Clags_Error, "error in '%s' while parsing argument %d of subcommand '%s': '%s'!",
                      error.config->name,
                      clags_arg_index(error.arg.config, error.arg.pointer), // this retrives the index within the configs `clags_arg_t` array
