@@ -163,7 +163,6 @@
   `--` disables option/flag parsing from this point onward.
 
   If the config enables toggling, `--` can re-enable parsing.
-  This is an add-on feature of clags, not POSIX.
 
 
   List Terminator
@@ -362,6 +361,7 @@
 #    define CLAGS__PRINTF_FORMAT(STRING_INDEX, FIRST_TO_CHECK)
 #endif
 
+// strip unwanted value type groups
 #define CLAGS__VTYPE(type, verify_func, name, value_type, validate_func, usage_func) X(type, verify_func, name, value_type, validate_func, usage_func)
 #define CLAGS__IGNORE_VTYPE(type, verify_func, name, value_type, validate_func, usage_func)
 
@@ -399,7 +399,7 @@
   #define CLAGS__TIME_VTYPE CLAGS__VTYPE
 #endif // CLAGS_STRIP_TIME_TYPES
 
-// the definition of all supported value types
+// the definition of all supported value types and their associated attributes
 // if an argument’s `value_type` is not explicitly set, `Clags_String` is used by default.
 #define CLAGS__VALUE_TYPES                                                                                                                                                                                      \
  /* Category           Enum Value    Verification Func    Name          Var Type         Validation Func         Usage Func                                                                                  */ \
