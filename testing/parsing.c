@@ -61,6 +61,35 @@ bool test_value_string(clags_sb_t *sb)
     return true;
 }
 
+bool test_string_duplication(clags_sb_t *sb)
+{
+    clags_allocs_t allocs = {0};
+    clags_list_t strings = clags_list(Clags_String);
+
+    clags_arg_t args[] = {
+        clags_positional(&strings, "", "", .is_list=true),
+    };
+    clags_config_t config = clags_config(args, GLOBAL_OPTIONS, .string_duplications=&allocs);
+
+    char *program_name = "test";
+    char *argv[] = {program_name, "foo", "bar", "baz"};
+    clags_error_t error = clags_parse(arr_len(argv), argv, &config);
+    test(error.type == Clags_Error_Ok);
+
+    test(allocs.count == strings.count + 1 && allocs.count == 4);
+    test(strcmp(allocs.items[0].data, program_name) == 0);
+    for (size_t i=0; i<strings.count; ++i){
+        const char *string = clags_list_element(strings, const char*, i);
+        test(string == allocs.items[i+1].data);
+        test(strcmp(string, argv[i+1]) == 0);
+    }
+
+    clags_allocs_free(&allocs);
+    test(allocs.count == 0);
+
+    return true;
+}
+
 bool test_value_bool(clags_sb_t *sb)
 {
     bool a = false;
@@ -522,6 +551,7 @@ bool test_value_time_s_time_ns(clags_sb_t *sb)
 
 static Test parsing_tests[] = {
     {"string values", test_value_string},
+    {"string duplication", test_string_duplication},
     {"boolean values", test_value_bool},
     {"choice matching", test_value_choice},
     {"subcommand selection", test_value_subcmd},

@@ -112,15 +112,18 @@ bool test_double_dash_disable(clags_sb_t *sb)
 
 bool test_double_dash_reenable(clags_sb_t *sb)
 {
+    char *p = NULL;
     bool a = false;
 
-    char *argv[] = {"", "--", "--", "-a"};
+    char *argv[] = {"", "--", "-b", "--", "-a"};
     clags_arg_t args[] = {
+        clags_positional(&p, "", "", .optional=true, .default_input="not -b"),
         clags_flag('a', "a", &a, "flag a",),
     };
     clags_config_t config = clags_config(args, .allow_option_parsing_toggle = true, GLOBAL_OPTIONS,);
 
     test(clags_parse(arr_len(argv), argv, &config).type == Clags_Error_Ok);
+    test(strcmp(p, "-b") == 0);
     test(a == true);
     return true;
 }
