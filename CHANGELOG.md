@@ -1,6 +1,6 @@
 # Changelog
 
-## [v4.0.0] - 
+## [v4.0.0] - 5.11.2026
 ### Added
 - automatic usage alignment calculation
   - the usage alignment for each config is now calculated in the validation stage
@@ -22,9 +22,10 @@
 - new error type `clags_error_t`: the error returned by `clags_parse` (see below) besides already known type also contains:
   - a pointer to the config that failed during parsing
   - a struct with pointers to the arg that failed and to the config to which that arg belongs. This is not populated for all error types. Check with the `.has_arg` field.
-- added `clags_error(type, config, arg, arg_config)` macro for easier error creation
+- added `clags_error(type, config)` and `clags_error_with_arg(type, config, arg, arg_config)` macros for simpler error creation
 - added `clags_propagate_log_level(&config, level)` for propagating a log level to all child configs
 - added `Clags_Error_ListOverflow` error to indicate that a list reached its maximum capacity
+- added `Clags_Error_InvalidParams` error to indicate that invalid parameters were passed to `clags_parse`
 - introduced the [tatr](https://github.com/tsoding/tatr) task and issue system
 - added `CLAGS_KEEP_<GROUP>_TYPES` macros to un-strip previously ignored groupes (most useful in combination with `CLAGS_STRIP_NONCORE_TYPES`)
 - new `clags_path_type_with_message` function wrapper of `clags_path_type` to additionally write an error message to a provided buffer
@@ -68,7 +69,7 @@
 - rewrote usage alignment handling and argument truncation
 - updated to `strtoint.h` v3.0.0
 - `clags_usage` and `clags_usage_to_file` now exit gracefully when an invalid config is passed
-- `clags_usage` and `clags_usage_to_file` no longer automatically validate a config. This change was made make these function side-effect free and to strengthen the usability of `clags_validate`
+- `clags_usage` and `clags_usage_to_file` no longer automatically validate a config. This change makes these function side-effect free and to strengthen the usability of `clags_validate`
 - removed the `clags__stat_struct`, `clags__stat_func` abstraction layer. On Windows, `clags_path_type` now uses winapi directly.
 - renamed usage type names `subcmd` -> `subcommand`, `time_ns` -> `time`
 - generalized time parsing so that both `clags_verify_time` and `clags_verify_time_ns` now share the same backend
